@@ -10,6 +10,7 @@ import oversightRoutes from './oversight.routes';
 import notificationRoutes from './notification.routes';
 import parentLinkRoutes from './parentLink.routes';
 import uploadRoutes from './upload.routes';
+import ocrRoutes from './ocr.routes';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/', gradingRoutes);
 router.use('/', oversightRoutes);
 router.use('/', notificationRoutes);
 router.use('/', uploadRoutes);
+router.use('/', ocrRoutes);
 
 export default router;

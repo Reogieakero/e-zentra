@@ -177,6 +177,29 @@ enum ReportCardStatus {
   released
 }
 
+enum OcrStatus {
+  not_applicable
+  queued
+  processing
+  passed
+  partial
+  failed
+}
+
+enum OcrJobStatus {
+  queued
+  processing
+  succeeded
+  partial
+  failed
+}
+
+enum ExtractionStatus {
+  needs_review
+  approved
+  rejected
+}
+
 enum NotificationType {
   new_anecdotal_record
   new_referral
@@ -299,6 +322,8 @@ model User {
   finalGradeStudents      FinalGrade[]                 @relation("FinalGradeStudent")
   riskStudents            StudentRiskAssessment[]      @relation("RiskStudent")
   reportCardStudents      ReportCard[]                 @relation("ReportCardStudent")
+  ocrJobs                 OcrJob[]                     @relation("OcrJobActor")
+  ocrExtractionReviews    ReportCardExtraction[]       @relation("ExtractionReviewedBy")
 
   @@map("users")
 }
@@ -928,6 +953,7 @@ model ReportCard {
   source      ReportCardSource
   fileUrl     String?          @map("file_url") @db.Text
   status      ReportCardStatus @default(pending)
+  ocrStatus   OcrStatus        @default(not_applicable) @map("ocr_status")
   generatedAt DateTime?        @map("generated_at") @db.Timestamptz(3)
   scannedBy   String?          @map("scanned_by") @db.Uuid
   scanned     User?            @relation("ReportCardScannedBy", fields: [scannedBy], references: [id])
@@ -936,8 +962,61 @@ model ReportCard {
   releasedAt  DateTime?        @map("released_at") @db.Timestamptz(3)
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
 
+  extraction  ReportCardExtraction[]
+
+  ocrJobs    OcrJob[]
+
   @@index([studentId])
   @@map("report_cards")
+}
+
+
+model OcrJob {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId      String       @map("actor_id") @db.Uuid
+  actor        User         @relation("OcrJobActor", fields: [actorId], references: [id])
+  reportCardId String       @map("report_card_id") @db.Uuid
+  reportCard   ReportCard   @relation(fields: [reportCardId], references: [id])
+  kind         String       @db.VarChar(50)
+  fileUrl      String       @map("file_url") @db.Text
+  fileHash     String       @map("file_hash") @db.VarChar(128)
+  status       OcrJobStatus @default(queued)
+  retryCount   Int          @default(0) @map("retry_count")
+  errorCode    String?      @map("error_code") @db.VarChar(50)
+  errorMessage String?      @map("error_message") @db.Text
+  engine       String       @default("fake") @db.VarChar(50)
+  startedAt    DateTime?    @map("started_at") @db.Timestamptz(3)
+  completedAt  DateTime?    @map("completed_at") @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  extraction ReportCardExtraction?
+
+  @@index([status, createdAt])
+  @@index([reportCardId])
+  @@map("ocr_jobs")
+}
+
+
+model ReportCardExtraction {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ocrJobId          String           @unique @map("ocr_job_id") @db.Uuid
+  ocrJob            OcrJob           @relation(fields: [ocrJobId], references: [id])
+  reportCardId      String           @map("report_card_id") @db.Uuid
+  reportCard        ReportCard       @relation(fields: [reportCardId], references: [id])
+  engine            String           @db.VarChar(50)
+  overallConfidence Float            @map("overall_confidence") @db.DoublePrecision
+  studentMatch      Json             @map("student_match")
+  gradeRows         Json             @map("grade_rows")
+  validation        Json             @default("[]") @map("validation")
+  corrections       Json             @default("[]") @map("corrections")
+  status            ExtractionStatus @default(needs_review)
+  reviewedBy        String?          @map("reviewed_by") @db.Uuid
+  reviewer          User?            @relation("ExtractionReviewedBy", fields: [reviewedBy], references: [id])
+  reviewedAt        DateTime?        @map("reviewed_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([reportCardId])
+  @@map("report_card_extractions")
 }
 
 

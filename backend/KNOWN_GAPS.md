@@ -94,3 +94,28 @@ operations; other operations remain compact reference entries. The spec is serve
   command/INCR-based semantics (no `EVAL`/Lua, no `KEYS`) so it works on Upstash.
 - `docker-compose.yml` starts only PostgreSQL (via `compose.yaml`); Redis is not bundled because Upstash is
   the production store. `REDIS_URL` is required (`${REDIS_URL:?}`).
+
+## 12. OCR pipeline (added Phase 4)
+
+- **Async, DB-backed worker.** OCR jobs are tracked in `ocr_jobs` (queued → processing →
+  succeeded/partial/failed) and processed by an in-process polling worker (`startOcrWorker`, default
+  2s interval) — intentionally *not* BullMQ, preserving the project's "no EVAL/Lua" Upstash convention
+  (see §11). `processQueuedOcrJobs()` claims up to `OCR_JOB_BATCH_SIZE` queued jobs per pass.
+- **Engine abstraction.** `src/services/ocr/` defines an `OcrEngine` interface (extract → normalized
+  `OcrResult`) with three implementations selected by `OCR_ENGINE`: `fake` (deterministic, default for
+  tests), `paddle` (HTTP client for the PaddleOCR microservice in `ocr-service/`), `textract` (future
+  cloud fallback, same HTTP contract). The rest of the app depends only on the interface.
+- **Staging, never authoritative.** OCR output is stored in `report_card_extractions`
+  (`needs_review`/`approved`/`rejected`) with per-field confidence. Raw extraction is never an official
+  record: on approval, verified grades are written to `final_grades` and the card moves
+  `pending → ready`. Corrections are recorded on the extraction for audit.
+- **Hooks.** `createReportCard` with `source=scanned_upload` + `fileUrl` enqueues an OCR job and sets
+  `report_cards.ocr_status`. Review/approve/reject endpoints live in `src/routes/ocr.routes.ts`,
+  band-asserted via `assertRecordCustodianBand`. Uploaded files must exist (hash is computed at enqueue).
+- **No frontend yet.** The pipeline is exercised end-to-end by the integration suite via the `fake`
+  engine; `POST /report-cards/:id/extraction/approve` writes final grades, so verification happens
+  purely through the API. The PaddleOCR service (`ocr-service/`) is scaffolded but not wired into CI.
+- **Known limits.** (1) Auto-approve still requires a custodian one-click confirm — no auto-release.
+  (2) Approving writes `final_grades` only for subject codes that resolve to known subjects and only
+  when no final grade already exists for the (student, subject, term). (3) A scanned card created
+  without a `fileUrl` (legacy test path) simply stays `ocr_status=queued` with no job.
