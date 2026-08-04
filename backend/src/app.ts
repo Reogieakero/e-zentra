@@ -24,7 +24,21 @@ export function createApp() {
   app.use(
     helmet({
       hsts: config.security.enableHsts,
-      contentSecurityPolicy: config.isProd ? undefined : false,
+      contentSecurityPolicy: config.isProd
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'"],
+              objectSrc: ["'none'"],
+              baseUri: ["'self'"],
+              frameAncestors: ["'none'"],
+              imgSrc: ["'self'", 'data:'],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+            },
+          }
+        : false,
+      referrerPolicy: { policy: 'same-origin' },
+      crossOriginEmbedderPolicy: false,
     })
   );
 

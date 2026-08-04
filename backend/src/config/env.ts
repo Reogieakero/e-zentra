@@ -23,7 +23,7 @@ const envSchema = z.object({
   RATE_LIMIT_AUTH_PER_MIN: z.coerce.number().default(5),
   LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
   LOGIN_LOCKOUT_MS: z.coerce.number().default(900000),
-  ENABLE_HSTS: boolFromString(false),
+  ENABLE_HSTS: z.string().optional(),
   TRUST_PROXY: z.coerce.number().default(0),
   MAX_UPLOAD_BYTES: z.coerce.number().default(5242880),
   ALLOWED_IMAGE_MIMES: z.string().default('image/jpeg,image/png,image/webp'),
@@ -63,7 +63,7 @@ export const config = {
     loginLockoutMs: parsed.data.LOGIN_LOCKOUT_MS,
   },
   security: {
-    enableHsts: parsed.data.ENABLE_HSTS,
+    enableHsts: parsed.data.ENABLE_HSTS === undefined ? parsed.data.NODE_ENV === 'production' : parsed.data.ENABLE_HSTS === 'true',
     trustProxy: parsed.data.TRUST_PROXY,
     maxUploadBytes: parsed.data.MAX_UPLOAD_BYTES,
     allowedImageMimes: parsed.data.ALLOWED_IMAGE_MIMES.split(',').map((s) => s.trim()),

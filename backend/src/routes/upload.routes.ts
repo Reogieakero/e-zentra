@@ -13,6 +13,7 @@ import { RECORDS_ADMIN_ROLES } from '../middleware/authorize';
 import { validateSchema } from '../middleware/validate';
 import { ApiError } from '../utils/ApiError';
 import { writeAudit } from '../services/audit.service';
+import { sniffMimeType, declaredMimeMatchesContent } from '../utils/fileSniff';
 
 const PHOTO_MIMES = config.security.allowedImageMimes;
 const DOC_MIMES = [...PHOTO_MIMES, 'application/pdf'];
@@ -105,6 +106,14 @@ router.post(
     if (!file) {
       throw ApiError.badRequest('No file uploaded (expected multipart field "file")');
     }
+
+    const header = fs.readFileSync(file.path);
+    const sniffed = sniffMimeType(new Uint8Array(header.subarray(0, 64)));
+    if (!declaredMimeMatchesContent(file.mimetype, sniffed)) {
+      fs.unlinkSync(file.path);
+      throw ApiError.validation(`File content does not match declared type '${file.mimetype}'`);
+    }
+
     const url = `/uploads/${KINDS[kind].dir}/${file.filename}`;
     if (kind === 'profile-photo') {
       await prisma.user.update({ where: { id: req.user!.id }, data: { profilePhotoUrl: url } });

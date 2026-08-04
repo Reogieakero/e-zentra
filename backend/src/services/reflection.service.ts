@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { serializeForOutput } from '../middleware/errorHandler';
 import { parseOffsetPagination } from '../utils/pagination';
+import { writeAudit } from './audit.service';
 
 export interface ReflectionInput {
   studentId: string;
@@ -22,6 +23,7 @@ export async function createReflection(actorId: string, actorRole: import('@pris
   const reflection = await prisma.studentReflection.create({
     data: { studentId: input.studentId, termId: input.termId, subjectId: input.subjectId, prompt: input.prompt, content: input.content },
   });
+  await writeAudit({ actorId, action: 'CREATE', tableName: 'student_reflections', recordId: reflection.id, newValue: input as unknown as Prisma.InputJsonValue });
   return { data: serializeForOutput(reflection) };
 }
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/authenticate';
 import { validateSchema } from '../middleware/validate';
+import { redisRateLimit } from '../middleware/rateLimiter';
 import { uuidParams } from '../schemas/common';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
@@ -11,6 +12,13 @@ import { parseCursorPagination, buildCursorResult } from '../utils/pagination';
 
 const router = Router();
 router.use(authenticate);
+
+const readAllLimiter = redisRateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyPrefix: 'rl:notif-read-all',
+  userScoped: true,
+});
 
 const listQuery = z
   .object({ limit: z.coerce.number().int().min(1).max(100).default(20), cursor: z.string().optional() })
@@ -45,7 +53,7 @@ router.post('/notifications/:id/read', validateSchema({ params: uuidParams }), a
   res.json({ data: serializeForOutput(updated) });
 }));
 
-router.post('/notifications/read-all', asyncHandler(async (req, res) => {
+router.post('/notifications/read-all', readAllLimiter, asyncHandler(async (req, res) => {
   await prisma.notification.updateMany({
     where: { recipientId: req.user!.id, isRead: false },
     data: { isRead: true, readAt: new Date() },

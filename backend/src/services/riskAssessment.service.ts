@@ -4,6 +4,7 @@ import { ApiError } from '../utils/ApiError';
 import { serializeForOutput } from '../middleware/errorHandler';
 import { parseOffsetPagination } from '../utils/pagination';
 import { upsertRiskAssessment } from './risk.service';
+import { writeAudit } from './audit.service';
 
 export interface RiskAssessmentInput {
   studentId: string;
@@ -23,9 +24,7 @@ export async function assessStudentRisk(actorId: string, actorRole: import('@pri
         term: { select: { id: true, termLabel: true } },
       },
     });
-    await prisma.auditLog.create({
-      data: { actorId, action: 'ASSESS', tableName: 'student_risk_assessments', recordId: record?.id ?? input.studentId, newValue: signals as unknown as Prisma.InputJsonValue },
-    });
+    await writeAudit({ actorId, action: 'ASSESS', tableName: 'student_risk_assessments', recordId: record?.id ?? input.studentId, newValue: signals as unknown as Prisma.InputJsonValue });
     return { data: serializeForOutput(record ?? signals) };
   }
   throw ApiError.forbidden('Role is not allowed to perform risk assessments');

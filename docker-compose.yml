@@ -10,12 +10,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://zentra:zentra_dev_password@db:5432/zentra?schema=public
+      DATABASE_URL: postgresql://zentra:${POSTGRES_PASSWORD:-zentra_dev_password}@db:5432/zentra?schema=public
       REDIS_URL: ${REDIS_URL:?REDIS_URL must be set to your Upstash connection string}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret-at-least-32-chars}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret-at-least-32-chars}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET must be set to a secret of at least 32 characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set to a secret of at least 32 characters}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
-      ENABLE_HSTS: ${ENABLE_HSTS:-false}
+      ENABLE_HSTS: ${ENABLE_HSTS:-true}
       TRUST_PROXY: ${TRUST_PROXY:-1}
       UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: zentra
-      POSTGRES_PASSWORD: zentra_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zentra_dev_password}
       POSTGRES_DB: zentra
     volumes:
       - zentra_pgdata:/var/lib/postgresql/data

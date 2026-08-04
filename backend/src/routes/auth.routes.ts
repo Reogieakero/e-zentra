@@ -26,6 +26,13 @@ const authLimiter = redisRateLimit({
   keyPrefix: 'rl:auth',
 });
 
+const sensitiveWriteLimiter = redisRateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  keyPrefix: 'rl:auth-write',
+  userScoped: true,
+});
+
 const registerStudentSchema = z
   .object({
     email: emailSchema,
@@ -136,7 +143,7 @@ router.post('/logout', authLimiter, validateSchema({ body: refreshSchema }), asy
 
 router.use(authenticate);
 
-router.post('/change-password', validateSchema({ body: changePasswordSchema }), asyncHandler(async (req, res) => {
+router.post('/change-password', sensitiveWriteLimiter, validateSchema({ body: changePasswordSchema }), asyncHandler(async (req, res) => {
   const user = req.user!;
   await changePassword(user.id, req.body.currentPassword, req.body.newPassword);
   res.status(204).send();

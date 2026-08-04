@@ -274,7 +274,7 @@ describe('Uploads (gap 1)', () => {
     const res = await request(app)
       .post('/api/v1/uploads/profile-photo')
       .set(auth(rk.tokens.accessToken))
-      .attach('file', Buffer.from('fake-png-bytes'), { filename: 'photo.png', contentType: 'image/png' });
+      .attach('file', Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('png-bytes')]), { filename: 'photo.png', contentType: 'image/png' });
     expect(res.status).toBe(201);
     expect(res.body.data.url).toMatch(/^\/uploads\/profile-photos\/[^/]+\.png$/);
     expect(res.body.data.mimeType).toBe('image/png');
@@ -283,25 +283,32 @@ describe('Uploads (gap 1)', () => {
     expect(user?.profilePhotoUrl).toBe(res.body.data.url);
   });
 
-  it('enforces role, mime type, kind, and presence of file', async () => {
+  it('enforces role, mime type, kind, content signature, and presence of file', async () => {
     const student = await loginAs('student');
     const forbidden = await request(app)
       .post('/api/v1/uploads/report-card')
       .set(auth(student.tokens.accessToken))
-      .attach('file', Buffer.from('x'), { filename: 'x.png', contentType: 'image/png' });
+      .attach('file', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), { filename: 'x.png', contentType: 'image/png' });
     expect(forbidden.status).toBe(403);
 
     const rk = await loginAs('record_keeper');
     const badMime = await request(app)
       .post('/api/v1/uploads/report-card')
       .set(auth(rk.tokens.accessToken))
-      .attach('file', Buffer.from('x'), { filename: 'x.txt', contentType: 'text/plain' });
+      .attach('file', Buffer.from([0x25, 0x50, 0x44, 0x46]), { filename: 'x.txt', contentType: 'text/plain' });
     expect(badMime.status).toBe(422);
+
+    const spoofed = await request(app)
+      .post('/api/v1/uploads/profile-photo')
+      .set(auth(rk.tokens.accessToken))
+      .attach('file', Buffer.from('<html>polyglot</html>'), { filename: 'x.png', contentType: 'image/png' });
+    expect(spoofed.status).toBe(422);
+    expect(spoofed.body.error.message).toMatch(/content does not match/i);
 
     const unknownKind = await request(app)
       .post('/api/v1/uploads/bogus')
       .set(auth(rk.tokens.accessToken))
-      .attach('file', Buffer.from('x'), { filename: 'x.png', contentType: 'image/png' });
+      .attach('file', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), { filename: 'x.png', contentType: 'image/png' });
     expect(unknownKind.status).toBe(422);
 
     const noFile = await request(app)
