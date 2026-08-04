@@ -115,8 +115,36 @@ router.post(
     }
 
     const url = `/uploads/${KINDS[kind].dir}/${file.filename}`;
+
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, profilePhotoUrl: true, storageUsedBytes: true } });
+    if (!user) {
+      fs.unlinkSync(file.path);
+      throw ApiError.unauthorized();
+    }
+
+    let releasedBytes = 0;
+    if (kind === 'profile-photo' && user.profilePhotoUrl) {
+      const previousPath = path.resolve(config.security.uploadDir, user.profilePhotoUrl.replace(/^\/uploads\//, ''));
+      if (fs.existsSync(previousPath)) {
+        try {
+          releasedBytes = fs.statSync(previousPath).size;
+          fs.unlinkSync(previousPath);
+        } catch {
+          releasedBytes = 0;
+        }
+      }
+    }
+
+    const currentUsed = Number(user.storageUsedBytes) - releasedBytes;
+    if (currentUsed + file.size > config.security.maxUserUploadBytes) {
+      fs.unlinkSync(file.path);
+      throw ApiError.rateLimited('Upload quota exceeded');
+    }
+
     if (kind === 'profile-photo') {
-      await prisma.user.update({ where: { id: req.user!.id }, data: { profilePhotoUrl: url } });
+      await prisma.user.update({ where: { id: req.user!.id }, data: { profilePhotoUrl: url, storageUsedBytes: BigInt(Math.max(0, currentUsed + file.size)) } });
+    } else {
+      await prisma.user.update({ where: { id: req.user!.id }, data: { storageUsedBytes: BigInt(Math.max(0, currentUsed + file.size)) } });
     }
     await writeAudit({
       actorId: req.user!.id,

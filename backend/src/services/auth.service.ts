@@ -436,15 +436,25 @@ export async function refreshTokens(refreshToken: string) {
 
   const newRefreshToken = generateRefreshToken();
   const expiresAt = new Date(Date.now() + config.jwt.refreshTtlDays * 24 * 60 * 60 * 1000);
-  await prisma.$transaction([
-    prisma.refreshToken.update({
-      where: { id: stored.id },
+
+  const rotated = await prisma.$transaction(async (tx) => {
+    const revoked = await tx.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
       data: { revokedAt: new Date(), replacedByTokenHash: sha256(newRefreshToken) },
-    }),
-    prisma.refreshToken.create({
+    });
+    if (revoked.count === 0) {
+      return { conflicted: true };
+    }
+    await tx.refreshToken.create({
       data: { userId: user.id, tokenHash: sha256(newRefreshToken), expiresAt },
-    }),
-  ]);
+    });
+    return { conflicted: false };
+  });
+
+  if (rotated.conflicted) {
+    await handleRefreshTokenReuse(user.id, 'Refresh token was concurrently reused (possible token theft)');
+    throw ApiError.unauthorized('Invalid refresh token');
+  }
 
   return {
     accessToken: signAccessToken(user.id),

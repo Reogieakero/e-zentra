@@ -234,6 +234,7 @@ model User {
   provisioningType    ProvisioningType  @default(self_registered) @map("provisioning_type")
   contactNumber       String?           @map("contact_number") @db.VarChar(20)
   profilePhotoUrl     String?           @map("profile_photo_url") @db.Text
+  storageUsedBytes    BigInt            @default(0) @map("storage_used_bytes") @db.BigInt
   accountStatus       AccountStatus     @default(pending) @map("account_status")
   approvedBy          String?           @map("approved_by") @db.Uuid
   approvedById        User?             @relation("AccountApproval", fields: [approvedBy], references: [id])

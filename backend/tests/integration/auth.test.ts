@@ -32,6 +32,33 @@ describe('Auth flow', () => {
     expect(reuseRes.status).toBe(401);
   });
 
+  it('detects concurrent refresh-token reuse and revokes the session family', async () => {
+    const { email } = await registerAndApproveStudent({ gradeLevel: 'grade_9', approverRole: 'record_keeper' });
+    const loginRes = await request(app).post('/api/v1/auth/login').send({ email, password: 'Test@1234' });
+    expect(loginRes.status).toBe(200);
+    const { refreshToken } = loginRes.body.data.tokens;
+
+    const [first, second] = await Promise.all([
+      request(app).post('/api/v1/auth/refresh').send({ refreshToken }),
+      request(app).post('/api/v1/auth/refresh').send({ refreshToken }),
+    ]);
+
+    const statuses = [first.status, second.status];
+    expect(statuses).toContain(200);
+    expect(statuses).toContain(401);
+
+    const [winner] = [first, second].filter((r) => r.status === 200);
+    const [loser] = [first, second].filter((r) => r.status === 401);
+    expect(winner).toBeTruthy();
+    expect(loser).toBeTruthy();
+
+    const winnerRefresh = winner!.body.data.refreshToken;
+    expect(winnerRefresh).toBeTruthy();
+
+    const winnerReuse = await request(app).post('/api/v1/auth/refresh').send({ refreshToken: winnerRefresh });
+    expect(winnerReuse.status).toBe(401);
+  });
+
   it('returns 401 for bad credentials and honors pending accounts', async () => {
     await createUser({ role: 'student', email: 's.badpw@test.edu', password: 'Test@1234', gradeLevel: 'grade_7' });
     const bad = await request(app).post('/api/v1/auth/login').send({ email: 's.badpw@test.edu', password: 'WrongPass1' });

@@ -316,4 +316,30 @@ describe('Uploads (gap 1)', () => {
       .set(auth(rk.tokens.accessToken));
     expect(noFile.status).toBe(400);
   });
+
+  it('tracks per-user storage usage and replaces prior profile photo', async () => {
+    const rk = await loginAs('record_keeper');
+    const png = () => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('aaaaaaaaaaaa')]);
+
+    const first = await request(app)
+      .post('/api/v1/uploads/profile-photo')
+      .set(auth(rk.tokens.accessToken))
+      .attach('file', png(), { filename: 'a.png', contentType: 'image/png' });
+    expect(first.status).toBe(201);
+    const firstUrl = first.body.data.url;
+
+    let user = await prisma.user.findUnique({ where: { id: rk.user.id }, select: { storageUsedBytes: true, profilePhotoUrl: true } });
+    expect(user?.storageUsedBytes).toBe(BigInt(first.body.data.size));
+    expect(user?.profilePhotoUrl).toBe(firstUrl);
+
+    const second = await request(app)
+      .post('/api/v1/uploads/profile-photo')
+      .set(auth(rk.tokens.accessToken))
+      .attach('file', png(), { filename: 'b.png', contentType: 'image/png' });
+    expect(second.status).toBe(201);
+
+    user = await prisma.user.findUnique({ where: { id: rk.user.id }, select: { storageUsedBytes: true, profilePhotoUrl: true } });
+    expect(user?.profilePhotoUrl).toBe(second.body.data.url);
+    expect(user?.storageUsedBytes).toBe(BigInt(second.body.data.size));
+  });
 });
