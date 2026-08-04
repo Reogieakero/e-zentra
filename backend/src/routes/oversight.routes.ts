@@ -62,7 +62,7 @@ const reportCardBody = z
     studentId: z.string().uuid(),
     termId: z.string().uuid(),
     source: z.enum(['system_generated', 'scanned_upload']),
-    fileUrl: z.string().url().optional().nullable(),
+    fileUrl: z.union([z.string().url(), z.string().regex(/^\/uploads\/report-cards\/[0-9a-f-]+\.(jpg|jpeg|png|webp|pdf)$/i)]).optional().nullable(),
   })
   .strict();
 const generateBody = z.object({ termId: z.string().uuid() }).strict();

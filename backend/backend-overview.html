@@ -234,6 +234,7 @@
       <a href="#flags">Flags &amp; Escalation</a>
       <a href="#links">Parent Links</a>
       <a href="#reports">Report Cards</a>
+      <a href="#ocr">OCR Pipeline</a>
       <a href="#uploads">Uploads</a>
       <a href="#notifications">Notifications</a>
       <a href="#cross">Cross-cutting</a>
@@ -263,9 +264,9 @@
     </div>
     <div class="stat-grid">
       <div class="stat"><b>23</b><span>service modules</span></div>
-      <div class="stat"><b>72</b><span>OpenAPI paths</span></div>
-      <div class="stat"><b>63</b><span>automated tests</span></div>
-      <div class="stat"><b>6</b><span>DB migrations</span></div>
+      <div class="stat"><b>76</b><span>OpenAPI paths</span></div>
+      <div class="stat"><b>88</b><span>automated tests</span></div>
+      <div class="stat"><b>8</b><span>DB migrations</span></div>
       <div class="stat"><b>9</b><span>roles</span></div>
       <div class="stat"><b>3</b><span>risk signals</span></div>
     </div>
@@ -653,8 +654,8 @@
       <div class="card">
         <h3>Manual path</h3>
         <div class="timeline">
-          <div class="tl-item"><div class="t">Create</div><div class="d"><span class="mono">POST /report-cards</span> — custodian creates a row (source <code class="inline">scanned_upload</code> or <code class="inline">system_generated</code>), status <code class="inline">pending</code>.</div></div>
-          <div class="tl-item"><div class="t">Mark ready</div><div class="d"><span class="mono">POST /report-cards/:id/ready</span> → status <code class="inline">ready</code>.</div></div>
+          <div class="tl-item"><div class="t">Create</div><div class="d"><span class="mono">POST /report-cards</span> — custodian creates a row (source <code class="inline">scanned_upload</code> or <code class="inline">system_generated</code>), status <code class="inline">pending</code>. A scanned upload immediately enqueues an OCR job (<span class="mono">ocrStatus: queued</span>).</div></div>
+          <div class="tl-item"><div class="t">OCR / Mark ready</div><div class="d">Scanned cards are extracted &amp; staged (see the OCR Pipeline section) before a custodian confirms; manual cards use <span class="mono">POST /report-cards/:id/ready</span> → status <code class="inline">ready</code>.</div></div>
           <div class="tl-item"><div class="t">Release</div><div class="d"><span class="mono">POST /report-cards/:id/release</span> → <code class="inline">released</code>; student + confirmed parents are notified.</div></div>
         </div>
       </div>
@@ -683,11 +684,76 @@
 
 <hr class="divider" />
 
+<!-- ============ OCR PIPELINE ============ -->
+<section class="section" id="ocr">
+  <div class="container">
+    <div class="section-head">
+      <p class="overline">10 · OCR</p>
+      <h2>Scanned report-card OCR pipeline</h2>
+      <p>Scanned report cards run through an asynchronous extraction pipeline: an engine reads the document into structured fields, the result is staged for review, and official grades are only written to <span class="mono">final_grades</span> after a custodian confirms. OCR output is staging data — never auto-released.</p>
+    </div>
+
+    <div class="flow" style="margin-bottom:24px">
+      <div class="flow-step"><div class="n">1</div><div class="t">Upload &amp; enqueue</div><div class="d"><code>scanned_upload</code> card → job created, file sha256-hashed, card marked <span class="mono">queued</span></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="n">2</div><div class="t">Extract</div><div class="d">Worker polls queued jobs → engine (fake / paddle / textract) reads LRN, subjects, grades</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="n">3</div><div class="t">Stage</div><div class="d">Extraction stored with confidence + per-row validation; card → <span class="mono">passed</span>/<span class="mono">partial</span></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="n">4</div><div class="t">Review</div><div class="d">Custodian corrects grades &amp; confirms, or rejects the extraction</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="n">5</div><div class="t">Finalize</div><div class="d">Final grades written, card → <span class="mono">ready</span>, audited (only on approval)</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET /ocr/jobs/:id</code></td><td>Job status + error detail — owner or records admin</td></tr>
+            <tr><td><code>GET /report-cards/:id/extraction</code></td><td>Staged extraction: confidence, student match, grade rows, validation</td></tr>
+            <tr><td><code>POST /report-cards/:id/extraction/approve</code></td><td>Confirm — optional <span class="mono">corrections</span> map overrides grades/remarks</td></tr>
+            <tr><td><code>POST /report-cards/:id/extraction/reject</code></td><td>Reject a <span class="mono">needs_review</span> extraction → card <span class="mono">failed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Design guarantees</h3>
+        <p><b>Async by default:</b> scanning a PDF takes seconds, so jobs are processed by an in-process polling worker (<span class="mono">startOcrWorker</span>) rather than inside the HTTP request. Deliberately DB-backed, not BullMQ — preserving the no-Lua Upstash convention.</p>
+        <p><b>Authority is human:</b> even a high-confidence extraction is staged as <span class="mono">needs_review</span> with an <span class="mono">autoApprove</span> hint. Only the custodian's one-click confirm writes to <span class="mono">final_grades</span> (which already exist are skipped — no duplicates).</p>
+        <p style="margin-bottom:0"><b>Safety:</b> grades are range-validated (60–100), unknown subject codes flag the row, student match is resolved against the student profile by LRN, and every enqueue / complete / fail / approve / reject is audit-logged.</p>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-top:24px">
+      <div class="card">
+        <h3>Engines</h3>
+        <p class="card-sub">Swappable via config</p>
+        <p><code class="inline">OCR_ENGINE</code> selects <span class="mono">fake</span> (tests), <span class="mono">paddle</span>, or <span class="mono">textract</span>. Paddle is a self-hosted FastAPI microservice (<code class="inline">ocr-service/</code>, PP-Structure) so PII never leaves the school — cloud engines behind the same interface.</p>
+      </div>
+      <div class="card">
+        <h3>Confidence</h3>
+        <p class="card-sub">Two thresholds</p>
+        <p><span class="mono">OCR_CONFIDENCE_THRESHOLD</span> (0.9) flags low-confidence extractions; <span class="mono">OCR_AUTO_APPROVE_THRESHOLD</span> (0.97) marks a staged extraction as <span class="mono">autoApprove</span>-ready for one-click confirm.</p>
+      </div>
+      <div class="card">
+        <h3>Failure handling</h3>
+        <p class="card-sub">Never silently drops work</p>
+        <p>Engine errors mark the job + card <span class="mono">failed</span> with an <span class="mono">errorCode</span>/<span class="mono">errorMessage</span> and an <span class="mono">OCR_FAILED</span> audit entry, so records staff can re-upload and retry.</p>
+      </div>
+    </div>
+
+    <div class="callout"><b>Why not auto-release:</b> OCR misreads matter on official records. Extractions live in a staging table (<span class="mono">report_card_extractions</span>) and the final grades transaction runs only on explicit approval — the same audit trail and <span class="mono">pending → ready</span> gate as manual cards.</div>
+  </div>
+</section>
+
+<hr class="divider" />
+
 <!-- ============ UPLOADS ============ -->
 <section class="section" id="uploads">
   <div class="container">
     <div class="section-head">
-      <p class="overline">10 · Files</p>
+      <p class="overline">11 · Files</p>
       <h2>File uploads</h2>
       <p>A single multipart endpoint, three kinds. Every kind restricts <i>which roles</i> may upload and <i>which MIME types</i> are accepted.</p>
     </div>
@@ -697,7 +763,7 @@
         <thead><tr><th>Kind</th><th>Allowed roles</th><th>Acceptable MIME types</th><th>Side effects</th></tr></thead>
         <tbody>
           <tr><td><span class="mono">profile-photo</span></td><td>student · parent · teacher · staff</td><td>image/jpeg · image/png · image/webp</td><td>Updates <code>users.profilePhotoUrl</code></td></tr>
-          <tr><td><span class="mono">report-card</span></td><td>record_keeper · registrar · principal</td><td>images + <code>application/pdf</code></td><td>Stored under <code>report-cards/</code></td></tr>
+          <tr><td><span class="mono">report-card</span></td><td>record_keeper · registrar · principal</td><td>images + <code>application/pdf</code></td><td>Stored under <code>report-cards/</code>; creating a scanned card enqueues an OCR job</td></tr>
           <tr><td><span class="mono">adm-photo</span></td><td>adm_coordinator</td><td>images</td><td>Stored under <code>adm-photos/</code></td></tr>
         </tbody>
       </table>
@@ -713,7 +779,7 @@
 <section class="section" id="notifications">
   <div class="container">
     <div class="section-head">
-      <p class="overline">11 · Inbox</p>
+      <p class="overline">12 · Inbox</p>
       <h2>Notifications &amp; audit trail</h2>
       <p>Two cross-cutting systems keep every stakeholder in the loop and every change provable: a per-user notification inbox with fan-out to confirmed parents, and an immutable audit log. Both are written synchronously inside the same service call that triggers them.</p>
     </div>
@@ -825,7 +891,7 @@
 <section class="section" id="cross">
   <div class="container">
     <div class="section-head">
-      <p class="overline">12 · Shared</p>
+      <p class="overline">13 · Shared</p>
       <h2>Cross-cutting concerns</h2>
       <p>Rate limiting, caching, error normalization, and API documentation are shared infrastructure used by every module.</p>
     </div>
@@ -872,7 +938,7 @@
       <div class="card">
         <h3>API documentation</h3>
         <p class="card-sub">OpenAPI 3.1</p>
-        <p><span class="mono">src/openapi.ts</span> documents <b>72 paths</b> across every module — auth, academic structure, anecdotal &amp; referrals, health &amp; home visits, ADM, attendance &amp; grading, risk &amp; oversight, sections, parent links, uploads, and notifications.</p>
+        <p><span class="mono">src/openapi.ts</span> documents <b>76 paths</b> across every module — auth, academic structure, anecdotal &amp; referrals, health &amp; home visits, ADM, attendance &amp; grading, risk &amp; oversight, sections, parent links, uploads, notifications, and the OCR pipeline.</p>
         <p style="margin-bottom:0">Interactive docs are served at <code class="inline">/api-docs</code>, with Bearer-JWT security defined once in the components.</p>
       </div>
     </div>
@@ -885,7 +951,7 @@
 <section class="section" id="infra">
   <div class="container">
     <div class="section-head">
-      <p class="overline">13 · Platform</p>
+      <p class="overline">14 · Platform</p>
       <h2>Infrastructure &amp; environment</h2>
       <p>The backend runs fully in the cloud: Postgres on Supabase, Redis on Upstash. Everything the app needs is configured through a validated <code>.env</code>.</p>
     </div>
@@ -907,7 +973,7 @@
       </div>
       <div class="card">
         <h3>Deployment facts</h3>
-        <p>Migrations are applied non-interactively with <code class="inline">npx prisma migrate deploy</code> — the Supabase DB and the test DB both get the same 6 migrations.</p>
+        <p>Migrations are applied non-interactively with <code class="inline">npx prisma migrate deploy</code> — the Supabase DB and the test DB both get the same 8 migrations.</p>
         <p>Docker Compose starts only Postgres; Redis is not bundled because Upstash is the production store, and <span class="mono">REDIS_URL</span> is required (<span class="mono">${REDIS_URL:?}</span>).</p>
         <p style="margin-bottom:0">RLS is enabled via migration; the app also validates every env var through Zod at boot and fails fast with a clear message.</p>
       </div>
@@ -921,7 +987,7 @@
 <section class="section" id="quality">
   <div class="container">
     <div class="section-head">
-      <p class="overline">14 · Confidence</p>
+      <p class="overline">15 · Confidence</p>
       <h2>Testing &amp; quality gates</h2>
       <p>Verification is continuous and automated — every change is gated by typecheck, compile, and the full integration suite before merge.</p>
     </div>
@@ -939,12 +1005,12 @@
       </div>
       <div class="card">
         <h3>Tests</h3>
-        <p class="card-sub"><code>npm test</code> — 63 tests · 10 suites</p>
+        <p class="card-sub"><code>npm test</code> — 88 tests · 14 suites</p>
         <p>supertest integration tests against a dedicated <code>zentra_test</code> DB. Must run with <code class="inline">--runInBand</code> because all suites share one database.</p>
       </div>
     </div>
 
-    <div class="callout"><b>Covered end-to-end:</b> auth + refresh rotation, grade-band approval ownership, grading + DepEd transmutation, risk assessment, record-flag escalation (manual and auto), parent-link request/confirm/reject, report-card generation idempotency, uploads (role/MIME/size gating), rate limiting, and attendance — plus pure unit tests for grade computation, pagination, confidentiality redaction, and band logic.</div>
+    <div class="callout"><b>Covered end-to-end:</b> auth + refresh rotation, grade-band approval ownership, grading + DepEd transmutation, risk assessment, record-flag escalation (manual and auto), parent-link request/confirm/reject, report-card generation idempotency, the full scanned-card OCR lifecycle (enqueue → extract → approve/reject with corrections), uploads (role/MIME/size gating), rate limiting, and attendance — plus pure unit tests for grade computation, pagination, confidentiality redaction, and band logic.</div>
   </div>
 </section>
 

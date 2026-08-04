@@ -845,6 +845,74 @@ export const openApiSpec = {
         responses: { 200: { description: 'Released' } },
       },
     },
+    '/ocr/jobs/{id}': {
+      get: {
+        tags: ['Risk & Oversight'],
+        summary: 'Get an OCR job and its status (job owner or records admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { 200: { description: 'OCR job' } },
+      },
+    },
+    '/report-cards/{id}/extraction': {
+      get: {
+        tags: ['Risk & Oversight'],
+        summary: 'Get the staged OCR extraction for a scanned report card (records admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { 200: { description: 'Extraction' } },
+      },
+    },
+    '/report-cards/{id}/extraction/approve': {
+      post: {
+        tags: ['Risk & Oversight'],
+        summary: 'Approve a verified OCR extraction; final grades are written and the card becomes ready (records admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  corrections: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        subjectCode: { type: 'string' },
+                        from: { type: 'number', nullable: true },
+                        to: { type: 'number', nullable: true },
+                        remarks: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Approved' } },
+      },
+    },
+    '/report-cards/{id}/extraction/reject': {
+      post: {
+        tags: ['Risk & Oversight'],
+        summary: 'Reject an OCR extraction that cannot be verified (records admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: { type: 'object', properties: { reason: { type: 'string' } } },
+            },
+          },
+        },
+        responses: { 200: { description: 'Rejected' } },
+      },
+    },
 
     
     '/sections': {

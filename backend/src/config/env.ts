@@ -32,6 +32,13 @@ const envSchema = z.object({
   RECORD_FLAG_ESCALATION_ENABLED: boolFromString(true),
   RECORD_FLAG_ESCALATION_DAYS: z.coerce.number().default(7),
   ENABLE_API_DOCS: z.string().optional(),
+  OCR_ENGINE: z.enum(['fake', 'paddle', 'textract']).default('fake'),
+  OCR_SERVICE_URL: z.string().url().optional(),
+  OCR_SERVICE_TOKEN: z.string().optional(),
+  OCR_CONFIDENCE_THRESHOLD: z.coerce.number().default(0.9),
+  OCR_AUTO_APPROVE_THRESHOLD: z.coerce.number().default(0.97),
+  OCR_JOB_BATCH_SIZE: z.coerce.number().default(5),
+  OCR_JOB_POLL_MS: z.coerce.number().default(2000),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -74,6 +81,15 @@ export const config = {
   flags: {
     recordFlagEscalationEnabled: parsed.data.RECORD_FLAG_ESCALATION_ENABLED,
     recordFlagEscalationDays: parsed.data.RECORD_FLAG_ESCALATION_DAYS,
+  },
+  ocr: {
+    engine: parsed.data.OCR_ENGINE,
+    serviceUrl: parsed.data.OCR_SERVICE_URL,
+    serviceToken: parsed.data.OCR_SERVICE_TOKEN,
+    confidenceThreshold: parsed.data.OCR_CONFIDENCE_THRESHOLD,
+    autoApproveThreshold: parsed.data.OCR_AUTO_APPROVE_THRESHOLD,
+    jobBatchSize: parsed.data.OCR_JOB_BATCH_SIZE,
+    jobPollMs: parsed.data.OCR_JOB_POLL_MS,
   },
   enableApiDocs: parsed.data.ENABLE_API_DOCS === undefined ? parsed.data.NODE_ENV !== 'production' : parsed.data.ENABLE_API_DOCS === 'true',
 };

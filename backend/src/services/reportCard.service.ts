@@ -33,12 +33,19 @@ export async function createReportCard(actorId: string, actorRole: import('@pris
       termId: input.termId,
       source: input.source,
       fileUrl: input.fileUrl,
-      status: input.source === 'scanned_upload' ? 'pending' : 'pending',
+      status: 'pending',
+      ocrStatus: input.source === 'scanned_upload' ? 'queued' : 'not_applicable',
       scannedBy: input.source === 'scanned_upload' ? actorId : null,
       managedBy: actorId,
     },
   });
   await writeAudit({ actorId, action: 'CREATE', tableName: 'report_cards', recordId: card.id, newValue: input as unknown as Prisma.InputJsonValue });
+
+  if (input.source === 'scanned_upload' && input.fileUrl) {
+    const { enqueueReportCardOcr } = await import('./ocr.service');
+    await enqueueReportCardOcr({ actorId, kind: 'report-card', fileUrl: input.fileUrl, reportCardId: card.id });
+  }
+
   return { data: serializeForOutput(card) };
 }
 
