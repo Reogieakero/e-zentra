@@ -102,7 +102,7 @@ router.post('/reflections', requireRole('student', 'teacher', 'guidance_counselo
 
 
 router.get('/report-cards', requireRole('record_keeper', 'registrar', 'principal', 'teacher', 'guidance_counselor', 'student', 'parent'), validateSchema({ query: reportCardListQuery }), asyncHandler(async (req, res) => {
-  res.json(await listReportCards(req.query as Record<string, unknown>));
+  res.json(await listReportCards(req.user!, req.query as Record<string, unknown>));
 }));
 router.post('/report-cards/generate', requireRole('record_keeper', 'registrar', 'principal'), validateSchema({ body: generateBody }), asyncHandler(async (req, res) => {
   const result = await generateReportCardsForTerm(req.user!.id, req.user!.role, req.body.termId);

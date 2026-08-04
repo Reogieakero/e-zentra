@@ -135,12 +135,17 @@ export async function createAssessment(actorId: string, actorRole: import('@pris
   return { data: serializeForOutput(assessment) };
 }
 
-export async function listAssessments(query: Record<string, unknown>) {
+export async function listAssessments(viewer: { id: string; role: import('@prisma/client').Role }, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.AssessmentWhereInput = {};
   if (query.sectionId) where.sectionId = query.sectionId as string;
   if (query.subjectId) where.subjectId = query.subjectId as string;
   if (query.termId) where.termId = query.termId as string;
+  if (viewer.role === 'teacher') {
+    const { getTeacherScopedSectionIds } = await import('../utils/access');
+    const sectionIds = await getTeacherScopedSectionIds(viewer.id);
+    where.sectionId = { in: sectionIds };
+  }
 
   const [total, rows] = await Promise.all([
     prisma.assessment.count({ where }),
@@ -182,6 +187,14 @@ export async function recordStudentGrade(actorId: string, actorRole: import('@pr
   const assessment = await prisma.assessment.findUnique({ where: { id: input.assessmentId } });
   if (!assessment) throw ApiError.notFound('Assessment not found');
   await assertTeacherTeaches(actorId, assessment.subjectId, assessment.sectionId);
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: input.studentId },
+    select: { id: true, sectionId: true },
+  });
+  if (!student) throw ApiError.badRequest('studentId must reference a student');
+  if (student.sectionId !== assessment.sectionId) {
+    throw ApiError.forbidden('This student is not enrolled in the section for this assessment');
+  }
   if (input.score < 0 || input.score > assessment.maxScore.toNumber()) {
     throw ApiError.validation(`score must be between 0 and maxScore (${assessment.maxScore.toNumber()})`);
   }
@@ -201,11 +214,16 @@ export async function recordStudentGrade(actorId: string, actorRole: import('@pr
   return { data: serializeForOutput(grade) };
 }
 
-export async function listStudentGrades(query: Record<string, unknown>) {
+export async function listStudentGrades(viewer: { id: string; role: import('@prisma/client').Role }, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.StudentGradeWhereInput = {};
   if (query.assessmentId) where.assessmentId = query.assessmentId as string;
   if (query.studentId) where.studentId = query.studentId as string;
+  if (viewer.role === 'teacher') {
+    const { getTeacherScopedSectionIds } = await import('../utils/access');
+    const sectionIds = await getTeacherScopedSectionIds(viewer.id);
+    where.assessment = { sectionId: { in: sectionIds } };
+  }
 
   const [total, rows] = await Promise.all([
     prisma.studentGrade.count({ where }),
@@ -327,13 +345,18 @@ export async function lockFinalGrade(actorId: string, actorRole: import('@prisma
   return { data: serializeForOutput(updated) };
 }
 
-export async function listFinalGrades(query: Record<string, unknown>) {
+export async function listFinalGrades(viewer: { id: string; role: import('@prisma/client').Role }, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.FinalGradeWhereInput = {};
   if (query.studentId) where.studentId = query.studentId as string;
   if (query.subjectId) where.subjectId = query.subjectId as string;
   if (query.termId) where.termId = query.termId as string;
   if (query.sectionId) where.sectionId = query.sectionId as string;
+  if (viewer.role === 'teacher') {
+    const { getTeacherScopedSectionIds } = await import('../utils/access');
+    const sectionIds = await getTeacherScopedSectionIds(viewer.id);
+    where.sectionId = { in: sectionIds };
+  }
 
   const [total, rows] = await Promise.all([
     prisma.finalGrade.count({ where }),

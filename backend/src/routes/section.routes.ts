@@ -25,6 +25,10 @@ const listQuery = z
   })
   .strict();
 
+const rosterQuery = z
+  .object({ page: z.coerce.number().int().min(1).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(20) })
+  .strict();
+
 const idParams = z.object({ id: z.string().uuid() }).strict();
 
 const createBody = z
@@ -63,9 +67,9 @@ router.get('/:id', validateSchema({ params: idParams }), asyncHandler(async (req
   res.json({ data });
 }));
 
-router.get('/:id/students', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.get('/:id/students', requireRole('teacher', 'record_keeper', 'registrar', 'principal', 'guidance_counselor', 'nurse', 'adm_coordinator'), validateSchema({ params: idParams, query: rosterQuery }), asyncHandler(async (req, res) => {
   const q = req.query as unknown as { page: number; pageSize: number };
-  res.json(await listSectionStudents(req.params.id, q.page, q.pageSize));
+  res.json(await listSectionStudents(req.user!, req.params.id, q.page, q.pageSize));
 }));
 
 router.post(

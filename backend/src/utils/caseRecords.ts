@@ -1,7 +1,6 @@
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
-import { redactSensitiveFields, ConfidentialityViewer } from '../utils/confidentiality';
 
 export async function assertCanFileCaseRecord(actorId: string, actorRole: Role, sectionId: string): Promise<void> {
   if (actorRole === 'guidance_counselor') return;
@@ -26,21 +25,6 @@ export async function isAdviserOfStudent(actorId: string, studentId: string): Pr
     select: { section: { select: { adviserId: true } } },
   });
   return profile?.section?.adviserId === actorId;
-}
-
-export interface RedactOptions {
-  viewer: ConfidentialityViewer;
-  authorId: string | null | undefined;
-  alwaysVisible: string[];
-  sensitive: string[];
-}
-
-export function redactRecord<T extends Record<string, unknown>>(record: T, options: RedactOptions): T {
-  const visible = { ...record };
-  const level = record.confidentiality_level as 'confidential' | 'internal_staff' | 'parent_visible' | undefined;
-  if (!level) return visible;
-  const redacted = redactSensitiveFields(visible, level, options.viewer, options.authorId, options.sensitive as (keyof T & string)[]);
-  return redacted;
 }
 
 export async function assertCanViewStudentRecords(viewer: { id: string; role: Role }, studentId: string): Promise<void> {

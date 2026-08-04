@@ -84,9 +84,11 @@ export async function markAttendance(actorId: string, input: MarkAttendanceInput
   return { data: { created: result.count, skipped: input.records.length - result.count } };
 }
 
-export async function listSectionAttendance(sectionId: string, query: Record<string, unknown>) {
+export async function listSectionAttendance(viewer: { id: string; role: import('@prisma/client').Role }, sectionId: string, query: Record<string, unknown>) {
   const section = await prisma.section.findUnique({ where: { id: sectionId } });
   if (!section) throw ApiError.notFound('Section not found');
+  const { assertCanViewSectionAttendance } = await import('../utils/access');
+  await assertCanViewSectionAttendance(viewer, section);
 
   const cursor = parseCursorPagination(query);
   const where: Prisma.AttendanceRecordWhereInput = { sectionId };
@@ -105,7 +107,7 @@ export async function listSectionAttendance(sectionId: string, query: Record<str
     orderBy: [{ attendanceDate: 'desc' }, { id: 'desc' }],
     take: cursor.take + 1,
     ...(cursor.cursor ? { cursor: { id: cursor.cursor }, skip: 1 } : {}),
-    include: { student: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    include: { student: { select: { id: true, firstName: true, lastName: true } } },
   });
 
   const paginated = buildCursorResult(records, cursor);

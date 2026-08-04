@@ -134,9 +134,11 @@ export async function updateSection(actorId: string, actorRole: import('@prisma/
   return { data: serializeForOutput(section) };
 }
 
-export async function listSectionStudents(sectionId: string, page: number, pageSize: number) {
+export async function listSectionStudents(viewer: { id: string; role: import('@prisma/client').Role }, sectionId: string, page: number, pageSize: number) {
   const section = await prisma.section.findUnique({ where: { id: sectionId } });
   if (!section) throw ApiError.notFound('Section not found');
+  const { assertCanViewSectionStudents } = await import('../utils/access');
+  await assertCanViewSectionStudents(viewer, section);
 
   const where = { sectionId };
   const [total, students] = await Promise.all([
@@ -146,7 +148,7 @@ export async function listSectionStudents(sectionId: string, page: number, pageS
       orderBy: { id: 'asc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true } } },
     }),
   ]);
   return { data: serializeForOutput(students), page, pageSize, total, hasMore: page * pageSize < total };

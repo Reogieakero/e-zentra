@@ -93,9 +93,10 @@ router.post(
 
 router.get(
   '/sections/:id/attendance',
+  requireRole('teacher', 'record_keeper', 'registrar', 'principal', 'guidance_counselor'),
   validateSchema({ params: idParams, query: attendanceListQuery }),
   asyncHandler(async (req, res) => {
-    const result = await listSectionAttendance(req.params.id, req.query as Record<string, unknown>);
+    const result = await listSectionAttendance(req.user!, req.params.id, req.query as Record<string, unknown>);
     res.json(result);
   })
 );

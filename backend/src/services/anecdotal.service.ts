@@ -7,6 +7,7 @@ import { serializeForOutput } from '../middleware/errorHandler';
 import { parseOffsetPagination } from '../utils/pagination';
 import { assertCanFileCaseRecord, assertCanViewStudentRecords } from '../utils/caseRecords';
 import { redactSensitiveFields } from '../utils/confidentiality';
+import { isBandOwner } from '../utils/access';
 
 export interface CreateAnecdotalInput {
   studentId: string;
@@ -59,10 +60,16 @@ export async function createAnecdotal(actorId: string, actorRole: import('@prism
 export async function listAnecdotalRecords(viewerId: string, viewerRole: import('@prisma/client').Role, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.AnecdotalRecordWhereInput = {};
-  if (query.studentId) where.studentId = query.studentId as string;
   if (query.sectionId) where.sectionId = query.sectionId as string;
   if (query.termId) where.termId = query.termId as string;
   if (viewerRole === 'student') where.studentId = viewerId;
+  else if (viewerRole === 'parent') {
+    const { getConfirmedChildIds } = await import('../utils/access');
+    const childIds = await getConfirmedChildIds(viewerId);
+    const requested = query.studentId as string | undefined;
+    if (requested && !childIds.includes(requested)) return emptyPage(offset);
+    where.studentId = requested ? requested : { in: childIds };
+  } else if (query.studentId) where.studentId = query.studentId as string;
 
   const [total, rows] = await Promise.all([
     prisma.anecdotalRecord.count({ where }),
@@ -83,6 +90,10 @@ export async function listAnecdotalRecords(viewerId: string, viewerRole: import(
 
   const data = rows.map((row) => redactAnecdotalFor(row, viewerId, viewerRole));
   return { data: serializeForOutput(data), page: offset.page, pageSize: offset.pageSize, total, hasMore: offset.page * offset.pageSize < total };
+}
+
+function emptyPage(offset: ReturnType<typeof parseOffsetPagination>) {
+  return { data: [], page: offset.page, pageSize: offset.pageSize, total: 0, hasMore: false };
 }
 
 export async function getAnecdotal(viewerId: string, viewerRole: import('@prisma/client').Role, id: string) {
@@ -158,12 +169,20 @@ export async function createReferral(actorId: string, actorRole: import('@prisma
   return { data: serializeForOutput(referral) };
 }
 
-export async function listReferrals(query: Record<string, unknown>) {
+export async function listReferrals(viewer: { id: string; role: import('@prisma/client').Role }, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.ReferralWhereInput = {};
   if (query.status) where.status = query.status as Prisma.ReferralWhereInput['status'];
   if (query.referredToRole) where.referredToRole = query.referredToRole as ReferredToRole;
   if (query.studentId) where.anecdotalRecord = { studentId: query.studentId as string };
+  if (viewer.role === 'teacher') {
+    const { getTeacherScopedSectionIds } = await import('../utils/access');
+    const sectionIds = await getTeacherScopedSectionIds(viewer.id);
+    where.anecdotalRecord = {
+      ...((where.anecdotalRecord ?? {}) as Prisma.AnecdotalRecordWhereInput),
+      sectionId: { in: sectionIds },
+    } as Prisma.AnecdotalRecordWhereInput;
+  }
 
   const [total, rows] = await Promise.all([
     prisma.referral.count({ where }),
@@ -178,22 +197,77 @@ export async function listReferrals(query: Record<string, unknown>) {
       },
     }),
   ]);
-  return { data: serializeForOutput(rows), page: offset.page, pageSize: offset.pageSize, total, hasMore: offset.page * offset.pageSize < total };
+  const data = rows.map((row) =>
+    redactSensitiveFields(row, row.confidentialityLevel, { role: viewer.role, id: viewer.id }, row.referredBy, [
+      'reasonForReferral',
+    ] as (keyof typeof row & string)[])
+  );
+  return { data: serializeForOutput(data), page: offset.page, pageSize: offset.pageSize, total, hasMore: offset.page * offset.pageSize < total };
 }
 
-export async function getReferral(id: string) {
+export async function getReferral(viewer: { id: string; role: import('@prisma/client').Role }, id: string) {
   const referral = await prisma.referral.findUnique({
     where: { id },
     include: {
       referred: { select: { id: true, firstName: true, lastName: true } },
-      anecdotalRecord: { select: { id: true, studentId: true, student: { select: { id: true, firstName: true, lastName: true } } } },
-      healthRecords: true,
-      homeVisitations: true,
-      admLearnerProfiles: true,
+      anecdotalRecord: {
+        select: {
+          id: true,
+          studentId: true,
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              studentProfile: { select: { gradeLevel: true } },
+            },
+          },
+        },
+      },
     },
   });
   if (!referral) throw ApiError.notFound('Referral not found');
-  return { data: serializeForOutput(referral) };
+
+  const studentId = referral.anecdotalRecord.studentId;
+  const gradeLevel = referral.anecdotalRecord.student.studentProfile?.gradeLevel ?? null;
+  const { assertCanViewStudentRecords } = await import('../utils/caseRecords');
+  await assertCanViewStudentRecords(viewer, studentId);
+
+  const isReferredParty = referral.referredToRole === viewer.role;
+  const isPrincipal = viewer.role === 'principal';
+  const isBandOwnerViewer = gradeLevel ? isBandOwner(viewer.role, gradeLevel) : false;
+  const mayViewNested = isReferredParty || isPrincipal || isBandOwnerViewer;
+
+  const payload: Record<string, unknown> = {
+    ...referral,
+    anecdotalRecord: {
+      id: referral.anecdotalRecord.id,
+      studentId,
+      student: referral.anecdotalRecord.student,
+    },
+  };
+  if (mayViewNested) {
+    const [healthRecords, homeVisitations, admLearnerProfiles] = await Promise.all([
+      prisma.healthRecord.findMany({
+        where: { referralId: id },
+        include: { attended: { select: { id: true, firstName: true, lastName: true } } },
+      }),
+      prisma.homeVisitationRecord.findMany({
+        where: { referralId: id },
+        include: { conducted: { select: { id: true, firstName: true, lastName: true } } },
+      }),
+      prisma.admLearnerProfile.findMany({ where: { referralId: id } }),
+    ]);
+    payload.healthRecords = healthRecords;
+    payload.homeVisitations = homeVisitations;
+    payload.admLearnerProfiles = admLearnerProfiles;
+  } else {
+    payload.healthRecords = [];
+    payload.homeVisitations = [];
+    payload.admLearnerProfiles = [];
+  }
+
+  return { data: serializeForOutput(payload) };
 }
 
 export async function updateReferralStatus(actorId: string, id: string, status: 'pending' | 'in_progress' | 'completed') {

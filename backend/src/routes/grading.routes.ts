@@ -82,7 +82,7 @@ router.post('/grade-components', requireRole('record_keeper', 'registrar'), vali
 }));
 
 router.get('/assessments', requireRole('teacher', 'record_keeper', 'registrar', 'principal', 'guidance_counselor'), validateSchema({ query: assessmentListQuery }), asyncHandler(async (req, res) => {
-  res.json(await listAssessments(req.query as Record<string, unknown>));
+  res.json(await listAssessments(req.user!, req.query as Record<string, unknown>));
 }));
 router.post('/assessments', requireRole('teacher'), validateSchema({ body: assessmentBody }), asyncHandler(async (req, res) => {
   const { data } = await createAssessment(req.user!.id, req.user!.role, req.body);
@@ -90,7 +90,7 @@ router.post('/assessments', requireRole('teacher'), validateSchema({ body: asses
 }));
 
 router.get('/student-grades', requireRole('teacher', 'record_keeper', 'registrar', 'principal'), validateSchema({ query: gradeListQuery }), asyncHandler(async (req, res) => {
-  res.json(await listStudentGrades(req.query as Record<string, unknown>));
+  res.json(await listStudentGrades(req.user!, req.query as Record<string, unknown>));
 }));
 router.post('/student-grades', requireRole('teacher'), validateSchema({ body: studentGradeBody }), asyncHandler(async (req, res) => {
   const { data } = await recordStudentGrade(req.user!.id, req.user!.role, req.body);
@@ -98,7 +98,7 @@ router.post('/student-grades', requireRole('teacher'), validateSchema({ body: st
 }));
 
 router.get('/final-grades', requireRole('teacher', 'record_keeper', 'registrar', 'principal', 'guidance_counselor'), validateSchema({ query: finalGradeListQuery }), asyncHandler(async (req, res) => {
-  res.json(await listFinalGrades(req.query as Record<string, unknown>));
+  res.json(await listFinalGrades(req.user!, req.query as Record<string, unknown>));
 }));
 router.post('/final-grades/compute', requireRole('teacher'), validateSchema({ body: computeBody }), asyncHandler(async (req, res) => {
   const { data } = await upsertFinalGrade(req.user!.id, req.user!.role, req.body.subjectId, req.body.termId, req.body.studentId, req.body.sectionId);

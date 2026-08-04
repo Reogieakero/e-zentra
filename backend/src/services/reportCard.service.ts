@@ -126,12 +126,35 @@ export async function generateReportCardsForTerm(actorId: string, actorRole: imp
   return { data: serializeForOutput(created), created: created.length };
 }
 
-export async function listReportCards(query: Record<string, unknown>) {
+export async function listReportCards(viewer: { id: string; role: import('@prisma/client').Role }, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.ReportCardWhereInput = {};
-  if (query.studentId) where.studentId = query.studentId as string;
   if (query.termId) where.termId = query.termId as string;
   if (query.status) where.status = query.status as Prisma.ReportCardWhereInput['status'];
+
+  if (viewer.role === 'student') {
+    if (query.studentId && query.studentId !== viewer.id) {
+      throw ApiError.forbidden('You may only view your own report cards');
+    }
+    where.studentId = viewer.id;
+    where.status = 'released';
+  } else if (viewer.role === 'parent') {
+    const children = await prisma.parentStudentLink.findMany({
+      where: { parentId: viewer.id, status: 'confirmed' },
+      select: { studentId: true },
+    });
+    const childIds = children.map((c) => c.studentId);
+    if (childIds.length === 0) {
+      return { data: [], page: offset.page, pageSize: offset.pageSize, total: 0, hasMore: false };
+    }
+    if (query.studentId && !childIds.includes(query.studentId as string)) {
+      throw ApiError.forbidden('You may only view report cards of your confirmed children');
+    }
+    where.studentId = { in: childIds };
+    where.status = 'released';
+  } else if (query.studentId) {
+    where.studentId = query.studentId as string;
+  }
 
   const [total, rows] = await Promise.all([
     prisma.reportCard.count({ where }),

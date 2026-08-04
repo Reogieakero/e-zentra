@@ -68,10 +68,16 @@ export async function createHealthRecord(actorId: string, input: CreateHealthRec
 export async function listHealthRecords(viewerId: string, viewerRole: import('@prisma/client').Role, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.HealthRecordWhereInput = {};
-  if (query.studentId) where.studentId = query.studentId as string;
   if (query.sectionId) where.sectionId = query.sectionId as string;
   if (query.termId) where.termId = query.termId as string;
   if (viewerRole === 'student') where.studentId = viewerId;
+  else if (viewerRole === 'parent') {
+    const { getConfirmedChildIds } = await import('../utils/access');
+    const childIds = await getConfirmedChildIds(viewerId);
+    const requested = query.studentId as string | undefined;
+    if (requested && !childIds.includes(requested)) return emptyPage(offset);
+    where.studentId = requested ? requested : { in: childIds };
+  } else if (query.studentId) where.studentId = query.studentId as string;
 
   const [total, rows] = await Promise.all([
     prisma.healthRecord.count({ where }),
@@ -95,6 +101,10 @@ export async function listHealthRecords(viewerId: string, viewerRole: import('@p
     ] as (keyof typeof row & string)[])
   );
   return { data: serializeForOutput(data), page: offset.page, pageSize: offset.pageSize, total, hasMore: offset.page * offset.pageSize < total };
+}
+
+function emptyPage(offset: ReturnType<typeof parseOffsetPagination>) {
+  return { data: [], page: offset.page, pageSize: offset.pageSize, total: 0, hasMore: false };
 }
 
 export async function getHealthRecord(viewerId: string, viewerRole: import('@prisma/client').Role, id: string) {

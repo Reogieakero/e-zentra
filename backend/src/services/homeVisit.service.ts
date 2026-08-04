@@ -75,7 +75,7 @@ export async function createHomeVisit(actorId: string, actorRole: import('@prism
   return { data: serializeForOutput(record) };
 }
 
-export async function listHomeVisits(query: Record<string, unknown>) {
+export async function listHomeVisits(viewerId: string, viewerRole: import('@prisma/client').Role, query: Record<string, unknown>) {
   const offset = parseOffsetPagination(query);
   const where: Prisma.HomeVisitationRecordWhereInput = {};
   if (query.studentId) where.studentId = query.studentId as string;
@@ -96,7 +96,17 @@ export async function listHomeVisits(query: Record<string, unknown>) {
       },
     }),
   ]);
-  return { data: serializeForOutput(rows), page: offset.page, pageSize: offset.pageSize, total, hasMore: offset.page * offset.pageSize < total };
+  const data = rows.map((row) =>
+    redactSensitiveFields(row, row.confidentialityLevel, { role: viewerRole, id: viewerId }, row.conductedBy, [
+      'reasonForVisitation',
+      'homeConditionObservation',
+      'familyConditionObservation',
+      'detailsOfConcern',
+      'learnerAgreement',
+      'familyAgreement',
+    ] as (keyof typeof row & string)[])
+  );
+  return { data: serializeForOutput(data), page: offset.page, pageSize: offset.pageSize, total, hasMore: offset.page * offset.pageSize < total };
 }
 
 export async function getHomeVisit(viewerId: string, viewerRole: import('@prisma/client').Role, id: string) {

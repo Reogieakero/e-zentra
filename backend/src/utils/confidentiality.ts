@@ -43,11 +43,25 @@ export function redactSensitiveFields<T extends Record<string, unknown>>(
   if (viewerSeesSensitiveFields(level, viewer, authorId)) {
     return record;
   }
-  const copy: Record<string, unknown> = { ...record };
-  for (const field of sensitiveFields) {
-    copy[field] = null;
+  return deepRedact({ ...record }, new Set(sensitiveFields)) as T;
+}
+
+function deepRedact(value: unknown, sensitiveFields: Set<string>): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => deepRedact(item, sensitiveFields));
   }
-  return copy as T;
+  if (value !== null && typeof value === 'object') {
+    const copy: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (sensitiveFields.has(key)) {
+        copy[key] = null;
+      } else {
+        copy[key] = deepRedact(child, sensitiveFields);
+      }
+    }
+    return copy;
+  }
+  return value;
 }
 
 export function isStaffRole(role: Role): boolean {

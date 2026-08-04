@@ -114,6 +114,40 @@ describe('confidentiality filtering', () => {
     expect(redacted.status).toBe('pending');
     expect(redacted.reason_for_referral).toBeNull();
   });
+
+  it('recursively redacts nested objects and arrays', () => {
+    const record = {
+      id: 'r',
+      observerId: 'staff',
+      incidentDescription: 'secret',
+      followups: [
+        { id: 'f1', followupNotes: 'still secret' },
+        { id: 'f2', followupNotes: 'more secret' },
+      ],
+      nested: { deep: { incidentDescription: 'deep secret' } },
+    };
+    const redacted = redactSensitiveFields(
+      record as Record<string, unknown>,
+      'confidential',
+      { role: 'parent', id: 'p' },
+      'staff',
+      ['incidentDescription', 'followupNotes']
+    );
+    expect(redacted.id).toBe('r');
+    expect(redacted.incidentDescription).toBeNull();
+    expect(redacted.followups).toEqual([
+      { id: 'f1', followupNotes: null },
+      { id: 'f2', followupNotes: null },
+    ]);
+    expect(redacted.nested).toEqual({ deep: { incidentDescription: null } });
+  });
+
+  it('does not mutate the original record when redacting', () => {
+    const record = { reason: 'secret' };
+    const redacted = redactSensitiveFields(record as Record<string, unknown>, 'confidential', { role: 'student', id: 's' }, 'staff', ['reason']);
+    expect(redacted.reason).toBeNull();
+    expect(record.reason).toBe('secret');
+  });
 });
 
 describe('pagination helpers', () => {

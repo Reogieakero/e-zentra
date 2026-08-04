@@ -182,10 +182,10 @@ router.post('/anecdotal-records/:id/followups', requireRole('teacher', 'guidance
 
 
 router.get('/referrals', requireRole('teacher', 'guidance_counselor', 'nurse', 'adm_coordinator', 'principal', 'record_keeper', 'registrar'), validateSchema({ query: referralListQuery }), asyncHandler(async (req, res) => {
-  res.json(await listReferrals(req.query as Record<string, unknown>));
+  res.json(await listReferrals(req.user!, req.query as Record<string, unknown>));
 }));
 router.get('/referrals/:id', requireRole('teacher', 'guidance_counselor', 'nurse', 'adm_coordinator', 'principal', 'record_keeper', 'registrar'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
-  const { data } = await getReferral(req.params.id);
+  const { data } = await getReferral(req.user!, req.params.id);
   res.json({ data });
 }));
 router.post('/referrals', requireRole('teacher', 'guidance_counselor'), validateSchema({ body: referralBody }), asyncHandler(async (req, res) => {
@@ -212,7 +212,7 @@ router.post('/health-records', requireRole('nurse'), validateSchema({ body: heal
 
 
 router.get('/home-visits', requireRole('teacher', 'guidance_counselor', 'nurse', 'adm_coordinator', 'principal', 'record_keeper', 'registrar'), validateSchema({ query: homeVisitListQuery }), asyncHandler(async (req, res) => {
-  res.json(await listHomeVisits(req.query as Record<string, unknown>));
+  res.json(await listHomeVisits(req.user!.id, req.user!.role, req.query as Record<string, unknown>));
 }));
 router.get('/home-visits/:id', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
   const { data } = await getHomeVisit(req.user!.id, req.user!.role, req.params.id);
