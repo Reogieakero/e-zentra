@@ -6,6 +6,7 @@ import { ApiError } from '../utils/ApiError';
 import { authenticate } from '../middleware/authenticate';
 import { redisRateLimit } from '../middleware/rateLimiter';
 import { validateSchema } from '../middleware/validate';
+import { emailSchema, passwordSchema, nameSchema, optionalName, gradeLevelEnum } from '../schemas/common';
 import {
   changePassword,
   getMe,
@@ -18,11 +19,6 @@ import {
 } from '../services/auth.service';
 
 const router = Router();
-
-const emailSchema = z.string().trim().email().max(150).toLowerCase();
-const passwordSchema = z.string().min(8, 'Password must be at least 8 characters').max(128);
-const nameSchema = z.string().trim().min(1).max(100);
-const optionalName = z.string().trim().max(100).optional().or(z.literal(''));
 
 const authLimiter = redisRateLimit({
   windowMs: 60 * 1000,
@@ -42,7 +38,7 @@ const registerStudentSchema = z
     lrn: z.string().trim().min(5).max(20),
     birthdate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
     sex: z.enum(['male', 'female']),
-    gradeLevel: z.enum(['grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12']),
+    gradeLevel: gradeLevelEnum,
     sectionId: z.string().uuid().optional(),
     address: z.string().trim().max(1000).optional(),
   })

@@ -1,30 +1,51 @@
 import { NextFunction, Request, Response } from 'express';
 import { redis } from '../lib/redis';
+import { logger } from '../lib/logger';
 import { ApiError } from '../utils/ApiError';
 
 export interface RateLimitOptions {
   windowMs: number;
   max: number;
   keyPrefix: string;
+  userScoped?: boolean;
+  failOpen?: boolean;
 }
 
-export function redisRateLimit({ windowMs, max, keyPrefix }: RateLimitOptions) {
+function requesterKey(req: Request, userScoped: boolean): string {
+  if (userScoped) {
+    const user = (req as Request & { user?: { id: string } }).user;
+    if (user?.id) {
+      return `user:${user.id}`;
+    }
+  }
+  return `ip:${req.ip ?? 'unknown'}`;
+}
+
+export function redisRateLimit({ windowMs, max, keyPrefix, userScoped = false, failOpen = true }: RateLimitOptions) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const key = `${keyPrefix}:${req.ip ?? 'unknown'}`;
+    const key = `${keyPrefix}:${requesterKey(req, userScoped)}`;
     try {
       const count = await redis.incr(key);
       if (count === 1) {
         await redis.pexpire(key, windowMs);
       }
+      const remaining = Math.max(0, max - count);
       res.setHeader('X-RateLimit-Limit', max);
-      res.setHeader('X-RateLimit-Remaining', Math.max(0, max - count));
+      res.setHeader('X-RateLimit-Remaining', remaining);
       if (count > max) {
         const ttl = await redis.pttl(key);
-        res.setHeader('Retry-After', Math.max(1, Math.ceil(ttl / 1000)));
+        const retryAfter = Math.max(1, Math.ceil(ttl / 1000));
+        res.setHeader('Retry-After', retryAfter);
+        res.setHeader('X-RateLimit-Reset', String(Date.now() + ttl));
         return next(ApiError.rateLimited());
       }
+      res.setHeader('X-RateLimit-Reset', String(Date.now() + windowMs));
       return next();
     } catch (err) {
+      if (failOpen) {
+        logger.warn({ err, keyPrefix }, 'rate limiter unavailable; failing open');
+        return next();
+      }
       return next(err);
     }
   };

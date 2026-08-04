@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/authenticate';
-import { requireRole } from '../middleware/authorize';
+import { requireRole, CASE_FILE_ROLES, CASE_MANAGER_ROLES } from '../middleware/authorize';
 import { validateSchema } from '../middleware/validate';
+import { uuidParams, offsetQuery, dateStringSchema } from '../schemas/common';
 import {
   addFollowup,
   createAnecdotal,
@@ -30,11 +31,6 @@ import {
 const router = Router();
 router.use(authenticate);
 
-const idParams = z.object({ id: z.string().uuid() }).strict();
-const offsetQuery = z
-  .object({ page: z.coerce.number().int().min(1).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(20) })
-  .strict();
-
 const confidentialitySchema = z.enum(['confidential', 'internal_staff', 'parent_visible']).optional();
 
 const anecdotalBody = z
@@ -42,7 +38,7 @@ const anecdotalBody = z
     studentId: z.string().uuid(),
     sectionId: z.string().uuid(),
     termId: z.string().uuid(),
-    observationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    observationDate: dateStringSchema,
     observationTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().nullable(),
     incidentDescription: z.string().trim().min(1).max(10000),
     locationSetting: z.string().trim().max(2000).optional().nullable(),
@@ -167,32 +163,32 @@ const admModuleBody = z
 router.get('/anecdotal-records', validateSchema({ query: anecdotalListQuery }), asyncHandler(async (req, res) => {
   res.json(await listAnecdotalRecords(req.user!.id, req.user!.role, req.query as Record<string, unknown>));
 }));
-router.get('/anecdotal-records/:id', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.get('/anecdotal-records/:id', validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await getAnecdotal(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));
-router.post('/anecdotal-records', requireRole('teacher', 'guidance_counselor'), validateSchema({ body: anecdotalBody }), asyncHandler(async (req, res) => {
+router.post('/anecdotal-records', requireRole(...CASE_MANAGER_ROLES), validateSchema({ body: anecdotalBody }), asyncHandler(async (req, res) => {
   const { data } = await createAnecdotal(req.user!.id, req.user!.role, req.body);
   res.status(201).json({ data });
 }));
-router.post('/anecdotal-records/:id/followups', requireRole('teacher', 'guidance_counselor'), validateSchema({ params: idParams, body: followupBody }), asyncHandler(async (req, res) => {
+router.post('/anecdotal-records/:id/followups', requireRole(...CASE_MANAGER_ROLES), validateSchema({ params: uuidParams, body: followupBody }), asyncHandler(async (req, res) => {
   const { data } = await addFollowup(req.user!.id, req.params.id, req.body.followupDate, req.body.followupNotes);
   res.status(201).json({ data });
 }));
 
 
-router.get('/referrals', requireRole('teacher', 'guidance_counselor', 'nurse', 'adm_coordinator', 'principal', 'record_keeper', 'registrar'), validateSchema({ query: referralListQuery }), asyncHandler(async (req, res) => {
+router.get('/referrals', requireRole(...CASE_FILE_ROLES), validateSchema({ query: referralListQuery }), asyncHandler(async (req, res) => {
   res.json(await listReferrals(req.user!, req.query as Record<string, unknown>));
 }));
-router.get('/referrals/:id', requireRole('teacher', 'guidance_counselor', 'nurse', 'adm_coordinator', 'principal', 'record_keeper', 'registrar'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.get('/referrals/:id', requireRole(...CASE_FILE_ROLES), validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await getReferral(req.user!, req.params.id);
   res.json({ data });
 }));
-router.post('/referrals', requireRole('teacher', 'guidance_counselor'), validateSchema({ body: referralBody }), asyncHandler(async (req, res) => {
+router.post('/referrals', requireRole(...CASE_MANAGER_ROLES), validateSchema({ body: referralBody }), asyncHandler(async (req, res) => {
   const { data } = await createReferral(req.user!.id, req.user!.role, req.body);
   res.status(201).json({ data });
 }));
-router.patch('/referrals/:id/status', requireRole('guidance_counselor', 'nurse', 'adm_coordinator', 'principal'), validateSchema({ params: idParams, body: referralStatusBody }), asyncHandler(async (req, res) => {
+router.patch('/referrals/:id/status', requireRole('guidance_counselor', 'nurse', 'adm_coordinator', 'principal'), validateSchema({ params: uuidParams, body: referralStatusBody }), asyncHandler(async (req, res) => {
   const { data } = await updateReferralStatus(req.user!.id, req.params.id, req.body.status);
   res.json({ data });
 }));
@@ -201,7 +197,7 @@ router.patch('/referrals/:id/status', requireRole('guidance_counselor', 'nurse',
 router.get('/health-records', validateSchema({ query: healthListQuery }), asyncHandler(async (req, res) => {
   res.json(await listHealthRecords(req.user!.id, req.user!.role, req.query as Record<string, unknown>));
 }));
-router.get('/health-records/:id', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.get('/health-records/:id', validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await getHealthRecord(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));
@@ -211,18 +207,18 @@ router.post('/health-records', requireRole('nurse'), validateSchema({ body: heal
 }));
 
 
-router.get('/home-visits', requireRole('teacher', 'guidance_counselor', 'nurse', 'adm_coordinator', 'principal', 'record_keeper', 'registrar'), validateSchema({ query: homeVisitListQuery }), asyncHandler(async (req, res) => {
+router.get('/home-visits', requireRole(...CASE_FILE_ROLES), validateSchema({ query: homeVisitListQuery }), asyncHandler(async (req, res) => {
   res.json(await listHomeVisits(req.user!.id, req.user!.role, req.query as Record<string, unknown>));
 }));
-router.get('/home-visits/:id', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.get('/home-visits/:id', validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await getHomeVisit(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));
-router.post('/home-visits', requireRole('teacher', 'guidance_counselor'), validateSchema({ body: homeVisitBody }), asyncHandler(async (req, res) => {
+router.post('/home-visits', requireRole(...CASE_MANAGER_ROLES), validateSchema({ body: homeVisitBody }), asyncHandler(async (req, res) => {
   const { data } = await createHomeVisit(req.user!.id, req.user!.role, req.body);
   res.status(201).json({ data });
 }));
-router.post('/home-visits/:id/certify', requireRole('guidance_counselor'), validateSchema({ params: idParams, body: certifyBody }), asyncHandler(async (req, res) => {
+router.post('/home-visits/:id/certify', requireRole('guidance_counselor'), validateSchema({ params: uuidParams, body: certifyBody }), asyncHandler(async (req, res) => {
   const { data } = await certifyHomeVisit(req.user!.id, req.params.id, req.body.purpose);
   res.json({ data });
 }));
@@ -231,7 +227,7 @@ router.post('/home-visits/:id/certify', requireRole('guidance_counselor'), valid
 router.get('/adm-profiles', requireRole('adm_coordinator', 'principal', 'guidance_counselor', 'record_keeper', 'registrar', 'teacher'), validateSchema({ query: admProfileListQuery }), asyncHandler(async (req, res) => {
   res.json(await listAdmProfiles(req.query as Record<string, unknown>));
 }));
-router.get('/adm-profiles/:id', requireRole('adm_coordinator', 'principal', 'guidance_counselor', 'record_keeper', 'registrar', 'teacher'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.get('/adm-profiles/:id', requireRole('adm_coordinator', 'principal', 'guidance_counselor', 'record_keeper', 'registrar', 'teacher'), validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await getAdmProfile(req.params.id);
   res.json({ data });
 }));
@@ -239,11 +235,11 @@ router.post('/adm-profiles', requireRole('adm_coordinator'), validateSchema({ bo
   const { data } = await createAdmProfile(req.user!.id, req.user!.role, req.body);
   res.status(201).json({ data });
 }));
-router.post('/adm-profiles/:id/submit', requireRole('adm_coordinator'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.post('/adm-profiles/:id/submit', requireRole('adm_coordinator'), validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await submitAdmProfile(req.user!.id, req.params.id);
   res.json({ data });
 }));
-router.post('/adm-profiles/:id/approve', requireRole('principal'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.post('/adm-profiles/:id/approve', requireRole('principal'), validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await approveAdmProfile(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));
@@ -251,11 +247,11 @@ router.post('/adm-meetings', requireRole('adm_coordinator'), validateSchema({ bo
   const { data } = await createAdmMeeting(req.user!.id, req.body);
   res.status(201).json({ data });
 }));
-router.post('/adm-profiles/:id/modules', requireRole('adm_coordinator'), validateSchema({ params: idParams, body: admModuleBody }), asyncHandler(async (req, res) => {
+router.post('/adm-profiles/:id/modules', requireRole('adm_coordinator'), validateSchema({ params: uuidParams, body: admModuleBody }), asyncHandler(async (req, res) => {
   const { data } = await releaseAdmModule(req.user!.id, req.params.id, req.body);
   res.status(201).json({ data });
 }));
-router.post('/adm-modules/:id/submit', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.post('/adm-modules/:id/submit', validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await submitAdmModule(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));

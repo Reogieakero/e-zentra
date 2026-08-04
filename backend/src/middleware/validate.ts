@@ -2,24 +2,6 @@ import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { ApiError } from '../utils/ApiError';
 
-type Source = 'body' | 'query' | 'params';
-
-export function validate(schema: z.ZodTypeAny, source: Source = 'body') {
-  return (req: Request, _res: Response, next: NextFunction) => {
-    const result = schema.safeParse(req[source]);
-    if (!result.success) {
-      const details = result.error.issues.map((i) => ({
-        path: i.path.join('.'),
-        code: i.code,
-        message: i.message,
-      }));
-      return next(ApiError.validation('Validation failed', details));
-    }
-    (req as unknown as Record<string, unknown>)[source] = result.data;
-    return next();
-  };
-}
-
 export function validateSchema(schema: { body?: z.ZodTypeAny; query?: z.ZodTypeAny; params?: z.ZodTypeAny }) {
   return (req: Request, _res: Response, next: NextFunction) => {
     try {

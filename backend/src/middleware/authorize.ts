@@ -11,6 +11,17 @@ function getUser(req: Request): AuthenticatedUser {
   return user;
 }
 
+export const REGISTRY_ROLES: readonly Role[] = ['registrar', 'record_keeper'];
+export const RECORDS_ADMIN_ROLES: readonly Role[] = ['registrar', 'record_keeper', 'principal'];
+export const CASE_FILE_ROLES: readonly Role[] = ['teacher', 'guidance_counselor', 'nurse', 'adm_coordinator', 'principal', 'record_keeper', 'registrar'];
+export const CASE_MANAGER_ROLES: readonly Role[] = ['teacher', 'guidance_counselor'];
+export const GUIDANCE_AND_ADM_ROLES: readonly Role[] = ['guidance_counselor', 'record_keeper', 'registrar', 'principal', 'adm_coordinator'];
+export const FLAG_HANDLER_ROLES: readonly Role[] = ['record_keeper', 'registrar', 'principal', 'guidance_counselor', 'adm_coordinator', 'nurse'];
+export const GRADE_VIEW_ROLES: readonly Role[] = ['teacher', 'record_keeper', 'registrar', 'principal', 'guidance_counselor'];
+export const STAFF_VIEW_ROLES: readonly Role[] = ['teacher', 'record_keeper', 'registrar', 'principal', 'guidance_counselor', 'nurse', 'adm_coordinator'];
+export const PARENT_LINK_ROLES: readonly Role[] = ['parent', 'record_keeper', 'registrar', 'principal'];
+export const REPORT_CARD_VIEW_ROLES: readonly Role[] = ['record_keeper', 'registrar', 'principal', 'teacher', 'guidance_counselor', 'student', 'parent'];
+
 export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     try {

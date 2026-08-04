@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/authenticate';
 import { validateSchema } from '../middleware/validate';
+import { uuidParams } from '../schemas/common';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { serializeForOutput } from '../middleware/errorHandler';
@@ -14,7 +15,6 @@ router.use(authenticate);
 const listQuery = z
   .object({ limit: z.coerce.number().int().min(1).max(100).default(20), cursor: z.string().optional() })
   .strict();
-const idParams = z.object({ id: z.string().uuid() }).strict();
 
 router.get('/notifications', validateSchema({ query: listQuery }), asyncHandler(async (req, res) => {
   const { take, cursor } = parseCursorPagination(req.query as Record<string, unknown>);
@@ -33,7 +33,7 @@ router.get('/notifications/unread-count', asyncHandler(async (_req, res) => {
   res.json({ data: { count } });
 }));
 
-router.post('/notifications/:id/read', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.post('/notifications/:id/read', validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const notification = await prisma.notification.findUnique({ where: { id: req.params.id } });
   if (!notification) throw ApiError.notFound('Notification not found');
   if (notification.recipientId !== req.user!.id) throw ApiError.forbidden('You may only mark your own notifications as read');

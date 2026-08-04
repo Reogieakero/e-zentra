@@ -53,11 +53,13 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.use(
-    '/api-docs',
-    swaggerUi.serve,
-    swaggerUi.setup(openApiSpec, { customSiteTitle: 'Zentra API' })
-  );
+  if (config.enableApiDocs) {
+    app.use(
+      '/api-docs',
+      swaggerUi.serve,
+      swaggerUi.setup(openApiSpec, { customSiteTitle: 'Zentra API' })
+    );
+  }
 
   app.use('/uploads', authenticate, asyncHandler(serveUpload));
 

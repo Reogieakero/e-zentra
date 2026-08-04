@@ -4,26 +4,24 @@ import { AccountStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/authenticate';
-import { requireRole } from '../middleware/authorize';
+import { requireRole, REGISTRY_ROLES, RECORDS_ADMIN_ROLES } from '../middleware/authorize';
 import { validateSchema } from '../middleware/validate';
+import { uuidParams, offsetQuery } from '../schemas/common';
 import { approveAccount, rejectAccount } from '../services/auth.service';
 
 const router = Router();
 router.use(authenticate);
 
-const approveParams = z.object({ id: z.string().uuid() }).strict();
-const listQuery = z
-  .object({
+const listQuery = offsetQuery
+  .extend({
     status: z.nativeEnum(AccountStatus).optional(),
     role: z.enum(['student', 'parent', 'teacher', 'registrar', 'record_keeper', 'adm_coordinator', 'guidance_counselor', 'principal', 'nurse']).optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(20),
   })
   .strict();
 
 router.get(
   '/',
-  requireRole('registrar', 'record_keeper', 'principal'),
+  requireRole(...RECORDS_ADMIN_ROLES),
   validateSchema({ query: listQuery }),
   asyncHandler(async (req, res) => {
     const { status, role, page, pageSize } = req.query as unknown as {
@@ -69,8 +67,8 @@ router.get(
 
 router.post(
   '/:id/approve',
-  requireRole('registrar', 'record_keeper'),
-  validateSchema({ params: approveParams }),
+  requireRole(...REGISTRY_ROLES),
+  validateSchema({ params: uuidParams }),
   asyncHandler(async (req, res) => {
     const { user } = await approveAccount(req.params.id, req.user!.id);
     res.json({ data: user });
@@ -79,8 +77,8 @@ router.post(
 
 router.post(
   '/:id/reject',
-  requireRole('registrar', 'record_keeper'),
-  validateSchema({ params: approveParams }),
+  requireRole(...REGISTRY_ROLES),
+  validateSchema({ params: uuidParams }),
   asyncHandler(async (req, res) => {
     const { user } = await rejectAccount(req.params.id, req.user!.id);
     res.json({ data: user });

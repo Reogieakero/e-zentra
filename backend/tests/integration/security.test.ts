@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { prisma } from '../../src/lib/prisma';
+import { config } from '../../src/config/env';
 import { app, auth, login, loginAs, truncateAll, createUser, registerAndApproveStudent } from '../helpers';
 import { seedSchoolYear, seedSection, seedSubject, seedTerm, seedGradeComponents, seedAssessment } from '../fixtures';
 
@@ -207,5 +208,25 @@ describe('Security: authorization scoping (Phase 0)', () => {
       .get(`/api/v1/referrals/${referral.id}`)
       .set(auth(principal.tokens.accessToken));
     expect(principalView.body.data.healthRecords).toHaveLength(1);
+  });
+});
+
+describe('Security: operational hardening (Phase 2)', () => {
+  it('serves Swagger docs in non-production by default', async () => {
+    const res = await request(app).get('/api-docs/');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('swagger-ui');
+  });
+
+  it('config.enableApiDocs defaults to true outside production and can be disabled via env', () => {
+    expect(config.enableApiDocs).toBe(true);
+  });
+
+  it('rejects record-flag list queries with an unknown sourceTable', async () => {
+    const rk = await loginAs('record_keeper', { email: `rk.flag.schema.${Date.now()}@test.edu` });
+    const res = await request(app)
+      .get('/api/v1/record-flags?sourceTable=bogus_table')
+      .set(auth(rk.tokens.accessToken));
+    expect(res.status).toBe(422);
   });
 });

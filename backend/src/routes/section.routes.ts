@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/authenticate';
-import { requireRole } from '../middleware/authorize';
+import { requireRole, REGISTRY_ROLES, STAFF_VIEW_ROLES } from '../middleware/authorize';
 import { validateSchema } from '../middleware/validate';
+import { uuidParams, offsetQuery, gradeLevelEnum } from '../schemas/common';
 import {
   createSection,
   getSection,
@@ -15,26 +16,20 @@ import {
 const router = Router();
 router.use(authenticate);
 
-const listQuery = z
-  .object({
+const listQuery = offsetQuery
+  .extend({
     schoolYearId: z.string().uuid().optional(),
-    gradeLevel: z.enum(['grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12']).optional(),
+    gradeLevel: gradeLevelEnum.optional(),
     status: z.enum(['active', 'archived']).optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(20),
   })
   .strict();
 
-const rosterQuery = z
-  .object({ page: z.coerce.number().int().min(1).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(20) })
-  .strict();
-
-const idParams = z.object({ id: z.string().uuid() }).strict();
+const rosterQuery = offsetQuery;
 
 const createBody = z
   .object({
     sectionName: z.string().trim().min(1).max(50),
-    gradeLevel: z.enum(['grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12']),
+    gradeLevel: gradeLevelEnum,
     adviserId: z.string().uuid().optional(),
     schoolYearId: z.string().uuid(),
     maxStudents: z.coerce.number().int().min(1).max(1000).optional(),
@@ -62,19 +57,19 @@ router.get('/', validateSchema({ query: listQuery }), asyncHandler(async (req, r
   res.json(result);
 }));
 
-router.get('/:id', validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
+router.get('/:id', validateSchema({ params: uuidParams }), asyncHandler(async (req, res) => {
   const { data } = await getSection(req.params.id);
   res.json({ data });
 }));
 
-router.get('/:id/students', requireRole('teacher', 'record_keeper', 'registrar', 'principal', 'guidance_counselor', 'nurse', 'adm_coordinator'), validateSchema({ params: idParams, query: rosterQuery }), asyncHandler(async (req, res) => {
+router.get('/:id/students', requireRole(...STAFF_VIEW_ROLES), validateSchema({ params: uuidParams, query: rosterQuery }), asyncHandler(async (req, res) => {
   const q = req.query as unknown as { page: number; pageSize: number };
   res.json(await listSectionStudents(req.user!, req.params.id, q.page, q.pageSize));
 }));
 
 router.post(
   '/',
-  requireRole('record_keeper', 'registrar'),
+  requireRole(...REGISTRY_ROLES),
   validateSchema({ body: createBody }),
   asyncHandler(async (req, res) => {
     const { data } = await createSection(req.user!.id, req.user!.role, req.body);
@@ -84,8 +79,8 @@ router.post(
 
 router.patch(
   '/:id',
-  requireRole('record_keeper', 'registrar'),
-  validateSchema({ params: idParams, body: updateBody }),
+  requireRole(...REGISTRY_ROLES),
+  validateSchema({ params: uuidParams, body: updateBody }),
   asyncHandler(async (req, res) => {
     const { data } = await updateSection(req.user!.id, req.user!.role, req.params.id, req.body);
     res.json({ data });

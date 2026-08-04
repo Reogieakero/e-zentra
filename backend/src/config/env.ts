@@ -30,6 +30,7 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default('./uploads'),
   RECORD_FLAG_ESCALATION_ENABLED: boolFromString(true),
   RECORD_FLAG_ESCALATION_DAYS: z.coerce.number().default(7),
+  ENABLE_API_DOCS: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -72,6 +73,7 @@ export const config = {
     recordFlagEscalationEnabled: parsed.data.RECORD_FLAG_ESCALATION_ENABLED,
     recordFlagEscalationDays: parsed.data.RECORD_FLAG_ESCALATION_DAYS,
   },
+  enableApiDocs: parsed.data.ENABLE_API_DOCS === undefined ? parsed.data.NODE_ENV !== 'production' : parsed.data.ENABLE_API_DOCS === 'true',
 };
 
 export type AppConfig = typeof config;

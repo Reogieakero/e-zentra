@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/authenticate';
-import { requireRole } from '../middleware/authorize';
+import { requireRole, PARENT_LINK_ROLES } from '../middleware/authorize';
 import { validateSchema } from '../middleware/validate';
+import { uuidParams, offsetQuery } from '../schemas/common';
 import { confirmParentLink, listParentLinks, rejectParentLink, requestParentLink } from '../services/parentLink.service';
 
 const router = Router();
@@ -19,21 +20,17 @@ const requestBody = z
     message: 'Provide exactly one of studentId or lrn',
   });
 
-const listQuery = z
-  .object({
+const listQuery = offsetQuery
+  .extend({
     status: z.enum(['pending_confirmation', 'confirmed', 'rejected']).optional(),
     parentId: z.string().uuid().optional(),
     studentId: z.string().uuid().optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(20),
   })
   .strict();
 
-const idParams = z.object({ id: z.string().uuid() }).strict();
-
 router.get(
   '/',
-  requireRole('parent', 'record_keeper', 'registrar', 'principal'),
+  requireRole(...PARENT_LINK_ROLES),
   validateSchema({ query: listQuery }),
   asyncHandler(async (req, res) => {
     const result = await listParentLinks(req.user!.id, req.user!.role, req.query);
@@ -53,8 +50,8 @@ router.post(
 
 router.post(
   '/:id/confirm',
-  requireRole('parent', 'record_keeper', 'registrar', 'principal'),
-  validateSchema({ params: idParams }),
+  requireRole(...PARENT_LINK_ROLES),
+  validateSchema({ params: uuidParams }),
   asyncHandler(async (req, res) => {
     const result = await confirmParentLink(req.user!.id, req.user!.role, req.params.id);
     res.json(result);
@@ -63,8 +60,8 @@ router.post(
 
 router.post(
   '/:id/reject',
-  requireRole('parent', 'record_keeper', 'registrar', 'principal'),
-  validateSchema({ params: idParams }),
+  requireRole(...PARENT_LINK_ROLES),
+  validateSchema({ params: uuidParams }),
   asyncHandler(async (req, res) => {
     const result = await rejectParentLink(req.user!.id, req.user!.role, req.params.id);
     res.json(result);

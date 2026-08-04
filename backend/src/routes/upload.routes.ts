@@ -8,6 +8,8 @@ import { config } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate, AuthenticatedUser } from '../middleware/authenticate';
+import { redisRateLimit } from '../middleware/rateLimiter';
+import { RECORDS_ADMIN_ROLES } from '../middleware/authorize';
 import { validateSchema } from '../middleware/validate';
 import { ApiError } from '../utils/ApiError';
 import { writeAudit } from '../services/audit.service';
@@ -15,10 +17,12 @@ import { writeAudit } from '../services/audit.service';
 const PHOTO_MIMES = config.security.allowedImageMimes;
 const DOC_MIMES = [...PHOTO_MIMES, 'application/pdf'];
 
+const ALL_AUTHENTICATED_ROLES = ['student', 'parent', 'teacher', 'registrar', 'record_keeper', 'adm_coordinator', 'guidance_counselor', 'principal', 'nurse'] as const;
+
 const KINDS = {
-  'profile-photo': { dir: 'profile-photos', roles: ['student', 'parent', 'teacher', 'registrar', 'record_keeper', 'adm_coordinator', 'guidance_counselor', 'principal', 'nurse'], mimes: PHOTO_MIMES },
-  'report-card': { dir: 'report-cards', roles: ['record_keeper', 'registrar', 'principal'], mimes: DOC_MIMES },
-  'adm-photo': { dir: 'adm-photos', roles: ['adm_coordinator'], mimes: PHOTO_MIMES },
+  'profile-photo': { dir: 'profile-photos', roles: ALL_AUTHENTICATED_ROLES, mimes: PHOTO_MIMES },
+  'report-card': { dir: 'report-cards', roles: RECORDS_ADMIN_ROLES, mimes: DOC_MIMES },
+  'adm-photo': { dir: 'adm-photos', roles: ['adm_coordinator'] as const, mimes: PHOTO_MIMES },
 } as const;
 
 type UploadKind = keyof typeof KINDS;
@@ -72,8 +76,16 @@ router.use(authenticate);
 
 const kindParams = z.object({ kind: z.enum(['profile-photo', 'report-card', 'adm-photo']) }).strict();
 
+const uploadLimiter = redisRateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyPrefix: 'rl:upload',
+  userScoped: true,
+});
+
 router.post(
   '/uploads/:kind',
+  uploadLimiter,
   validateSchema({ params: kindParams }),
   (req, res, next) => {
     const cfg = KINDS[kindOf(req)];
