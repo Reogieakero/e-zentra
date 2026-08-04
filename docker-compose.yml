@@ -15,7 +15,12 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret-at-least-32-chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret-at-least-32-chars}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
-      ENABLE_HSTS: "false"
+      ENABLE_HSTS: ${ENABLE_HSTS:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
+    volumes:
+      - zentra_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -41,3 +46,4 @@ services:
 
 volumes:
   zentra_pgdata:
+  zentra_uploads:

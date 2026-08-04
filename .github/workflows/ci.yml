@@ -50,6 +50,9 @@ jobs:
 
       - run: npx prisma generate
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck (lint)
         run: npm run lint
 

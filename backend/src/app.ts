@@ -1,12 +1,14 @@
 import cors from 'cors';
 import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
-import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config/env';
 import { logger } from './lib/logger';
+import { asyncHandler } from './utils/asyncHandler';
+import { authenticate } from './middleware/authenticate';
 import { errorHandler } from './middleware/errorHandler';
 import { redisRateLimit } from './middleware/rateLimiter';
+import { serveUpload } from './middleware/serveUpload';
 import routes from './routes';
 import { ApiError } from './utils/ApiError';
 import { openApiSpec } from './openapi';
@@ -15,7 +17,9 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
-  app.set('trust proxy', 1);
+  if (config.security.trustProxy > 0) {
+    app.set('trust proxy', config.security.trustProxy);
+  }
 
   app.use(
     helmet({
@@ -55,7 +59,7 @@ export function createApp() {
     swaggerUi.setup(openApiSpec, { customSiteTitle: 'Zentra API' })
   );
 
-  app.use('/uploads', express.static(path.resolve(config.security.uploadDir)));
+  app.use('/uploads', authenticate, asyncHandler(serveUpload));
 
   const globalLimiter = redisRateLimit({
     windowMs: 60 * 1000,

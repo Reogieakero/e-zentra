@@ -58,7 +58,17 @@ export async function markAttendance(actorId: string, input: MarkAttendanceInput
     recordedBy: actorId,
   }));
 
-  const result = await prisma.attendanceRecord.createMany({ data, skipDuplicates: true });
+  const result = await prisma.$transaction(async (tx) => {
+    const created = await tx.attendanceRecord.createMany({ data, skipDuplicates: true });
+    await writeAudit({
+      actorId,
+      action: 'CREATE',
+      tableName: 'attendance_records',
+      recordId: input.sectionId,
+      newValue: { count: created.count, date: input.attendanceDate, session: input.session } as unknown as Prisma.InputJsonValue,
+    }, tx);
+    return created;
+  });
 
   for (const row of input.records) {
     if (row.status === 'absent' || row.status === 'late') {
@@ -72,14 +82,6 @@ export async function markAttendance(actorId: string, input: MarkAttendanceInput
     }
     await recomputeRiskAndNotify(row.studentId, input.termId).catch(() => undefined);
   }
-
-  await writeAudit({
-    actorId,
-    action: 'CREATE',
-    tableName: 'attendance_records',
-    recordId: input.sectionId,
-    newValue: { count: result.count, date: input.attendanceDate, session: input.session } as unknown as Prisma.InputJsonValue,
-  });
 
   return { data: { created: result.count, skipped: input.records.length - result.count } };
 }

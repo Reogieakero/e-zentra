@@ -11,11 +11,12 @@ export interface AuditEntry {
   newValue?: Prisma.InputJsonValue;
 }
 
-export async function writeAudit(entry: AuditEntry): Promise<void> {
+export async function writeAudit(entry: AuditEntry, tx?: Prisma.TransactionClient): Promise<void> {
   if (!entry.recordId) {
     throw ApiError.badRequest('recordId is required for audit logging');
   }
-  await prisma.auditLog.create({
+  const client = tx ?? prisma;
+  await client.auditLog.create({
     data: {
       actorId: entry.actorId,
       action: entry.action,
@@ -23,6 +24,22 @@ export async function writeAudit(entry: AuditEntry): Promise<void> {
       recordId: entry.recordId,
       oldValue: entry.oldValue,
       newValue: entry.newValue,
+    },
+  });
+}
+
+export async function writeSecurityEvent(
+  actorId: string,
+  event: string,
+  details?: Record<string, unknown>
+): Promise<void> {
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: event,
+      tableName: 'security_events',
+      recordId: actorId,
+      newValue: details ? (details as Prisma.InputJsonValue) : undefined,
     },
   });
 }

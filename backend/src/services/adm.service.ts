@@ -24,6 +24,21 @@ export async function createAdmProfile(actorId: string, actorRole: import('@pris
   const referral = await prisma.referral.findUnique({ where: { id: input.referralId } });
   if (!referral) throw ApiError.notFound('Referral not found');
 
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: input.studentId },
+    select: { id: true, sectionId: true, gradeLevel: true },
+  });
+  if (!student) throw ApiError.badRequest('studentId must reference a student');
+  if (student.sectionId !== input.sectionId) {
+    throw ApiError.badRequest('studentId does not belong to the given section');
+  }
+  const term = await prisma.term.findUnique({ where: { id: input.termId } });
+  if (!term) throw ApiError.notFound('Term not found');
+  const { gradeBandForGradeLevel } = await import('../utils/gradeBand');
+  if (gradeBandForGradeLevel(student.gradeLevel) !== term.gradeBand) {
+    throw ApiError.badRequest('Term grade band does not match the student grade level');
+  }
+
   const profile = await prisma.admLearnerProfile.create({
     data: {
       studentId: input.studentId,

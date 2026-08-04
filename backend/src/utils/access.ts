@@ -23,6 +23,20 @@ export function isBandOwner(role: Role, gradeLevel: GradeLevel): boolean {
   return canManageGradeLevel(role, gradeLevel);
 }
 
+export function assertRecordCustodianBand(role: Role, gradeLevel: GradeLevel): void {
+  if (role === 'principal' || role === 'guidance_counselor' || role === 'nurse' || role === 'adm_coordinator') return;
+  if (role === 'record_keeper' || role === 'registrar') {
+    if (!canManageGradeLevel(role, gradeLevel)) {
+      throw ApiError.forbidden(
+        `Record Keeper owns Junior High (grades 7-10) records; Registrar owns Senior High (grades 11-12) records. ` +
+          `Role '${role}' does not own grade level '${gradeLevel}'.`
+      );
+    }
+    return;
+  }
+  throw ApiError.forbidden(`Role '${role}' may not manage records`);
+}
+
 export function isPrincipal(viewer: Viewer): boolean {
   return viewer.role === 'principal';
 }

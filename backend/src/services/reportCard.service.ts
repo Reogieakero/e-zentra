@@ -17,6 +17,11 @@ export async function createReportCard(actorId: string, actorRole: import('@pris
   if (actorRole !== 'record_keeper' && actorRole !== 'registrar' && actorRole !== 'principal') {
     throw ApiError.forbidden('Only record custodians or the Principal may create report cards');
   }
+  const { assertRecordCustodianBand } = await import('../utils/access');
+  const student = await prisma.studentProfile.findUnique({ where: { id: input.studentId }, select: { gradeLevel: true } });
+  if (!student) throw ApiError.badRequest('studentId must reference a student');
+  assertRecordCustodianBand(actorRole, student.gradeLevel);
+
   const existing = await prisma.reportCard.findFirst({
     where: { studentId: input.studentId, termId: input.termId },
   });
@@ -37,9 +42,13 @@ export async function createReportCard(actorId: string, actorRole: import('@pris
   return { data: serializeForOutput(card) };
 }
 
-export async function markReportCardReady(actorId: string, id: string) {
+export async function markReportCardReady(actorId: string, actorRole: import('@prisma/client').Role, id: string) {
   const card = await prisma.reportCard.findUnique({ where: { id } });
   if (!card) throw ApiError.notFound('Report card not found');
+  const { assertRecordCustodianBand } = await import('../utils/access');
+  const student = await prisma.studentProfile.findUnique({ where: { id: card.studentId }, select: { gradeLevel: true } });
+  if (!student) throw ApiError.notFound('Student not found');
+  assertRecordCustodianBand(actorRole, student.gradeLevel);
   if (card.status !== 'pending') throw ApiError.conflict('Only pending report cards may be marked ready');
 
   const updated = await prisma.reportCard.update({
@@ -50,9 +59,13 @@ export async function markReportCardReady(actorId: string, id: string) {
   return { data: serializeForOutput(updated) };
 }
 
-export async function releaseReportCard(actorId: string, id: string) {
+export async function releaseReportCard(actorId: string, actorRole: import('@prisma/client').Role, id: string) {
   const card = await prisma.reportCard.findUnique({ where: { id } });
   if (!card) throw ApiError.notFound('Report card not found');
+  const { assertRecordCustodianBand } = await import('../utils/access');
+  const student = await prisma.studentProfile.findUnique({ where: { id: card.studentId }, select: { gradeLevel: true } });
+  if (!student) throw ApiError.notFound('Student not found');
+  assertRecordCustodianBand(actorRole, student.gradeLevel);
   if (card.status !== 'ready') throw ApiError.conflict('Only ready report cards may be released');
 
   const updated = await prisma.reportCard.update({
@@ -75,6 +88,15 @@ export async function generateReportCardsForTerm(actorId: string, actorRole: imp
   }
   const term = await prisma.term.findUnique({ where: { id: termId } });
   if (!term) throw ApiError.notFound('Term not found');
+  if (actorRole !== 'principal') {
+    const { gradeBandOwnedBy } = await import('../utils/gradeBand');
+    if (!gradeBandOwnedBy(term.gradeBand, actorRole)) {
+      throw ApiError.forbidden(
+        `Record Keeper owns Junior High terms/records; Registrar owns Senior High terms/records. ` +
+          `Role '${actorRole}' does not own grade band '${term.gradeBand}'.`
+      );
+    }
+  }
 
   const rows = await prisma.finalGrade.findMany({
     where: { termId },

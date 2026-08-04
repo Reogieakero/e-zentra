@@ -8,7 +8,7 @@ import { isLoginLockedOut, recordLoginFailure, resetLoginFailures } from '../mid
 import { ApiError } from '../utils/ApiError';
 import { assertGradeBandOwnership } from '../utils/gradeBand';
 import { sha256 } from '../utils/hash';
-import { writeAudit } from './audit.service';
+import { writeAudit, writeSecurityEvent } from './audit.service';
 import { notify, notifyStudentAndParents } from './notification.service';
 
 export interface RegisterStudentInput {
@@ -360,6 +360,11 @@ export async function rejectAccount(targetUserId: string, approverId: string): P
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) {
+    await writeSecurityEvent(
+      '00000000-0000-0000-0000-000000000000',
+      'login_failed_unknown_email',
+      { email: email.toLowerCase() }
+    ).catch(() => undefined);
     throw ApiError.unauthorized('Invalid email or password');
   }
   const { locked, retryAfterSeconds } = await isLoginLockedOut(user.id);
@@ -377,6 +382,10 @@ export async function login(email: string, password: string) {
       config.rateLimit.loginLockoutMs
     );
     if (nowLocked) {
+      await writeSecurityEvent(user.id, 'login_lockout', {
+        reason: 'Maximum failed login attempts reached',
+        attempts,
+      }).catch(() => undefined);
       throw new ApiError(429, 'RATE_LIMITED', 'Too many failed login attempts. Account temporarily locked.', {
         retryAfterSeconds: retry,
       });
@@ -412,6 +421,9 @@ export async function refreshTokens(refreshToken: string) {
   const tokenHash = sha256(refreshToken);
   const stored = await prisma.refreshToken.findUnique({ where: { tokenHash } });
   if (!stored || stored.revokedAt) {
+    if (stored && stored.revokedAt && stored.replacedByTokenHash) {
+      await handleRefreshTokenReuse(stored.userId, 'A previously rotated refresh token was reused (possible token theft)');
+    }
     throw ApiError.unauthorized('Invalid refresh token');
   }
   if (stored.expiresAt < new Date()) {
@@ -439,6 +451,14 @@ export async function refreshTokens(refreshToken: string) {
     refreshToken: newRefreshToken,
     expiresAt,
   };
+}
+
+async function handleRefreshTokenReuse(userId: string, reason: string): Promise<void> {
+  await prisma.refreshToken.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  await writeSecurityEvent(userId, 'refresh_token_reuse', { reason });
 }
 
 export async function logout(refreshToken: string): Promise<void> {

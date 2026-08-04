@@ -17,6 +17,51 @@ const FLAG_SOURCE_TABLES = new Set([
   'student_risk_assessments',
 ]);
 
+async function gradeLevelForFlagSource(sourceTable: string, sourceRecordId: string): Promise<import('@prisma/client').GradeLevel | null> {
+  const selectStudent = {
+    select: { id: true, studentProfile: { select: { gradeLevel: true } } },
+  } as const;
+  switch (sourceTable) {
+    case 'anecdotal_records': {
+      const row = await prisma.anecdotalRecord.findUnique({ where: { id: sourceRecordId }, select: { student: selectStudent } });
+      return row?.student.studentProfile?.gradeLevel ?? null;
+    }
+    case 'health_records': {
+      const row = await prisma.healthRecord.findUnique({ where: { id: sourceRecordId }, select: { student: selectStudent } });
+      return row?.student.studentProfile?.gradeLevel ?? null;
+    }
+    case 'home_visitation_records': {
+      const row = await prisma.homeVisitationRecord.findUnique({ where: { id: sourceRecordId }, select: { student: selectStudent } });
+      return row?.student.studentProfile?.gradeLevel ?? null;
+    }
+    case 'attendance_records': {
+      const row = await prisma.attendanceRecord.findUnique({ where: { id: sourceRecordId }, select: { student: selectStudent } });
+      return row?.student.studentProfile?.gradeLevel ?? null;
+    }
+    case 'student_risk_assessments': {
+      const row = await prisma.studentRiskAssessment.findUnique({ where: { id: sourceRecordId }, select: { student: selectStudent } });
+      return row?.student.studentProfile?.gradeLevel ?? null;
+    }
+    case 'referrals': {
+      const row = await prisma.referral.findUnique({
+        where: { id: sourceRecordId },
+        select: { anecdotalRecord: { select: { student: selectStudent } } },
+      });
+      return row?.anecdotalRecord.student.studentProfile?.gradeLevel ?? null;
+    }
+    case 'adm_learner_profiles': {
+      const row = await prisma.admLearnerProfile.findUnique({ where: { id: sourceRecordId }, select: { student: selectStudent } });
+      return row?.student.studentProfile?.gradeLevel ?? null;
+    }
+    case 'final_grades': {
+      const row = await prisma.finalGrade.findUnique({ where: { id: sourceRecordId }, select: { student: selectStudent } });
+      return row?.student.studentProfile?.gradeLevel ?? null;
+    }
+    default:
+      return null;
+  }
+}
+
 export interface CreateFlagInput {
   sourceTable: string;
   sourceRecordId: string;
@@ -46,10 +91,18 @@ export async function createRecordFlag(actorId: string, input: CreateFlagInput) 
   return { data: serializeForOutput(flag) };
 }
 
-export async function resolveRecordFlag(actorId: string, id: string) {
+export async function resolveRecordFlag(actorId: string, actorRole: import('@prisma/client').Role, id: string) {
   const flag = await prisma.recordFlag.findUnique({ where: { id } });
   if (!flag) throw ApiError.notFound('Record flag not found');
   if (flag.status !== 'open') throw ApiError.conflict('Only open flags may be resolved');
+
+  if (actorRole === 'record_keeper' || actorRole === 'registrar') {
+    const gradeLevel = await gradeLevelForFlagSource(flag.sourceTable, flag.sourceRecordId);
+    if (gradeLevel) {
+      const { assertRecordCustodianBand } = await import('../utils/access');
+      assertRecordCustodianBand(actorRole, gradeLevel);
+    }
+  }
 
   const updated = await prisma.recordFlag.update({ where: { id }, data: { status: 'resolved', resolvedBy: actorId, resolvedAt: new Date() } });
   await writeAudit({ actorId, action: 'RESOLVE', tableName: 'record_flags', recordId: id, newValue: { status: 'resolved' } as unknown as Prisma.InputJsonValue });

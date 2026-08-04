@@ -83,7 +83,7 @@ router.post('/record-flags', requireRole('teacher', 'record_keeper', 'registrar'
   res.status(201).json({ data });
 }));
 router.post('/record-flags/:id/resolve', requireRole('record_keeper', 'registrar', 'principal', 'guidance_counselor', 'adm_coordinator', 'nurse'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
-  const { data } = await resolveRecordFlag(req.user!.id, req.params.id);
+  const { data } = await resolveRecordFlag(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));
 router.post('/record-flags/:id/escalate', requireRole('record_keeper', 'registrar', 'guidance_counselor', 'adm_coordinator', 'nurse'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
@@ -113,11 +113,11 @@ router.post('/report-cards', requireRole('record_keeper', 'registrar', 'principa
   res.status(201).json({ data });
 }));
 router.post('/report-cards/:id/ready', requireRole('record_keeper', 'registrar', 'principal'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
-  const { data } = await markReportCardReady(req.user!.id, req.params.id);
+  const { data } = await markReportCardReady(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));
 router.post('/report-cards/:id/release', requireRole('record_keeper', 'registrar', 'principal'), validateSchema({ params: idParams }), asyncHandler(async (req, res) => {
-  const { data } = await releaseReportCard(req.user!.id, req.params.id);
+  const { data } = await releaseReportCard(req.user!.id, req.user!.role, req.params.id);
   res.json({ data });
 }));
 

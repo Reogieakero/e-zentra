@@ -199,18 +199,21 @@ export async function recordStudentGrade(actorId: string, actorRole: import('@pr
     throw ApiError.validation(`score must be between 0 and maxScore (${assessment.maxScore.toNumber()})`);
   }
 
-  const grade = await prisma.studentGrade.upsert({
-    where: { assessmentId_studentId: { assessmentId: input.assessmentId, studentId: input.studentId } },
-    update: { score: new Prisma.Decimal(input.score), remarks: input.remarks },
-    create: {
-      assessmentId: input.assessmentId,
-      studentId: input.studentId,
-      score: new Prisma.Decimal(input.score),
-      remarks: input.remarks,
-      recordedBy: actorId,
-    },
+  const grade = await prisma.$transaction(async (tx) => {
+    const g = await tx.studentGrade.upsert({
+      where: { assessmentId_studentId: { assessmentId: input.assessmentId, studentId: input.studentId } },
+      update: { score: new Prisma.Decimal(input.score), remarks: input.remarks },
+      create: {
+        assessmentId: input.assessmentId,
+        studentId: input.studentId,
+        score: new Prisma.Decimal(input.score),
+        remarks: input.remarks,
+        recordedBy: actorId,
+      },
+    });
+    await writeAudit({ actorId, action: 'UPSERT', tableName: 'student_grades', recordId: g.id, newValue: input as unknown as Prisma.InputJsonValue }, tx);
+    return g;
   });
-  await writeAudit({ actorId, action: 'UPSERT', tableName: 'student_grades', recordId: grade.id, newValue: input as unknown as Prisma.InputJsonValue });
   return { data: serializeForOutput(grade) };
 }
 
@@ -270,32 +273,36 @@ export async function upsertFinalGrade(actorId: string, actorRole: import('@pris
   if (locked?.isLocked) throw ApiError.conflict('Final grade is locked and may not be recomputed');
 
   const computed = await computeFinalGradeForStudent(subjectId, termId, studentId);
-  const final = await prisma.finalGrade.upsert({
-    where: { studentId_subjectId_termId: { studentId, subjectId, termId } },
-    update: {
-      quizAverage: computed.quizAverage !== null ? new Prisma.Decimal(computed.quizAverage) : null,
-      performanceTaskAverage: computed.performanceTaskAverage !== null ? new Prisma.Decimal(computed.performanceTaskAverage) : null,
-      examAverage: computed.examAverage !== null ? new Prisma.Decimal(computed.examAverage) : null,
-      initialGrade: new Prisma.Decimal(computed.initialGrade),
-      transmutedGrade: new Prisma.Decimal(computed.transmutedGrade),
-      remarks: computed.remarks,
-      sectionId,
-      computedAt: new Date(),
-    },
-    create: {
-      studentId,
-      subjectId,
-      sectionId,
-      termId,
-      quizAverage: computed.quizAverage !== null ? new Prisma.Decimal(computed.quizAverage) : null,
-      performanceTaskAverage: computed.performanceTaskAverage !== null ? new Prisma.Decimal(computed.performanceTaskAverage) : null,
-      examAverage: computed.examAverage !== null ? new Prisma.Decimal(computed.examAverage) : null,
-      initialGrade: new Prisma.Decimal(computed.initialGrade),
-      transmutedGrade: new Prisma.Decimal(computed.transmutedGrade),
-      remarks: computed.remarks,
-      finalizedBy: actorId,
-      finalizedAt: new Date(),
-    },
+  const final = await prisma.$transaction(async (tx) => {
+    const f = await tx.finalGrade.upsert({
+      where: { studentId_subjectId_termId: { studentId, subjectId, termId } },
+      update: {
+        quizAverage: computed.quizAverage !== null ? new Prisma.Decimal(computed.quizAverage) : null,
+        performanceTaskAverage: computed.performanceTaskAverage !== null ? new Prisma.Decimal(computed.performanceTaskAverage) : null,
+        examAverage: computed.examAverage !== null ? new Prisma.Decimal(computed.examAverage) : null,
+        initialGrade: new Prisma.Decimal(computed.initialGrade),
+        transmutedGrade: new Prisma.Decimal(computed.transmutedGrade),
+        remarks: computed.remarks,
+        sectionId,
+        computedAt: new Date(),
+      },
+      create: {
+        studentId,
+        subjectId,
+        sectionId,
+        termId,
+        quizAverage: computed.quizAverage !== null ? new Prisma.Decimal(computed.quizAverage) : null,
+        performanceTaskAverage: computed.performanceTaskAverage !== null ? new Prisma.Decimal(computed.performanceTaskAverage) : null,
+        examAverage: computed.examAverage !== null ? new Prisma.Decimal(computed.examAverage) : null,
+        initialGrade: new Prisma.Decimal(computed.initialGrade),
+        transmutedGrade: new Prisma.Decimal(computed.transmutedGrade),
+        remarks: computed.remarks,
+        finalizedBy: actorId,
+        finalizedAt: new Date(),
+      },
+    });
+    await writeAudit({ actorId, action: 'UPSERT', tableName: 'final_grades', recordId: f.id, newValue: { subjectId, termId, studentId } as unknown as Prisma.InputJsonValue }, tx);
+    return f;
   });
 
   await recomputeRiskAndNotify(studentId, termId, sectionId);

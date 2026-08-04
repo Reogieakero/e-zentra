@@ -24,6 +24,7 @@ const envSchema = z.object({
   LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
   LOGIN_LOCKOUT_MS: z.coerce.number().default(900000),
   ENABLE_HSTS: boolFromString(false),
+  TRUST_PROXY: z.coerce.number().default(0),
   MAX_UPLOAD_BYTES: z.coerce.number().default(5242880),
   ALLOWED_IMAGE_MIMES: z.string().default('image/jpeg,image/png,image/webp'),
   UPLOAD_DIR: z.string().default('./uploads'),
@@ -62,6 +63,7 @@ export const config = {
   },
   security: {
     enableHsts: parsed.data.ENABLE_HSTS,
+    trustProxy: parsed.data.TRUST_PROXY,
     maxUploadBytes: parsed.data.MAX_UPLOAD_BYTES,
     allowedImageMimes: parsed.data.ALLOWED_IMAGE_MIMES.split(',').map((s) => s.trim()),
     uploadDir: parsed.data.UPLOAD_DIR,
