@@ -1,0 +1,958 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum Role {
+  student
+  parent
+  teacher
+  registrar
+  record_keeper
+  adm_coordinator
+  guidance_counselor
+  principal
+  nurse
+}
+
+enum ProvisioningType {
+  self_registered
+  hardcoded
+}
+
+enum AccountStatus {
+  pending
+  active
+  inactive
+  suspended
+  rejected
+}
+
+enum Sex {
+  male
+  female
+}
+
+enum GradeLevel {
+  grade_7
+  grade_8
+  grade_9
+  grade_10
+  grade_11
+  grade_12
+}
+
+enum GradeBand {
+  junior_high
+  senior_high
+}
+
+enum TermNumber {
+  term_1
+  term_2
+  term_3
+}
+
+enum SchoolYearStatus {
+  upcoming
+  active
+  completed
+}
+
+enum TermStatus {
+  upcoming
+  active
+  completed
+}
+
+enum SectionStatus {
+  active
+  archived
+}
+
+enum SubjectStatus {
+  active
+  archived
+}
+
+enum AdviserAccessStatus {
+  pending
+  approved
+  denied
+}
+
+enum ConfidentialityLevel {
+  confidential
+  internal_staff
+  parent_visible
+}
+
+enum ReferredToRole {
+  nurse
+  guidance_counselor
+  adm_coordinator
+  principal
+}
+
+enum ReferralStatus {
+  pending
+  in_progress
+  completed
+}
+
+enum Recommendation {
+  rest_in_clinic
+  sent_home
+  referred_to_hospital
+  returned_to_class
+}
+
+enum VisitContext {
+  adm_followup
+  guidance_counseling
+}
+
+enum AdmProfileStatus {
+  draft
+  submitted
+  approved
+}
+
+enum AdmModuleStatus {
+  released
+  in_progress
+  submitted
+  student_returned
+}
+
+enum Session {
+  morning
+  afternoon
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+enum ComponentType {
+  quiz
+  performance_task
+  exam
+}
+
+enum FinalGradeRemarks {
+  passed
+  failed
+  incomplete
+}
+
+enum RiskLevel {
+  high
+  moderate
+  low
+}
+
+enum RecordFlagStatus {
+  open
+  resolved
+}
+
+enum ReportCardSource {
+  system_generated
+  scanned_upload
+}
+
+enum ReportCardStatus {
+  pending
+  ready
+  released
+}
+
+enum NotificationType {
+  new_anecdotal_record
+  new_referral
+  referral_completed
+  new_health_record
+  new_home_visitation
+  new_adm_profile
+  grade_posted
+  grade_finalized
+  grade_locked
+  attendance_alert
+  new_followup
+  record_flagged
+  record_flag_escalated
+  at_risk_flagged
+  adviser_access_requested
+  adviser_access_decided
+  parent_link_requested
+  parent_link_confirmed
+  account_approved
+  account_rejected
+  adm_module_released
+  adm_module_submitted
+  adm_certification_issued
+  report_card_ready
+}
+
+enum ParentRelationship {
+  mother
+  father
+  guardian
+}
+
+enum ParentLinkStatus {
+  pending_confirmation
+  confirmed
+  rejected
+}
+
+enum ConfirmedVia {
+  parent_app
+  staff_recorded
+}
+
+
+model User {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email               String            @unique @db.VarChar(150)
+  passwordHash        String            @map("password_hash") @db.Text
+  firstName           String            @map("first_name") @db.VarChar(100)
+  middleName          String?           @map("middle_name") @db.VarChar(100)
+  lastName            String            @map("last_name") @db.VarChar(100)
+  suffix              String?           @db.VarChar(10)
+  role                Role
+  provisioningType    ProvisioningType  @default(self_registered) @map("provisioning_type")
+  contactNumber       String?           @map("contact_number") @db.VarChar(20)
+  profilePhotoUrl     String?           @map("profile_photo_url") @db.Text
+  accountStatus       AccountStatus     @default(pending) @map("account_status")
+  approvedBy          String?           @map("approved_by") @db.Uuid
+  approvedById        User?             @relation("AccountApproval", fields: [approvedBy], references: [id])
+  approvedAt          DateTime?         @map("approved_at") @db.Timestamptz(3)
+  isVerified          Boolean           @default(false) @map("is_verified")
+  lastLoginAt         DateTime?         @map("last_login_at") @db.Timestamptz(3)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  studentProfile          StudentProfile?              @relation("StudentProfileLink")
+  parentProfile           ParentProfile?               @relation("ParentProfileLink")
+  staffProfile            StaffProfile?                @relation("StaffProfileLink")
+  refreshTokens           RefreshToken[]
+  notifications           Notification[]
+  approvedAccounts        User[]                       @relation("AccountApproval")
+  confirmedParentLinks    ParentStudentLink[]          @relation("ParentLinkConfirmation")
+  parentLinks             ParentStudentLink[]          @relation("ParentLinkParent")
+  studentLinks            ParentStudentLink[]          @relation("ParentLinkStudent")
+  sectionsAdvised         Section[]                    @relation("SectionAdviser")
+  createdSchoolYears      SchoolYear[]                 @relation("SchoolYearCreatedBy")
+  createdTerms            Term[]                       @relation("TermCreatedBy")
+  termStatusUpdated       Term[]                       @relation("TermStatusUpdatedBy")
+  createdSections         Section[]                    @relation("SectionCreatedBy")
+  createdSubjects         Subject[]                    @relation("SubjectCreatedBy")
+  subjectAssignments      TeacherSubjectAssignment[]   @relation("AssignmentTeacher")
+  assignmentCreator       TeacherSubjectAssignment[]   @relation("AssignmentCreatedBy")
+  adviserAccessRequests   AdviserAccessRequest[]       @relation("AdviserRequest")
+  adviserRequestReviewer  AdviserAccessRequest[]       @relation("AdviserRequestReviewer")
+  anecdotalObserved       AnecdotalRecord[]            @relation("AnecdotalObserver")
+  anecdotalStudents       AnecdotalRecord[]            @relation("AnecdotalStudent")
+  followups               AnecdotalRecordFollowup[]
+  referralsReferred       Referral[]                   @relation("ReferralReferredBy")
+  healthAttended          HealthRecord[]               @relation("HealthAttendedBy")
+  homeVisitsConducted     HomeVisitationRecord[]       @relation("HomeVisitConductedBy")
+  homeVisitsCertified     HomeVisitationRecord[]       @relation("HomeVisitCertifiedBy")
+  admProfilesPrepared     AdmLearnerProfile[]          @relation("AdmProfilePreparedBy")
+  admProfilesAlternate    AdmLearnerProfile[]          @relation("AdmProfileAlternate")
+  admProfilesCertified    AdmLearnerProfile[]          @relation("AdmProfileCertifiedBy")
+  admProfilesApproved     AdmLearnerProfile[]          @relation("AdmProfileApprovedBy")
+  admProfilesAdviser      AdmLearnerProfile[]          @relation("AdmProfileTeacherAdviser")
+  parentMeetingsConducted AdmParentMeeting[]           @relation("MeetingConductedBy")
+  parentMeetingsConfirmed AdmParentMeeting[]           @relation("MeetingConfirmedBy")
+  parentMeetingsAdvised   AdmParentMeeting[]           @relation("MeetingAdviser")
+  admModulesSubmitted     AdmModule[]                  @relation("ModuleSubmittedBy")
+  admModulesApproved      AdmModule[]                  @relation("ModuleApprovedBy")
+  attendanceRecorded      AttendanceRecord[]        @relation("AttendanceRecordedBy")
+  assessmentsCreated      Assessment[]
+  gradesRecorded          StudentGrade[]            @relation("StudentGradeRecordedBy")
+  finalGradesFinalized    FinalGrade[]                 @relation("FinalGradeFinalizedBy")
+  finalGradesLocked       FinalGrade[]                 @relation("FinalGradeLockedBy")
+  flagsRaised             RecordFlag[]                 @relation("FlagRaisedBy")
+  flagsResolved           RecordFlag[]                 @relation("FlagResolvedBy")
+  auditActions            AuditLog[]                   @relation("AuditActor")
+  reflections             StudentReflection[]      @relation("ReflectionAuthor")
+  reportCardsScanned      ReportCard[]                 @relation("ReportCardScannedBy")
+  reportCardsManaged      ReportCard[]                 @relation("ReportCardManagedBy")
+  healthStudents          HealthRecord[]               @relation("HealthStudent")
+  homeVisitStudents       HomeVisitationRecord[]       @relation("HomeVisitStudent")
+  admStudents             AdmLearnerProfile[]          @relation("AdmStudent")
+  attendanceStudents      AttendanceRecord[]           @relation("AttendanceStudent")
+  gradeStudents           StudentGrade[]               @relation("StudentGradeStudent")
+  finalGradeStudents      FinalGrade[]                 @relation("FinalGradeStudent")
+  riskStudents            StudentRiskAssessment[]      @relation("RiskStudent")
+  reportCardStudents      ReportCard[]                 @relation("ReportCardStudent")
+
+  @@map("users")
+}
+
+model StudentProfile {
+  id         String     @id @db.Uuid
+  user       User       @relation("StudentProfileLink", fields: [id], references: [id], onDelete: Cascade)
+  lrn        String     @unique @db.VarChar(20)
+  birthdate  DateTime   @db.Date
+  sex        Sex
+  gradeLevel GradeLevel @map("grade_level")
+  sectionId  String?    @map("section_id") @db.Uuid
+  section    Section?   @relation(fields: [sectionId], references: [id])
+  address    String?    @db.Text
+
+  @@index([sectionId])
+  @@map("student_profiles")
+}
+
+model ParentProfile {
+  id           String            @id @db.Uuid
+  user         User              @relation("ParentProfileLink", fields: [id], references: [id], onDelete: Cascade)
+  relationship ParentRelationship
+  occupation   String?           @db.VarChar(100)
+  address      String?           @db.Text
+
+  @@map("parent_profiles")
+}
+
+model ParentStudentLink {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parentId    String           @map("parent_id") @db.Uuid
+  parent      User             @relation("ParentLinkParent", fields: [parentId], references: [id])
+  studentId   String           @map("student_id") @db.Uuid
+  student     User             @relation("ParentLinkStudent", fields: [studentId], references: [id])
+  status      ParentLinkStatus @default(pending_confirmation)
+  confirmedBy String?          @map("confirmed_by") @db.Uuid
+  confirmed   User?            @relation("ParentLinkConfirmation", fields: [confirmedBy], references: [id])
+  confirmedAt DateTime?        @map("confirmed_at") @db.Timestamptz(3)
+  confirmedVia ConfirmedVia?   @map("confirmed_via")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([parentId, studentId])
+  @@index([studentId])
+  @@map("parent_student_links")
+}
+
+model StaffProfile {
+  id         String    @id @db.Uuid
+  user       User      @relation("StaffProfileLink", fields: [id], references: [id], onDelete: Cascade)
+  employeeId String    @unique @map("employee_id") @db.VarChar(20)
+  department String?   @db.VarChar(100)
+  dateHired  DateTime? @map("date_hired") @db.Date
+
+  @@map("staff_profiles")
+}
+
+model RefreshToken {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash        String    @unique @map("token_hash") @db.Text
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  replacedByTokenHash String? @map("replaced_by_token_hash") @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+
+model SchoolYear {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  yearLabel String          @unique @map("year_label") @db.VarChar(9)
+  startDate DateTime        @map("start_date") @db.Date
+  endDate   DateTime        @map("end_date") @db.Date
+  status    SchoolYearStatus @default(upcoming)
+  createdBy String          @map("created_by") @db.Uuid
+  creator   User            @relation("SchoolYearCreatedBy", fields: [createdBy], references: [id])
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  terms     Term[]
+  sections  Section[]
+  teacherSubjectAssignments TeacherSubjectAssignment[]
+
+  @@map("school_years")
+}
+
+model Term {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schoolYearId    String     @map("school_year_id") @db.Uuid
+  schoolYear      SchoolYear @relation(fields: [schoolYearId], references: [id])
+  gradeBand       GradeBand  @map("grade_band")
+  termNumber      TermNumber @map("term_number")
+  termLabel       String     @map("term_label") @db.VarChar(50)
+  startDate       DateTime   @map("start_date") @db.Date
+  endDate         DateTime   @map("end_date") @db.Date
+  status          TermStatus @default(upcoming)
+  createdBy       String     @map("created_by") @db.Uuid
+  creator         User       @relation("TermCreatedBy", fields: [createdBy], references: [id])
+  statusUpdatedBy String?    @map("status_updated_by") @db.Uuid
+  statusUpdater   User?      @relation("TermStatusUpdatedBy", fields: [statusUpdatedBy], references: [id])
+  statusUpdatedAt DateTime?  @map("status_updated_at") @db.Timestamptz(3)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  anecdotalRecords AnecdotalRecord[]
+  healthRecords    HealthRecord[]
+  homeVisitations  HomeVisitationRecord[]
+  admProfiles      AdmLearnerProfile[]
+  attendance       AttendanceRecord[]
+  gradeComponents  GradeComponent[]
+  assessments      Assessment[]
+  finalGrades      FinalGrade[]
+  riskAssessments  StudentRiskAssessment[]
+  reflections      StudentReflection[]
+  reportCards      ReportCard[]
+
+  @@unique([schoolYearId, gradeBand, termNumber])
+  @@map("terms")
+}
+
+model Section {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectionName String        @map("section_name") @db.VarChar(50)
+  gradeLevel  GradeLevel    @map("grade_level")
+  adviserId   String?       @map("adviser_id") @db.Uuid
+  adviser     User?         @relation("SectionAdviser", fields: [adviserId], references: [id])
+  schoolYearId String       @map("school_year_id") @db.Uuid
+  schoolYear  SchoolYear    @relation(fields: [schoolYearId], references: [id])
+  maxStudents Int?          @map("max_students")
+  status      SectionStatus @default(active)
+  createdBy   String        @map("created_by") @db.Uuid
+  creator     User          @relation("SectionCreatedBy", fields: [createdBy], references: [id])
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  students            StudentProfile[]
+  subjectAssignments  TeacherSubjectAssignment[]
+  adviserAccessRequests AdviserAccessRequest[]
+  anecdotalRecords    AnecdotalRecord[]
+  healthRecords       HealthRecord[]
+  homeVisitations     HomeVisitationRecord[]
+  admProfiles         AdmLearnerProfile[]
+  attendance          AttendanceRecord[]
+  assessments         Assessment[]
+  finalGrades         FinalGrade[]
+  riskAssessments     StudentRiskAssessment[]
+
+  @@index([schoolYearId])
+  @@index([adviserId])
+  @@map("sections")
+}
+
+model Subject {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subjectName String        @map("subject_name") @db.VarChar(100)
+  subjectCode String        @unique @map("subject_code") @db.VarChar(20)
+  gradeLevel  GradeLevel    @map("grade_level")
+  status      SubjectStatus @default(active)
+  createdBy   String        @map("created_by") @db.Uuid
+  creator     User          @relation("SubjectCreatedBy", fields: [createdBy], references: [id])
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  subjectAssignments TeacherSubjectAssignment[]
+  gradeComponents    GradeComponent[]
+  assessments        Assessment[]
+  finalGrades        FinalGrade[]
+  reflections        StudentReflection[]
+
+  @@map("subjects")
+}
+
+model TeacherSubjectAssignment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  teacherId    String   @map("teacher_id") @db.Uuid
+  teacher      User     @relation("AssignmentTeacher", fields: [teacherId], references: [id])
+  subjectId    String   @map("subject_id") @db.Uuid
+  subject      Subject  @relation(fields: [subjectId], references: [id])
+  sectionId    String   @map("section_id") @db.Uuid
+  section      Section  @relation(fields: [sectionId], references: [id])
+  schoolYearId String   @map("school_year_id") @db.Uuid
+  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id])
+  assignedBy   String   @map("assigned_by") @db.Uuid
+  assigned     User     @relation("AssignmentCreatedBy", fields: [assignedBy], references: [id])
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([teacherId, subjectId, sectionId, schoolYearId])
+  @@index([sectionId])
+  @@index([subjectId])
+  @@map("teacher_subject_assignments")
+}
+
+model AdviserAccessRequest {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adviserId   String              @map("adviser_id") @db.Uuid
+  adviser     User                @relation("AdviserRequest", fields: [adviserId], references: [id])
+  sectionId   String              @map("section_id") @db.Uuid
+  section     Section             @relation(fields: [sectionId], references: [id])
+  requestedAt DateTime            @default(now()) @map("requested_at") @db.Timestamptz(3)
+  reason      String?             @db.Text
+  status      AdviserAccessStatus @default(pending)
+  reviewedBy  String?             @map("reviewed_by") @db.Uuid
+  reviewer    User?               @relation("AdviserRequestReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt  DateTime?           @map("reviewed_at") @db.Timestamptz(3)
+
+  @@index([sectionId])
+  @@map("adviser_access_requests")
+}
+
+
+model AnecdotalRecord {
+  id                          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  formReference               String               @default("GCForm-01") @map("form_reference") @db.VarChar(20)
+  observerId                  String               @map("observer_id") @db.Uuid
+  observer                    User                 @relation("AnecdotalObserver", fields: [observerId], references: [id])
+  studentId                   String               @map("student_id") @db.Uuid
+  student                     User                 @relation("AnecdotalStudent", fields: [studentId], references: [id])
+  sectionId                   String               @map("section_id") @db.Uuid
+  section                     Section              @relation(fields: [sectionId], references: [id])
+  termId                      String               @map("term_id") @db.Uuid
+  term                        Term                 @relation(fields: [termId], references: [id])
+  observationDate             DateTime             @map("observation_date") @db.Date
+  observationTime             DateTime?            @map("observation_time") @db.Time
+  incidentDescription         String               @map("incident_description") @db.Text
+  locationSetting             String?              @map("location_setting") @db.Text
+  notesRecommendationsActions String?              @map("notes_recommendations_actions") @db.Text
+  classPerformance            String?              @map("class_performance") @db.Text
+  attendanceSummary           String?              @map("attendance_summary") @db.Text
+  confidentialityLevel        ConfidentialityLevel @default(confidential) @map("confidentiality_level")
+  createdAt                   DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  followups AnecdotalRecordFollowup[]
+  referrals    Referral[]
+
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([termId])
+  @@map("anecdotal_records")
+}
+
+model AnecdotalRecordFollowup {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  anecdotalRecordId String          @map("anecdotal_record_id") @db.Uuid
+  anecdotalRecord   AnecdotalRecord @relation(fields: [anecdotalRecordId], references: [id])
+  followedUpBy      String          @map("followed_up_by") @db.Uuid
+  followedUp        User            @relation(fields: [followedUpBy], references: [id])
+  followupDate      DateTime        @map("followup_date") @db.Date
+  followupNotes     String          @map("followup_notes") @db.Text
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([anecdotalRecordId])
+  @@map("anecdotal_record_followups")
+}
+
+model Referral {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  anecdotalRecordId    String               @map("anecdotal_record_id") @db.Uuid
+  anecdotalRecord      AnecdotalRecord      @relation(fields: [anecdotalRecordId], references: [id])
+  referredToRole       ReferredToRole       @map("referred_to_role")
+  referredBy           String               @map("referred_by") @db.Uuid
+  referred             User                 @relation("ReferralReferredBy", fields: [referredBy], references: [id])
+  reasonForReferral    String               @map("reason_for_referral") @db.Text
+  status               ReferralStatus       @default(pending)
+  confidentialityLevel ConfidentialityLevel @default(confidential) @map("confidentiality_level")
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  healthRecords         HealthRecord[]
+  homeVisitations       HomeVisitationRecord[]
+  admLearnerProfiles    AdmLearnerProfile[]
+
+  @@index([anecdotalRecordId])
+  @@map("referrals")
+}
+
+model HealthRecord {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId            String               @map("student_id") @db.Uuid
+  student              User                 @relation("HealthStudent", fields: [studentId], references: [id])
+  sectionId            String               @map("section_id") @db.Uuid
+  section              Section              @relation(fields: [sectionId], references: [id])
+  termId               String               @map("term_id") @db.Uuid
+  term                 Term                 @relation(fields: [termId], references: [id])
+  referralId           String?              @map("referral_id") @db.Uuid
+  referral             Referral?            @relation(fields: [referralId], references: [id])
+  visitDate            DateTime             @map("visit_date") @db.Date
+  visitTime            DateTime?            @map("visit_time") @db.Time
+  reasonForVisit       String               @map("reason_for_visit") @db.Text
+  vitalSigns           Json?                @map("vital_signs")
+  diagnosisAssessment  String?              @map("diagnosis_assessment") @db.Text
+  treatmentGiven       String?              @map("treatment_given") @db.Text
+  medicationAdministered String?            @map("medication_administered") @db.Text
+  recommendation       Recommendation?
+  parentNotified       Boolean              @default(false) @map("parent_notified")
+  attendedBy           String               @map("attended_by") @db.Uuid
+  attended             User                 @relation("HealthAttendedBy", fields: [attendedBy], references: [id])
+  confidentialityLevel ConfidentialityLevel @default(confidential) @map("confidentiality_level")
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([termId])
+  @@index([referralId])
+  @@map("health_records")
+}
+
+model HomeVisitationRecord {
+  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  formReference            String               @default("GCForm-12") @map("form_reference") @db.VarChar(20)
+  studentId                String               @map("student_id") @db.Uuid
+  student                  User                 @relation("HomeVisitStudent", fields: [studentId], references: [id])
+  sectionId                String               @map("section_id") @db.Uuid
+  section                  Section              @relation(fields: [sectionId], references: [id])
+  termId                   String               @map("term_id") @db.Uuid
+  term                     Term                 @relation(fields: [termId], references: [id])
+  referralId               String?              @map("referral_id") @db.Uuid
+  referral                 Referral?            @relation(fields: [referralId], references: [id])
+  visitContext             VisitContext         @map("visit_context")
+  personVisitedName        String               @map("person_visited_name") @db.VarChar(150)
+  relationToStudent        String?              @map("relation_to_student") @db.VarChar(50)
+  address                  String?              @db.Text
+  reasonForVisitation      String               @map("reason_for_visitation") @db.Text
+  visitDate                DateTime             @map("visit_date") @db.Date
+  visitTime                DateTime?            @map("visit_time") @db.Time
+  homeConditionObservation String?              @map("home_condition_observation") @db.Text
+  familyConditionObservation String?            @map("family_condition_observation") @db.Text
+  detailsOfConcern         String?              @map("details_of_concern") @db.Text
+  learnerAgreement         String?              @map("learner_agreement") @db.Text
+  familyAgreement          String?              @map("family_agreement") @db.Text
+  conductedBy              String               @map("conducted_by") @db.Uuid
+  conducted                User                 @relation("HomeVisitConductedBy", fields: [conductedBy], references: [id])
+  studentSigned            Boolean              @default(false) @map("student_signed")
+  parentSigned             Boolean              @default(false) @map("parent_signed")
+  adviserSigned            Boolean              @default(false) @map("adviser_signed")
+  certificationIssued      Boolean              @default(false) @map("certification_issued")
+  certificationPurpose     String?              @map("certification_purpose") @db.Text
+  certificationIssuedDate  DateTime?            @map("certification_issued_date") @db.Date
+  certifiedBy              String?              @map("certified_by") @db.Uuid
+  certified                User?                @relation("HomeVisitCertifiedBy", fields: [certifiedBy], references: [id])
+  confidentialityLevel     ConfidentialityLevel @default(confidential) @map("confidentiality_level")
+  createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([termId])
+  @@index([referralId])
+  @@map("home_visitation_records")
+}
+
+model AdmLearnerProfile {
+  id                           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId                    String           @map("student_id") @db.Uuid
+  student                      User             @relation("AdmStudent", fields: [studentId], references: [id])
+  sectionId                    String           @map("section_id") @db.Uuid
+  section                      Section          @relation(fields: [sectionId], references: [id])
+  termId                       String           @map("term_id") @db.Uuid
+  term                         Term             @relation(fields: [termId], references: [id])
+  referralId                   String           @map("referral_id") @db.Uuid
+  referral                     Referral         @relation(fields: [referralId], references: [id])
+  teacherAdviserId             String?          @map("teacher_adviser_id") @db.Uuid
+  teacherAdviser               User?            @relation("AdmProfileTeacherAdviser", fields: [teacherAdviserId], references: [id])
+  photoUrl                     String?          @map("photo_url") @db.Text
+  reasonForAdm                 String           @map("reason_for_adm") @db.Text
+  admInterventionDescription   String           @map("adm_intervention_description") @db.Text
+  admInterventionResult        String?          @map("adm_intervention_result") @db.Text
+  preparedBy                   String           @map("prepared_by") @db.Uuid
+  prepared                     User             @relation("AdmProfilePreparedBy", fields: [preparedBy], references: [id])
+  alternateAdmCoordinatorId    String?          @map("alternate_adm_coordinator_id") @db.Uuid
+  alternateAdmCoordinator      User?            @relation("AdmProfileAlternate", fields: [alternateAdmCoordinatorId], references: [id])
+  certificationIssued          Boolean          @default(false) @map("certification_issued")
+  certificationIssuedDate      DateTime?        @map("certification_issued_date") @db.Date
+  certifiedBy                  String?          @map("certified_by") @db.Uuid
+  certified                    User?            @relation("AdmProfileCertifiedBy", fields: [certifiedBy], references: [id])
+  approvedBy                   String?          @map("approved_by") @db.Uuid
+  approved                     User?            @relation("AdmProfileApprovedBy", fields: [approvedBy], references: [id])
+  confidentialityLevel         ConfidentialityLevel @default(confidential) @map("confidentiality_level")
+  status                       AdmProfileStatus @default(draft)
+  createdAt                    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  parentMeetings AdmParentMeeting[]
+  admModules     AdmModule[]
+
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([termId])
+  @@map("adm_learner_profiles")
+}
+
+
+model AdmParentMeeting {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admLearnerProfileId       String    @map("adm_learner_profile_id") @db.Uuid
+  admLearnerProfile         AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id])
+  meetingDate               DateTime  @map("meeting_date") @db.Date
+  parentsAttended           Boolean   @map("parents_attended")
+  confirmedBy               String?   @map("confirmed_by") @db.Uuid
+  confirmed                 User?     @relation("MeetingConfirmedBy", fields: [confirmedBy], references: [id])
+  confirmedVia              ConfirmedVia @default(staff_recorded) @map("confirmed_via")
+  minutesOfMeeting          String?   @map("minutes_of_meeting") @db.Text
+  attendanceLogbookReference String?  @map("attendance_logbook_reference") @db.Text
+  conductedBy               String    @map("conducted_by") @db.Uuid
+  conducted                 User      @relation("MeetingConductedBy", fields: [conductedBy], references: [id])
+  adviserId                 String?   @map("adviser_id") @db.Uuid
+  adviser                   User?     @relation("MeetingAdviser", fields: [adviserId], references: [id])
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([admLearnerProfileId])
+  @@map("adm_parent_meetings")
+}
+
+model AdmModule {
+  id                     String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admLearnerProfileId    String          @map("adm_learner_profile_id") @db.Uuid
+  admLearnerProfile      AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id])
+  releaseDate            DateTime?       @map("release_date") @db.Date
+  distributionSchedule   String?         @map("distribution_schedule") @db.Text
+  submissionDeadline     DateTime?       @map("submission_deadline") @db.Date
+  followupCounselingNotes String?        @map("followup_counseling_notes") @db.Text
+  status                 AdmModuleStatus @default(released)
+  submittedBy            String?         @map("submitted_by") @db.Uuid
+  submitted              User?           @relation("ModuleSubmittedBy", fields: [submittedBy], references: [id])
+  approvedBy             String          @map("approved_by") @db.Uuid
+  approved               User            @relation("ModuleApprovedBy", fields: [approvedBy], references: [id])
+  createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([admLearnerProfileId])
+  @@map("adm_modules")
+}
+
+
+model AttendanceRecord {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String           @map("student_id") @db.Uuid
+  student        User             @relation("AttendanceStudent", fields: [studentId], references: [id])
+  sectionId      String           @map("section_id") @db.Uuid
+  section        Section          @relation(fields: [sectionId], references: [id])
+  termId         String           @map("term_id") @db.Uuid
+  term           Term             @relation(fields: [termId], references: [id])
+  attendanceDate DateTime         @map("attendance_date") @db.Date
+  session        Session
+  status         AttendanceStatus
+  remarks        String?          @db.Text
+  recordedBy     String           @map("recorded_by") @db.Uuid
+  recorded       User             @relation("AttendanceRecordedBy", fields: [recordedBy], references: [id])
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([studentId, attendanceDate, session])
+  @@index([sectionId])
+  @@index([termId])
+  @@map("attendance_records")
+}
+
+model GradeComponent {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subjectId       String        @map("subject_id") @db.Uuid
+  subject         Subject       @relation(fields: [subjectId], references: [id])
+  componentType   ComponentType @map("component_type")
+  weightPercentage Decimal      @map("weight_percentage") @db.Decimal(5, 2)
+  termId          String        @map("term_id") @db.Uuid
+  term            Term          @relation(fields: [termId], references: [id])
+
+  @@index([subjectId])
+  @@index([termId])
+  @@map("grade_components")
+}
+
+model Assessment {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subjectId     String        @map("subject_id") @db.Uuid
+  subject       Subject       @relation(fields: [subjectId], references: [id])
+  sectionId     String        @map("section_id") @db.Uuid
+  section       Section       @relation(fields: [sectionId], references: [id])
+  termId        String        @map("term_id") @db.Uuid
+  term          Term          @relation(fields: [termId], references: [id])
+  teacherId     String        @map("teacher_id") @db.Uuid
+  teacher       User          @relation(fields: [teacherId], references: [id])
+  componentType ComponentType @map("component_type")
+  title         String        @db.VarChar(150)
+  maxScore      Decimal       @map("max_score") @db.Decimal(6, 2)
+  dateGiven     DateTime      @map("date_given") @db.Date
+
+  studentGrades StudentGrade[]
+
+  @@index([sectionId])
+  @@index([termId])
+  @@index([subjectId])
+  @@map("assessments")
+}
+
+model StudentGrade {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessmentId String     @map("assessment_id") @db.Uuid
+  assessment   Assessment @relation(fields: [assessmentId], references: [id])
+  studentId    String     @map("student_id") @db.Uuid
+  student      User       @relation("StudentGradeStudent", fields: [studentId], references: [id])
+  score        Decimal    @db.Decimal(6, 2)
+  remarks      String?    @db.Text
+  recordedBy   String     @map("recorded_by") @db.Uuid
+  recorded     User       @relation("StudentGradeRecordedBy", fields: [recordedBy], references: [id])
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([assessmentId, studentId])
+  @@index([studentId])
+  @@map("student_grades")
+}
+
+model FinalGrade {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId              String   @map("student_id") @db.Uuid
+  student                User     @relation("FinalGradeStudent", fields: [studentId], references: [id])
+  subjectId              String   @map("subject_id") @db.Uuid
+  subject                Subject  @relation(fields: [subjectId], references: [id])
+  sectionId              String   @map("section_id") @db.Uuid
+  section                Section  @relation(fields: [sectionId], references: [id])
+  termId                 String   @map("term_id") @db.Uuid
+  term                   Term     @relation(fields: [termId], references: [id])
+  quizAverage            Decimal? @map("quiz_average") @db.Decimal(5, 2)
+  performanceTaskAverage Decimal? @map("performance_task_average") @db.Decimal(5, 2)
+  examAverage            Decimal? @map("exam_average") @db.Decimal(5, 2)
+  initialGrade           Decimal  @map("initial_grade") @db.Decimal(5, 2)
+  transmutedGrade        Decimal  @map("transmuted_grade") @db.Decimal(5, 2)
+  remarks                String?  @db.VarChar(20)
+  finalizedBy            String?  @map("finalized_by") @db.Uuid
+  finalized              User?    @relation("FinalGradeFinalizedBy", fields: [finalizedBy], references: [id])
+  finalizedAt            DateTime? @map("finalized_at") @db.Timestamptz(3)
+  isLocked               Boolean  @default(false) @map("is_locked")
+  lockedBy               String?  @map("locked_by") @db.Uuid
+  locked                 User?    @relation("FinalGradeLockedBy", fields: [lockedBy], references: [id])
+  lockedAt               DateTime? @map("locked_at") @db.Timestamptz(3)
+  computedAt             DateTime @default(now()) @map("computed_at") @db.Timestamptz(3)
+
+  @@unique([studentId, subjectId, termId])
+  @@index([sectionId])
+  @@map("final_grades")
+}
+
+
+model StudentRiskAssessment {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String    @map("student_id") @db.Uuid
+  student         User      @relation("RiskStudent", fields: [studentId], references: [id])
+  sectionId       String    @map("section_id") @db.Uuid
+  section         Section   @relation(fields: [sectionId], references: [id])
+  termId          String    @map("term_id") @db.Uuid
+  term            Term      @relation(fields: [termId], references: [id])
+  academicRisk    Boolean   @map("academic_risk")
+  attendanceRisk  Boolean   @map("attendance_risk")
+  behavioralRisk  Boolean   @map("behavioral_risk")
+  riskCount       Int       @map("risk_count")
+  riskLevel       RiskLevel @map("risk_level")
+  computedAt      DateTime  @default(now()) @map("computed_at") @db.Timestamptz(3)
+
+  @@unique([studentId, termId])
+  @@index([sectionId])
+  @@map("student_risk_assessments")
+}
+
+
+model RecordFlag {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceTable       String          @map("source_table") @db.VarChar(50)
+  sourceRecordId    String          @map("source_record_id") @db.Uuid
+  flaggedBy         String          @map("flagged_by") @db.Uuid
+  flagged           User            @relation("FlagRaisedBy", fields: [flaggedBy], references: [id])
+  flagReason        String          @map("flag_reason") @db.Text
+  status            RecordFlagStatus @default(open)
+  resolvedBy        String?         @map("resolved_by") @db.Uuid
+  resolver          User?           @relation("FlagResolvedBy", fields: [resolvedBy], references: [id])
+  resolvedAt        DateTime?       @map("resolved_at") @db.Timestamptz(3)
+  escalatedToPrincipal Boolean      @default(false) @map("escalated_to_principal")
+  escalatedAt       DateTime?       @map("escalated_at") @db.Timestamptz(3)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([sourceTable, sourceRecordId])
+  @@map("record_flags")
+}
+
+model AuditLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId   String   @map("actor_id") @db.Uuid
+  actor     User     @relation("AuditActor", fields: [actorId], references: [id])
+  action    String   @db.VarChar(50)
+  tableName String   @map("table_name") @db.VarChar(50)
+  recordId  String   @map("record_id") @db.Uuid
+  oldValue  Json?    @map("old_value")
+  newValue  Json?    @map("new_value")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([actorId])
+  @@index([tableName])
+  @@map("audit_log")
+}
+
+
+model StudentReflection {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  student   User     @relation("ReflectionAuthor", fields: [studentId], references: [id])
+  termId    String?  @map("term_id") @db.Uuid
+  term      Term?    @relation(fields: [termId], references: [id])
+  subjectId String?  @map("subject_id") @db.Uuid
+  subject   Subject? @relation(fields: [subjectId], references: [id])
+  prompt    String?  @db.Text
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([studentId])
+  @@map("student_reflections")
+}
+
+model ReportCard {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String           @map("student_id") @db.Uuid
+  student     User             @relation("ReportCardStudent", fields: [studentId], references: [id])
+  termId      String           @map("term_id") @db.Uuid
+  term        Term             @relation(fields: [termId], references: [id])
+  source      ReportCardSource
+  fileUrl     String?          @map("file_url") @db.Text
+  status      ReportCardStatus @default(pending)
+  generatedAt DateTime?        @map("generated_at") @db.Timestamptz(3)
+  scannedBy   String?          @map("scanned_by") @db.Uuid
+  scanned     User?            @relation("ReportCardScannedBy", fields: [scannedBy], references: [id])
+  managedBy   String?          @map("managed_by") @db.Uuid
+  managed     User?            @relation("ReportCardManagedBy", fields: [managedBy], references: [id])
+  releasedAt  DateTime?        @map("released_at") @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([studentId])
+  @@map("report_cards")
+}
+
+
+model Notification {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipientId       String           @map("recipient_id") @db.Uuid
+  recipient         User             @relation(fields: [recipientId], references: [id])
+  sourceTable       String           @map("source_table") @db.VarChar(50)
+  sourceRecordId    String           @map("source_record_id") @db.Uuid
+  notificationType  NotificationType @map("notification_type")
+  title             String           @db.VarChar(150)
+  message           String           @db.Text
+  isRead            Boolean          @default(false) @map("is_read")
+  readAt            DateTime?        @map("read_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([recipientId, createdAt])
+  @@map("notifications")
+}

@@ -1,0 +1,211 @@
+import request from 'supertest';
+import { app, createUser, loginAs, registerAndApproveStudent, truncateAll } from '../helpers';
+
+describe('Auth flow', () => {
+  beforeEach(async () => {
+    await truncateAll();
+  });
+
+  it('registers a student as pending, approves via grade-band owner, logs in, refreshes, logs out', async () => {
+    const { studentId, email } = await registerAndApproveStudent({ gradeLevel: 'grade_9', approverRole: 'record_keeper' });
+
+    const { user } = await loginAs('record_keeper', { email: 'rk.auth@test.edu' });
+    expect(user.accountStatus).toBe('active');
+    expect(studentId).toBeTruthy();
+
+    const loginRes = await request(app).post('/api/v1/auth/login').send({ email, password: 'Test@1234' });
+    expect(loginRes.status).toBe(200);
+    const { accessToken, refreshToken } = loginRes.body.data.tokens;
+    expect(accessToken).toBeTruthy();
+    expect(loginRes.body.data.user.accountStatus).toBe('active');
+
+    const refreshRes = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
+    expect(refreshRes.status).toBe(200);
+    expect(refreshRes.body.data.accessToken).toBeTruthy();
+    const newRefresh = refreshRes.body.data.refreshToken;
+    expect(newRefresh).not.toBe(refreshToken);
+
+    const logoutRes = await request(app).post('/api/v1/auth/logout').send({ refreshToken: newRefresh });
+    expect(logoutRes.status).toBe(204);
+
+    const reuseRes = await request(app).post('/api/v1/auth/refresh').send({ refreshToken: newRefresh });
+    expect(reuseRes.status).toBe(401);
+  });
+
+  it('returns 401 for bad credentials and honors pending accounts', async () => {
+    await createUser({ role: 'student', email: 's.badpw@test.edu', password: 'Test@1234', gradeLevel: 'grade_7' });
+    const bad = await request(app).post('/api/v1/auth/login').send({ email: 's.badpw@test.edu', password: 'WrongPass1' });
+    expect(bad.status).toBe(401);
+    expect(bad.body.error.code).toBe('UNAUTHORIZED');
+
+    const missing = await request(app).post('/api/v1/auth/login').send({ email: 'nobody@test.edu', password: 'Whatever1' });
+    expect(missing.status).toBe(401);
+  });
+
+  it('requires approval before login (403 forbidden for pending accounts)', async () => {
+    const reg = await request(app).post('/api/v1/auth/register/student').send({
+      email: 'pending.g7@test.edu',
+      password: 'Test@1234',
+      firstName: 'P',
+      lastName: 'Pending',
+      lrn: 'LRNPENDINGG7',
+      birthdate: '2010-01-01',
+      sex: 'male',
+      gradeLevel: 'grade_7',
+    });
+    expect(reg.status).toBe(201);
+
+    const loginRes = await request(app).post('/api/v1/auth/login').send({ email: 'pending.g7@test.edu', password: 'Test@1234' });
+    expect(loginRes.status).toBe(403);
+    expect(loginRes.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('enforces grade-band ownership on account approval (grade 9 is JHS)', async () => {
+    const reg = await request(app).post('/api/v1/auth/register/student').send({
+      email: 'band.g9@test.edu',
+      password: 'Test@1234',
+      firstName: 'B',
+      lastName: 'Band',
+      lrn: 'LRNBANDG9',
+      birthdate: '2010-01-01',
+      sex: 'male',
+      gradeLevel: 'grade_9',
+    });
+    expect(reg.status).toBe(201);
+    const studentId = reg.body.data.id;
+
+    const registrar = await loginAs('registrar');
+    const rk = await loginAs('record_keeper');
+
+    const wrong = await request(app)
+      .post(`/api/v1/users/${studentId}/approve`)
+      .set('Authorization', `Bearer ${registrar.tokens.accessToken}`);
+    expect(wrong.status).toBe(403);
+
+    const correct = await request(app)
+      .post(`/api/v1/users/${studentId}/approve`)
+      .set('Authorization', `Bearer ${rk.tokens.accessToken}`);
+    expect(correct.status).toBe(200);
+  });
+
+  it('enforces grade-band ownership on account approval (grade 11 is SHS)', async () => {
+    const reg = await request(app).post('/api/v1/auth/register/student').send({
+      email: 'band.g11@test.edu',
+      password: 'Test@1234',
+      firstName: 'B',
+      lastName: 'Band11',
+      lrn: 'LRNBANDG11',
+      birthdate: '2009-01-01',
+      sex: 'female',
+      gradeLevel: 'grade_11',
+    });
+    const studentId = reg.body.data.id;
+
+    const registrar = await loginAs('registrar');
+    const rk = await loginAs('record_keeper');
+
+    const wrong = await request(app)
+      .post(`/api/v1/users/${studentId}/approve`)
+      .set('Authorization', `Bearer ${rk.tokens.accessToken}`);
+    expect(wrong.status).toBe(403);
+
+    const correct = await request(app)
+      .post(`/api/v1/users/${studentId}/approve`)
+      .set('Authorization', `Bearer ${registrar.tokens.accessToken}`);
+    expect(correct.status).toBe(200);
+  });
+
+  it('only the Registrar approves teacher accounts school-wide', async () => {
+    const reg = await request(app).post('/api/v1/auth/register/teacher').send({
+      email: 'teacher.pending@test.edu',
+      password: 'Test@1234',
+      firstName: 'T',
+      lastName: 'Teacher',
+      employeeId: 'EMP-ABC123',
+    });
+    expect(reg.status).toBe(201);
+    const teacherId = reg.body.data.id;
+
+    const rk = await loginAs('record_keeper');
+    const registrar = await loginAs('registrar');
+
+    const wrong = await request(app)
+      .post(`/api/v1/users/${teacherId}/approve`)
+      .set('Authorization', `Bearer ${rk.tokens.accessToken}`);
+    expect(wrong.status).toBe(403);
+
+    const correct = await request(app)
+      .post(`/api/v1/users/${teacherId}/approve`)
+      .set('Authorization', `Bearer ${registrar.tokens.accessToken}`);
+    expect(correct.status).toBe(200);
+  });
+
+  it('validates inputs and rejects unknown fields', async () => {
+    const bad = await request(app).post('/api/v1/auth/register/student').send({
+      email: 'not-an-email',
+      password: 'short',
+      firstName: '',
+      lastName: 'X',
+      lrn: '1',
+      birthdate: 'nope',
+      sex: 'male',
+      gradeLevel: 'grade_99',
+    });
+    expect(bad.status).toBe(422);
+    expect(bad.body.error.code).toBe('VALIDATION_ERROR');
+
+    const unknown = await request(app).post('/api/v1/auth/register/student').send({
+      email: 'unknown.field@test.edu',
+      password: 'Test@1234',
+      firstName: 'A',
+      lastName: 'B',
+      lrn: 'LRNUNKNOWN',
+      birthdate: '2010-01-01',
+      sex: 'male',
+      gradeLevel: 'grade_7',
+      hacked: true,
+    });
+    expect(unknown.status).toBe(422);
+  });
+
+  it('rejects requests without a valid bearer token', async () => {
+    const res = await request(app).get('/api/v1/auth/me');
+    expect(res.status).toBe(401);
+    const badToken = await request(app).get('/api/v1/auth/me').set('Authorization', 'Bearer not-a-jwt');
+    expect(badToken.status).toBe(401);
+  });
+
+  it('creates and confirms parent-student link on approval', async () => {
+    const reg = await request(app).post('/api/v1/auth/register/student').send({
+      email: 'child.link@test.edu',
+      password: 'Test@1234',
+      firstName: 'C',
+      lastName: 'Child',
+      lrn: 'LRNCHILDLINK',
+      birthdate: '2011-01-01',
+      sex: 'female',
+      gradeLevel: 'grade_7',
+    });
+    const studentId = reg.body.data.id;
+
+    const parentReg = await request(app).post('/api/v1/auth/register/parent').send({
+      email: 'parent.link@test.edu',
+      password: 'Test@1234',
+      firstName: 'P',
+      lastName: 'Parent',
+      relationship: 'mother',
+      childEmail: 'child.link@test.edu',
+    });
+    expect(parentReg.status).toBe(201);
+
+    const rk = await loginAs('record_keeper');
+    await request(app)
+      .post(`/api/v1/users/${studentId}/approve`)
+      .set('Authorization', `Bearer ${rk.tokens.accessToken}`)
+      .expect(200);
+
+    const { prisma } = require('../../src/lib/prisma');
+    const link = await prisma.parentStudentLink.findFirst({ where: { studentId } });
+    expect(link?.status).toBe('confirmed');
+  });
+});
