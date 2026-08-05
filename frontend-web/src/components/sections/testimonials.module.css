@@ -1,0 +1,70 @@
+.container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 24px;
+  }
+}
+
+.section {
+  background: var(--muted);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 80px 0;
+}
+
+.grid {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 12px;
+  color: #fbbf24;
+}
+
+.star {
+  fill: currentColor;
+}
+
+.quote {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+}
+
+.author {
+  margin-top: 16px;
+}
+
+.authorName {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.authorRole {
+  font-size: 10px;
+  color: var(--muted-foreground);
+}

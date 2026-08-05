@@ -1,0 +1,167 @@
+.container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 24px;
+  }
+}
+
+.section {
+  padding: 80px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+
+.title {
+  margin-top: 8px;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+
+.lede {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+  max-width: 32rem;
+}
+
+.points {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.point {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.iconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-weak);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.icon {
+  color: var(--brand-primary);
+}
+
+.pointTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.pointDesc {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+/* dark card */
+.card {
+  background: #111827;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  color: #fff;
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 32px;
+  }
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brand-light);
+}
+
+.rows {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.viewRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.role {
+  font-size: 11px;
+  color: #d1d5db;
+}
+
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tone_brand {
+  color: var(--brand-light);
+}
+.tone_warning {
+  color: #fcd34d;
+}
+.tone_info {
+  color: #7dd3fc;
+}
+.tone_neutral {
+  color: #9ca3af;
+}
+
+.cardFootnote {
+  margin-top: 20px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #9ca3af;
+}

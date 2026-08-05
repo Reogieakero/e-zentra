@@ -1,0 +1,91 @@
+.container {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 24px;
+  }
+}
+
+.section {
+  background: var(--muted);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 80px 0;
+}
+
+.table {
+  margin-top: 48px;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 90px 1fr 1fr;
+}
+
+@media (min-width: 640px) {
+  .row {
+    grid-template-columns: 130px 1fr 1fr;
+  }
+}
+
+.cellLabel {
+  padding: 12px;
+}
+
+.cellCol {
+  padding: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.headerRow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.headerCell {
+  display: flex;
+  align-items: center;
+}
+
+.headerAfter {
+  background: rgba(209, 250, 229, 0.4);
+  color: var(--brand-primary);
+}
+
+.datarow {
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.datarow:last-child {
+  border-bottom: 0;
+}
+
+.dataLabel {
+  font-weight: 500;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+}
+
+.dataBefore {
+  color: var(--muted-foreground);
+}
+
+.dataAfter {
+  background: rgba(209, 250, 229, 0.2);
+  color: var(--foreground);
+}
