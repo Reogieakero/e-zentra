@@ -35,9 +35,11 @@ export function Header() {
           <Link href="/login" className={styles.signIn}>
             Sign In
           </Link>
-          <Button href="#contact" variant="primary" size="md">
-            Request a Demo
-          </Button>
+          <span className={styles.demoWrap}>
+            <Button href="#contact" variant="primary" size="md">
+              Request a Demo
+            </Button>
+          </span>
         </div>
       </div>
     </header>
