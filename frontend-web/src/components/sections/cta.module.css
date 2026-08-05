@@ -1,0 +1,69 @@
+.container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 16px 80px;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 24px 80px;
+  }
+}
+
+.banner {
+  position: relative;
+  border-radius: var(--radius-lg);
+  background: var(--brand-gradient);
+  overflow: hidden;
+}
+
+.dotGrid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--brand-weak) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+  opacity: 0.15;
+}
+
+.bannerInner {
+  position: relative;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  text-align: center;
+}
+
+@media (min-width: 1024px) {
+  .bannerInner {
+    flex-direction: row;
+    padding: 56px 48px;
+    text-align: left;
+  }
+}
+
+.title {
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.lede {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(209, 250, 229, 0.9);
+  max-width: 32rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-shrink: 0;
+}

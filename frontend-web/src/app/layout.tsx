@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Zentra — School Information System",
+  title: "Zentra — School Management System for K-12",
   description:
-    "Zentra connects students, parents, teachers, and school staff around academic records, attendance, grading, and learner support.",
+    "A DepEd-aligned student information and ADM management system for Junior and Senior High School — one record per learner, scoped to every role that needs it.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
