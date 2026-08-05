@@ -159,6 +159,8 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
 
       <div className={styles.divider}>
         <div className={styles.dividerLine} />
+        <span className={styles.dividerText}>or</span>
+        <div className={styles.dividerLine} />
       </div>
 
       <button type="button" className={styles.google} onClick={handleGoogle} disabled={googleLoading}>
