@@ -19,7 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={inter.variable}>
       <body>
-        <Toaster position="top-right" />
+        <Toaster position="top-right" theme="dark" />
         {children}
       </body>
     </html>
