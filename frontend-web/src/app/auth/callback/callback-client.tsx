@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { CircleCheckBig, ShieldQuestion, UserPlus } from "lucide-react";
+import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
 import { clearSession, setTokens, setUser, type LoginResponse, type Portal } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
+import { env } from "@/lib/env";
 
 export default function AuthCallbackClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [message, setMessage] = useState("Completing your sign-in…");
   const started = useRef(false);
 
   useEffect(() => {
@@ -19,7 +21,11 @@ export default function AuthCallbackClient() {
 
       const portal = (searchParams.get("portal") ?? "staff") as Portal;
       if (!window.location.hash && !searchParams.get("code")) {
-        setMessage("No Google sign-in was found. Redirecting…");
+        sileo.info({
+          title: "No Google sign-in found",
+          description: "Taking you back to sign in.",
+          icon: <ShieldQuestion size={18} />,
+        });
         setTimeout(() => router.replace("/login"), 1500);
         return;
       }
@@ -38,13 +44,40 @@ export default function AuthCallbackClient() {
           body: { accessToken: token, portal },
         });
 
+        sileo.success({
+          title: `Signed in${loginData.user.firstName ? `, ${loginData.user.firstName}` : ""}!`,
+          description: "Welcome to Zentra.",
+          icon: <CircleCheckBig size={18} />,
+        });
+
         setTokens(loginData.tokens);
         setUser(loginData.user);
         router.replace("/");
       } catch (err) {
         clearSession();
-        setMessage(err instanceof ApiClientError || err instanceof Error ? err.message : "Sign-in failed.");
-        setTimeout(() => router.replace("/login"), 2000);
+
+        const message =
+          err instanceof ApiClientError || err instanceof Error ? err.message : "Sign-in failed.";
+
+        if (
+          !env.supabaseConfigured ||
+          /no.*zentra account.*linked/i.test(message) ||
+          /does not exist/i.test(message)
+        ) {
+          sileo.action({
+            title: "Account not found",
+            description: message,
+            icon: <UserPlus size={18} />,
+            button: {
+              title: "Create an account",
+              onClick: () => router.replace("/signup"),
+            },
+          });
+        } else {
+          sileo.error({ title: "Sign-in failed", description: message });
+        }
+
+        setTimeout(() => router.replace("/login"), 2500);
       }
     }
 
@@ -90,7 +123,7 @@ export default function AuthCallbackClient() {
             animation: "spin 0.7s linear infinite",
           }}
         />
-        {message}
+        Completing your sign-in…
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
