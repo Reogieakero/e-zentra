@@ -348,4 +348,28 @@ describe('Auth flow', () => {
     expect(unknown.status).toBe(200);
     expect(unknown.body.data.devResetUrl).toBeNull();
   });
+
+  it('password reset: is scoped to the requested portal and does not leak mismatches', async () => {
+    const { studentId, email } = await registerAndApproveStudent({ gradeLevel: 'grade_9', approverRole: 'record_keeper' });
+    const { prisma } = require('../../src/lib/prisma');
+
+    // Matching portal (student) issues a reset.
+    const ok = await request(app).post('/api/v1/auth/password-reset/request').send({ email, portal: 'student' });
+    expect(ok.status).toBe(200);
+    if (config.smtp.enabled) {
+      expect(ok.body.data.devResetUrl).toBeNull();
+    } else {
+      expect(ok.body.data.devResetUrl).toBeTruthy();
+    }
+
+    // Mismatched portal (parent / staff) behaves like an unknown email.
+    for (const portal of ['parent', 'staff']) {
+      const before = await prisma.passwordResetToken.count({ where: { userId: studentId, usedAt: null } });
+      const mismatch = await request(app).post('/api/v1/auth/password-reset/request').send({ email, portal });
+      expect(mismatch.status).toBe(200);
+      expect(mismatch.body.data.devResetUrl).toBeNull();
+      const after = await prisma.passwordResetToken.count({ where: { userId: studentId, usedAt: null } });
+      expect(after).toBe(before);
+    }
+  });
 });

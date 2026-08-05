@@ -60,7 +60,7 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
   }
 
   function handleForgot() {
-    router.push("/forgot-password");
+    router.push(`/forgot-password?portal=${portal}`);
   }
 
   async function handleGoogle() {
