@@ -347,27 +347,31 @@ describe('Auth flow', () => {
     const unknown = await request(app).post('/api/v1/auth/password-reset/request').send({ email: 'nobody@test.edu' });
     expect(unknown.status).toBe(200);
     expect(unknown.body.data.devResetUrl).toBeNull();
+    expect(unknown.body.data.mismatch).toBeNull();
   });
 
   it('password reset: is scoped to the requested portal and does not leak mismatches', async () => {
     const { studentId, email } = await registerAndApproveStudent({ gradeLevel: 'grade_9', approverRole: 'record_keeper' });
     const { prisma } = require('../../src/lib/prisma');
 
-    // Matching portal (student) issues a reset.
+    // Matching portal (student) issues a reset; no role mismatch reported.
     const ok = await request(app).post('/api/v1/auth/password-reset/request').send({ email, portal: 'student' });
     expect(ok.status).toBe(200);
+    expect(ok.body.data.mismatch).toBeNull();
     if (config.smtp.enabled) {
       expect(ok.body.data.devResetUrl).toBeNull();
     } else {
       expect(ok.body.data.devResetUrl).toBeTruthy();
     }
 
-    // Mismatched portal (parent / staff) behaves like an unknown email.
+    // Mismatched portal (parent / staff) reports the account's real role
+    // (so the UI can tell the user they used the wrong page) without issuing a reset.
     for (const portal of ['parent', 'staff']) {
       const before = await prisma.passwordResetToken.count({ where: { userId: studentId, usedAt: null } });
       const mismatch = await request(app).post('/api/v1/auth/password-reset/request').send({ email, portal });
       expect(mismatch.status).toBe(200);
       expect(mismatch.body.data.devResetUrl).toBeNull();
+      expect(mismatch.body.data.mismatch).toBe('student');
       const after = await prisma.passwordResetToken.count({ where: { userId: studentId, usedAt: null } });
       expect(after).toBe(before);
     }

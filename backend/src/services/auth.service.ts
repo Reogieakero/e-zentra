@@ -391,6 +391,13 @@ function roleMatchesPortal(role: Role, portal: ResetPortal): boolean {
   return isStaffRole(role);
 }
 
+function roleToPortal(role: Role): ResetPortal {
+  if (role === 'student') return 'student';
+  if (role === 'parent') return 'parent';
+  if (isStaffRole(role)) return 'staff';
+  return 'student';
+}
+
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) {
@@ -625,20 +632,29 @@ If you didn't request this, you can safely ignore this email and your password w
 /**
  * Starts a password reset for the given email. Always resolves successfully
  * (regardless of whether the account exists) to avoid account enumeration.
- * When a portal is supplied, the account's role must match it; mismatches are
- * treated the same as an unknown email so existence isn't leaked.
+ * When a portal is supplied, the account's role must match it; a mismatch is
+ * reported back (mismatch = the account's actual portal) so callers can tell
+ * the user they used the wrong portal, while unknown emails stay generic.
  * Stores a hashed, single-use, time-limited token and either emails the reset
  * link (when SMTP is configured) or returns it as a dev fallback.
  */
 export async function requestPasswordReset(email: string, portal?: ResetPortal) {
   const normalized = email.toLowerCase();
   const user = await prisma.user.findUnique({ where: { email: normalized } });
-  if (!user || (portal && !roleMatchesPortal(user.role, portal))) {
+  if (!user) {
     await writeSecurityEvent('00000000-0000-0000-0000-000000000000', 'password_reset_unknown_email', {
       email: normalized,
       portal,
     }).catch(() => undefined);
-    return { delivered: false, devResetUrl: null };
+    return { delivered: false, devResetUrl: null, mismatch: null };
+  }
+
+  if (portal && !roleMatchesPortal(user.role, portal)) {
+    const actual = roleToPortal(user.role);
+    await writeSecurityEvent(user.id, 'password_reset_role_mismatch', { email: normalized, portal, actual }).catch(
+      () => undefined
+    );
+    return { delivered: false, devResetUrl: null, mismatch: actual };
   }
 
   // Invalidate any outstanding reset tokens for this user.
@@ -656,7 +672,7 @@ export async function requestPasswordReset(email: string, portal?: ResetPortal) 
   const delivered = await sendMail({ to: user.email, subject: mail.subject, text: mail.text, html: mail.html });
 
   await writeSecurityEvent(user.id, 'password_reset_requested', { delivered }).catch(() => undefined);
-  return { delivered, devResetUrl: delivered ? null : resetUrl };
+  return { delivered, devResetUrl: delivered ? null : resetUrl, mismatch: null };
 }
 
 /**
