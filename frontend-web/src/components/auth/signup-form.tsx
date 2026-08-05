@@ -1,16 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { GraduationCap, Presentation, UserPlus, Users } from "lucide-react";
+import { useRef, useState } from "react";
+import { Check, GraduationCap, Presentation, ShieldCheck, UserPlus, Users, X } from "lucide-react";
 import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
 import type { RegisterResponse } from "@/lib/auth";
+import { getPasswordStrength } from "@/lib/password";
+import { PasswordInput } from "@/components/ui/password-input";
+import { CustomSelect, type SelectOption } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import styles from "./signup-form.module.css";
 
 type SignupRole = "student" | "parent" | "teacher";
 
-const GRADE_LEVELS = [
+const GRADE_LEVELS: SelectOption[] = [
   { value: "grade_7", label: "Grade 7" },
   { value: "grade_8", label: "Grade 8" },
   { value: "grade_9", label: "Grade 9" },
@@ -19,10 +23,15 @@ const GRADE_LEVELS = [
   { value: "grade_12", label: "Grade 12" },
 ];
 
-const RELATIONSHIPS = [
+const RELATIONSHIPS: SelectOption[] = [
   { value: "mother", label: "Mother" },
   { value: "father", label: "Father" },
   { value: "guardian", label: "Guardian" },
+];
+
+const SEXES: SelectOption[] = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
 ];
 
 const TABS: { role: SignupRole; icon: typeof GraduationCap; label: string }[] = [
@@ -36,6 +45,8 @@ export function SignupForm() {
   const [role, setRole] = useState<SignupRole>("student");
   const [submitting, setSubmitting] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
+  const strongToastRef = useRef(false);
+  const confirmMatchRef = useRef<boolean | null>(null);
 
   function setValue(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -51,8 +62,74 @@ export function SignupForm() {
     });
   }
 
+  function handlePasswordChange(value: string) {
+    if (!value) {
+      strongToastRef.current = false;
+      setValue("password", "");
+      return;
+    }
+    const { satisfied } = getPasswordStrength(value);
+    if (satisfied && !strongToastRef.current) {
+      strongToastRef.current = true;
+      sileo.success({
+        title: "Great password!",
+        description: "All requirements are met.",
+        icon: <ShieldCheck size={18} />,
+      });
+    }
+    setValue("password", value);
+  }
+
+  function handleConfirmChange(value: string) {
+    setValue("confirmPassword", value);
+    if (!value) {
+      confirmMatchRef.current = null;
+      return;
+    }
+    const matches = value === values.password;
+    if (matches !== confirmMatchRef.current) {
+      confirmMatchRef.current = matches;
+      if (matches) {
+        sileo.success({
+          title: "Passwords match",
+          description: "Your confirmation matches the password.",
+          icon: <Check size={18} />,
+        });
+      } else {
+        sileo.error({
+          title: "Passwords don't match",
+          description: "Confirm password must match the password.",
+          icon: <X size={18} />,
+        });
+      }
+    }
+  }
+
+  function handleLrnChange(value: string) {
+    setValue("lrn", value.replace(/[^0-9]/g, "").slice(0, 12));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    const { satisfied } = getPasswordStrength(values.password ?? "");
+    if (!satisfied) {
+      sileo.error({
+        title: "Password too weak",
+        description: "Meet all password requirements to continue.",
+        icon: <ShieldCheck size={18} />,
+      });
+      return;
+    }
+    if ((values.confirmPassword ?? "") !== (values.password ?? "")) {
+      sileo.error({
+        title: "Passwords don't match",
+        description: "Your confirm password must match the password.",
+        icon: <X size={18} />,
+      });
+      return;
+    }
+
     setSubmitting(true);
 
     const base = {
@@ -172,49 +249,64 @@ export function SignupForm() {
           <>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="lrn">Learner Reference Number (LRN)</label>
-              <input id="lrn" className={styles.input} required value={values.lrn ?? ""} onChange={(e) => setValue("lrn", e.target.value)} />
+              <input
+                id="lrn"
+                className={styles.input}
+                required
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={12}
+                placeholder="12-digit LRN"
+                value={values.lrn ?? ""}
+                onChange={(e) => handleLrnChange(e.target.value)}
+              />
             </div>
             <div className={styles.nameRow}>
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="gradeLevel">Grade level</label>
-                <select id="gradeLevel" className={styles.input} value={values.gradeLevel ?? "grade_7"} onChange={(e) => setValue("gradeLevel", e.target.value)}>
-                  {GRADE_LEVELS.map((g) => (
-                    <option key={g.value} value={g.value}>{g.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="sex">Sex</label>
-                <select id="sex" className={styles.input} value={values.sex ?? "male"} onChange={(e) => setValue("sex", e.target.value)}>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
-              </div>
+              <CustomSelect
+                id="gradeLevel"
+                label="Grade level"
+                value={values.gradeLevel ?? ""}
+                options={GRADE_LEVELS}
+                placeholder="Select grade"
+                onChange={(v) => setValue("gradeLevel", v)}
+              />
+              <CustomSelect
+                id="sex"
+                label="Sex"
+                value={values.sex ?? ""}
+                options={SEXES}
+                placeholder="Select sex"
+                onChange={(v) => setValue("sex", v)}
+              />
             </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="birthdate">Birthdate</label>
-              <input id="birthdate" type="date" className={styles.input} required value={values.birthdate ?? ""} onChange={(e) => setValue("birthdate", e.target.value)} />
-            </div>
+            <DatePicker
+              id="birthdate"
+              label="Birthdate"
+              value={values.birthdate ?? ""}
+              max={new Date().toISOString().slice(0, 10)}
+              placeholder="Select birthdate"
+              onChange={(v) => setValue("birthdate", v)}
+            />
           </>
         ) : null}
 
         {role === "parent" ? (
           <>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="relationship">Relationship to student</label>
-              <select id="relationship" className={styles.input} value={values.relationship ?? "guardian"} onChange={(e) => setValue("relationship", e.target.value)}>
-                {RELATIONSHIPS.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              id="relationship"
+              label="Relationship to student"
+              value={values.relationship ?? ""}
+              options={RELATIONSHIPS}
+              placeholder="Select relationship"
+              onChange={(v) => setValue("relationship", v)}
+            />
             <div className={styles.field}>
               <label className={styles.label} htmlFor="childEmail">Child&apos;s email <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional if you know their LRN)</span></label>
               <input id="childEmail" type="email" className={styles.input} value={values.childEmail ?? ""} onChange={(e) => setValue("childEmail", e.target.value)} />
             </div>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="childLrn">Child&apos;s LRN <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional if you know their email)</span></label>
-              <input id="childLrn" className={styles.input} value={values.childLrn ?? ""} onChange={(e) => setValue("childLrn", e.target.value)} />
+              <input id="childLrn" inputMode="numeric" pattern="[0-9]*" maxLength={12} className={styles.input} value={values.childLrn ?? ""} onChange={(e) => setValue("childLrn", e.target.value.replace(/[^0-9]/g, "").slice(0, 12))} />
             </div>
           </>
         ) : null}
@@ -229,10 +321,19 @@ export function SignupForm() {
               <label className={styles.label} htmlFor="department">Department <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional)</span></label>
               <input id="department" className={styles.input} value={values.department ?? ""} onChange={(e) => setValue("department", e.target.value)} />
             </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="dateHired">Date hired <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional)</span></label>
-              <input id="dateHired" type="date" className={styles.input} value={values.dateHired ?? ""} onChange={(e) => setValue("dateHired", e.target.value)} />
-            </div>
+            <DatePicker
+              id="dateHired"
+              label={
+                <>
+                  Date hired{" "}
+                  <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional)</span>
+                </>
+              }
+              value={values.dateHired ?? ""}
+              max={new Date().toISOString().slice(0, 10)}
+              placeholder="Select date hired"
+              onChange={(v) => setValue("dateHired", v)}
+            />
           </>
         ) : null}
 
@@ -240,10 +341,27 @@ export function SignupForm() {
           <label className={styles.label} htmlFor="email">Email</label>
           <input id="email" type="email" className={styles.input} required value={values.email ?? ""} onChange={(e) => setValue("email", e.target.value)} />
         </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="password">Password <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(min 8 characters)</span></label>
-          <input id="password" type="password" className={styles.input} required minLength={8} value={values.password ?? ""} onChange={(e) => setValue("password", e.target.value)} />
-        </div>
+
+        <PasswordInput
+          id="password"
+          label="Password"
+          value={values.password ?? ""}
+          required
+          showStrength
+          autoComplete="new-password"
+          placeholder="Create a strong password"
+          onChange={handlePasswordChange}
+        />
+
+        <PasswordInput
+          id="confirmPassword"
+          label="Confirm password"
+          value={values.confirmPassword ?? ""}
+          required
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+          onChange={handleConfirmChange}
+        />
 
         <button type="submit" className={styles.submitBtn} disabled={submitting}>
           {submitting ? <span className={styles.spinner} /> : `Create ${role} account`}
