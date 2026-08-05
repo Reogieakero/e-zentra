@@ -41,13 +41,11 @@ export function ForgotPasswordForm() {
 
       // The email belongs to a different role than the page you're on.
       if (data.mismatch) {
-        const actual = PORTAL_LABEL[data.mismatch];
         sileo.error({
           title: "Wrong account type",
-          description:
-            portal === data.mismatch
-              ? `This email belongs to a ${actual} account. Use the ${actual} sign-in page to reset it.`
-              : `This email is a ${actual} account, not a ${PORTAL_LABEL[portal ?? "staff"]} account. Use the ${actual} sign-in page to reset it.`,
+          description: portal
+            ? `That email belongs to a different account type, not a ${PORTAL_LABEL[portal]} account. Use the matching sign-in page to reset it.`
+            : "That email belongs to a different account type. Use the matching sign-in page to reset it.",
           icon: <ShieldAlert size={18} />,
         });
         return;
