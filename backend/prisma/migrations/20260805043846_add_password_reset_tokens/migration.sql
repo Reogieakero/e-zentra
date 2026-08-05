@@ -1,15 +1,3 @@
--- DropForeignKey
-ALTER TABLE "ocr_jobs" DROP CONSTRAINT "ocr_jobs_report_card_id_fkey";
-
--- DropForeignKey
-ALTER TABLE "report_card_extractions" DROP CONSTRAINT "report_card_extractions_ocr_job_id_fkey";
-
--- DropForeignKey
-ALTER TABLE "report_card_extractions" DROP CONSTRAINT "report_card_extractions_report_card_id_fkey";
-
--- DropIndex
-DROP INDEX "ocr_jobs_actor_id_idx";
-
 -- CreateTable
 CREATE TABLE "password_reset_tokens" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -30,12 +18,3 @@ CREATE INDEX "password_reset_tokens_user_id_idx" ON "password_reset_tokens"("use
 
 -- AddForeignKey
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ocr_jobs" ADD CONSTRAINT "ocr_jobs_report_card_id_fkey" FOREIGN KEY ("report_card_id") REFERENCES "report_cards"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "report_card_extractions" ADD CONSTRAINT "report_card_extractions_ocr_job_id_fkey" FOREIGN KEY ("ocr_job_id") REFERENCES "ocr_jobs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "report_card_extractions" ADD CONSTRAINT "report_card_extractions_report_card_id_fkey" FOREIGN KEY ("report_card_id") REFERENCES "report_cards"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
