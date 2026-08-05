@@ -83,7 +83,7 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
 
     setGoogleLoading(true);
     try {
-      await googleSignIn(portal);
+      await googleSignIn({ portal });
     } catch (err) {
       sileo.error({
         title: "Google sign-in failed",

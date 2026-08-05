@@ -56,6 +56,18 @@ export interface RegisterTeacherInput {
   dateHired?: string;
 }
 
+/**
+ * Overrides applied on top of a register input. Used when provisioning the
+ * account via a social provider (e.g. Google), where the account email and
+ * name come from the provider and no usable password is set.
+ */
+export interface RegisterOpts {
+  email?: string;
+  password?: string;
+  avatarUrl?: string | null;
+  nameOverrides?: { firstName?: string; lastName?: string };
+}
+
 const PUBLIC_SELECT = {
   id: true,
   email: true,
@@ -90,25 +102,27 @@ async function findOrThrowByEmail(email: string) {
   return user;
 }
 
-export async function registerStudent(input: RegisterStudentInput) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
+export async function registerStudent(input: RegisterStudentInput, opts?: RegisterOpts) {
+  const email = (opts?.email ?? input.email).toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw ApiError.conflict('An account with this email already exists');
   const existingLrn = await prisma.studentProfile.findUnique({ where: { lrn: input.lrn } });
   if (existingLrn) throw ApiError.conflict('This LRN is already registered');
 
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(opts?.password ?? input.password);
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
-        email: input.email.toLowerCase(),
+        email,
         passwordHash,
-        firstName: input.firstName,
+        firstName: opts?.nameOverrides?.firstName ?? input.firstName,
         middleName: input.middleName,
-        lastName: input.lastName,
+        lastName: opts?.nameOverrides?.lastName ?? input.lastName,
         suffix: input.suffix,
         role: 'student',
         provisioningType: 'self_registered',
         contactNumber: input.contactNumber,
+        profilePhotoUrl: opts?.avatarUrl ?? undefined,
         accountStatus: 'pending',
       },
       select: PUBLIC_SELECT,
@@ -129,8 +143,9 @@ export async function registerStudent(input: RegisterStudentInput) {
   return { user: user };
 }
 
-export async function registerParent(input: RegisterParentInput) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
+export async function registerParent(input: RegisterParentInput, opts?: RegisterOpts) {
+  const email = (opts?.email ?? input.email).toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw ApiError.conflict('An account with this email already exists');
 
   let childUser: { id: string; gradeLevel: GradeLevel } | null = null;
@@ -159,19 +174,20 @@ export async function registerParent(input: RegisterParentInput) {
     childUser = { id: child.id, gradeLevel: child.studentProfile.gradeLevel };
   }
 
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(opts?.password ?? input.password);
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
-        email: input.email.toLowerCase(),
+        email,
         passwordHash,
-        firstName: input.firstName,
+        firstName: opts?.nameOverrides?.firstName ?? input.firstName,
         middleName: input.middleName,
-        lastName: input.lastName,
+        lastName: opts?.nameOverrides?.lastName ?? input.lastName,
         suffix: input.suffix,
         role: 'parent',
         provisioningType: 'self_registered',
         contactNumber: input.contactNumber,
+        profilePhotoUrl: opts?.avatarUrl ?? undefined,
         accountStatus: 'pending',
       },
       select: PUBLIC_SELECT,
@@ -196,25 +212,27 @@ export async function registerParent(input: RegisterParentInput) {
   return { user };
 }
 
-export async function registerTeacher(input: RegisterTeacherInput) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
+export async function registerTeacher(input: RegisterTeacherInput, opts?: RegisterOpts) {
+  const email = (opts?.email ?? input.email).toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw ApiError.conflict('An account with this email already exists');
   const existingEmp = await prisma.staffProfile.findUnique({ where: { employeeId: input.employeeId } });
   if (existingEmp) throw ApiError.conflict('This employee ID is already registered');
 
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(opts?.password ?? input.password);
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
-        email: input.email.toLowerCase(),
+        email,
         passwordHash,
-        firstName: input.firstName,
+        firstName: opts?.nameOverrides?.firstName ?? input.firstName,
         middleName: input.middleName,
-        lastName: input.lastName,
+        lastName: opts?.nameOverrides?.lastName ?? input.lastName,
         suffix: input.suffix,
         role: 'teacher',
         provisioningType: 'self_registered',
         contactNumber: input.contactNumber,
+        profilePhotoUrl: opts?.avatarUrl ?? undefined,
         accountStatus: 'pending',
       },
       select: PUBLIC_SELECT,
@@ -554,12 +572,17 @@ export async function getGoogleAuthUrl(redirectTo: string) {
 }
 
 /**
- * Completes a Google sign-in performed on the client via Supabase. Verifies
- * the received access token against Supabase, then matches the Supabase user
- * to an existing Zentra account by email (Google is used only to authenticate
- * an already provisioned school account). Issues Zentra JWT on success.
+ * Resolves a Supabase Google access token to a Google identity (email, name,
+ * avatar). Used both to authenticate existing accounts and to bootstrap a
+ * Google-based signup.
  */
-export async function authenticateGoogleToken(accessToken: string, portal: 'student' | 'parent' | 'staff') {
+export interface GoogleIdentity {
+  email: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+async function resolveGoogleIdentity(accessToken: string): Promise<GoogleIdentity> {
   const supabase = getSupabase();
   const {
     data: { user: sbUser },
@@ -568,26 +591,162 @@ export async function authenticateGoogleToken(accessToken: string, portal: 'stud
   if (error || !sbUser?.email) {
     throw ApiError.unauthorized('Invalid Google session');
   }
+  const meta = (sbUser.user_metadata ?? {}) as Record<string, unknown>;
+  const name =
+    (typeof meta.full_name === 'string' && meta.full_name) ||
+    (typeof meta.name === 'string' && meta.name) ||
+    sbUser.email;
+  const avatarUrl =
+    (typeof meta.avatar_url === 'string' && meta.avatar_url) ||
+    (typeof meta.picture === 'string' && meta.picture) ||
+    null;
+  return { email: sbUser.email.toLowerCase(), name, avatarUrl };
+}
 
-  const user = await prisma.user.findUnique({ where: { email: sbUser.email.toLowerCase() } });
-  if (!user) throw ApiError.unauthorized('No Zentra account is linked to this Google account');
+/**
+ * Completes a Google sign-in performed on the client via Supabase.
+ *
+ * - When the Google email matches an existing Zentra account, verifies the
+ *   portal (in login mode) and active status, then issues Zentra tokens.
+ * - When no account matches, returns the Google identity so the frontend can
+ *   continue with a Google-based signup (profile completion).
+ *
+ * `mode` distinguishes a login attempt from a signup attempt. In signup mode
+ * an existing account simply signs the user in (portal checks skipped).
+ */
+export async function authenticateGoogleToken(
+  accessToken: string,
+  portal: 'student' | 'parent' | 'staff' | undefined,
+  mode: 'login' | 'signup' = 'login'
+) {
+  const identity = await resolveGoogleIdentity(accessToken);
+  const user = await prisma.user.findUnique({ where: { email: identity.email } });
+  if (!user) {
+    return { needsSignup: true, identity: { email: identity.email, name: identity.name, avatarUrl: identity.avatarUrl } };
+  }
 
-  if (portal === 'student' && user.role !== 'student') {
-    throw ApiError.forbidden('This Google account is not linked to a student account');
-  }
-  if (portal === 'parent' && user.role !== 'parent') {
-    throw ApiError.forbidden('This Google account is not linked to a parent account');
-  }
-  if (portal === 'staff' && !isStaffRole(user.role)) {
-    throw ApiError.forbidden('This Google account is not linked to a staff account');
-  }
   if (user.accountStatus !== 'active') {
     throw ApiError.forbidden(`Account status is '${user.accountStatus}'; login is only allowed for active accounts`);
+  }
+
+  if (mode === 'login') {
+    if (portal === 'student' && user.role !== 'student') {
+      throw ApiError.forbidden('This Google account is not linked to a student account');
+    }
+    if (portal === 'parent' && user.role !== 'parent') {
+      throw ApiError.forbidden('This Google account is not linked to a parent account');
+    }
+    if (portal === 'staff' && !isStaffRole(user.role)) {
+      throw ApiError.forbidden('This Google account is not linked to a staff account');
+    }
   }
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   const publicUser = await prisma.user.findUnique({ where: { id: user.id }, select: PUBLIC_SELECT });
   return { user: publicUser, tokens: await issueTokens(user.id) };
+}
+
+export interface GoogleRegisterInput {
+  accessToken: string;
+  role: 'student' | 'parent' | 'teacher';
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  suffix?: string;
+  contactNumber?: string;
+  lrn?: string;
+  birthdate?: string;
+  sex?: 'male' | 'female';
+  gradeLevel?: GradeLevel;
+  address?: string;
+  relationship?: 'mother' | 'father' | 'guardian';
+  occupation?: string;
+  childEmail?: string;
+  childLrn?: string;
+  employeeId?: string;
+  department?: string;
+  dateHired?: string;
+}
+
+/**
+ * Creates a Zentra account linked to a Google identity. The account has no
+ * usable password (a random hash is stored so email/password login cannot
+ * succeed) and is created as `pending` until an administrator approves it.
+ */
+export async function registerGoogleAccount(input: GoogleRegisterInput) {
+  const identity = await resolveGoogleIdentity(input.accessToken);
+  const existing = await prisma.user.findUnique({ where: { email: identity.email } });
+  if (existing) throw ApiError.conflict('An account with this email already exists');
+
+  const randomPassword = randomBytes(32).toString('base64');
+  const nameParts = identity.name.split(' ').filter(Boolean);
+  const firstName = input.firstName?.trim() || nameParts[0] || '';
+  const lastName = input.lastName?.trim() || nameParts.slice(1).join(' ') || '';
+
+  const opts: RegisterOpts = {
+    email: identity.email,
+    password: randomPassword,
+    avatarUrl: identity.avatarUrl,
+    nameOverrides: { firstName, lastName },
+  };
+
+  switch (input.role) {
+    case 'student':
+      return registerStudent(
+        {
+          email: '',
+          password: '',
+          firstName: '',
+          middleName: input.middleName,
+          lastName: '',
+          suffix: input.suffix,
+          contactNumber: input.contactNumber,
+          lrn: input.lrn ?? '',
+          birthdate: input.birthdate ?? '',
+          sex: input.sex ?? 'male',
+          gradeLevel: input.gradeLevel ?? 'grade_7',
+          address: input.address,
+        },
+        opts
+      );
+    case 'parent':
+      if (input.childEmail && input.childLrn) {
+        throw ApiError.badRequest('Provide either childEmail or childLrn, not both');
+      }
+      return registerParent(
+        {
+          email: '',
+          password: '',
+          firstName: '',
+          middleName: input.middleName,
+          lastName: '',
+          suffix: input.suffix,
+          contactNumber: input.contactNumber,
+          relationship: input.relationship ?? 'guardian',
+          occupation: input.occupation,
+          address: input.address,
+          childEmail: input.childEmail,
+          childLrn: input.childLrn,
+        },
+        opts
+      );
+    case 'teacher':
+      return registerTeacher(
+        {
+          email: '',
+          password: '',
+          firstName: '',
+          middleName: input.middleName,
+          lastName: '',
+          suffix: input.suffix,
+          contactNumber: input.contactNumber,
+          employeeId: input.employeeId ?? '',
+          department: input.department,
+          dateHired: input.dateHired,
+        },
+        opts
+      );
+  }
 }
 
 export { PUBLIC_SELECT };
