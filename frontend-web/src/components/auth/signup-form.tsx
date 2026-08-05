@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, GraduationCap, Presentation, ShieldCheck, UserPlus, Users, X } from "lucide-react";
 import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
@@ -45,11 +45,27 @@ export function SignupForm() {
   const [role, setRole] = useState<SignupRole>("student");
   const [submitting, setSubmitting] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
-  const strongToastRef = useRef(false);
+  const wasSatisfiedRef = useRef(false);
+  const passwordToastRef = useRef<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const confirmMatchRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (passwordToastRef.current) sileo.dismiss(passwordToastRef.current);
+    };
+  }, []);
 
   function setValue(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function dismissPasswordToast() {
+    if (passwordToastRef.current) {
+      sileo.dismiss(passwordToastRef.current);
+      passwordToastRef.current = null;
+    }
   }
 
   function switchRole(next: SignupRole) {
@@ -63,21 +79,50 @@ export function SignupForm() {
   }
 
   function handlePasswordChange(value: string) {
+    setValue("password", value);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
     if (!value) {
-      strongToastRef.current = false;
-      setValue("password", "");
+      dismissPasswordToast();
+      wasSatisfiedRef.current = false;
       return;
     }
-    const { satisfied } = getPasswordStrength(value);
-    if (satisfied && !strongToastRef.current) {
-      strongToastRef.current = true;
-      sileo.success({
-        title: "Great password!",
-        description: "All requirements are met.",
+
+    const { satisfied, rules } = getPasswordStrength(value);
+
+    if (satisfied) {
+      dismissPasswordToast();
+      if (!wasSatisfiedRef.current) {
+        wasSatisfiedRef.current = true;
+        sileo.success({
+          title: "Great password!",
+          description: "All requirements are met.",
+          icon: <ShieldCheck size={18} />,
+        });
+      }
+      return;
+    }
+
+    wasSatisfiedRef.current = false;
+    const missing = rules.filter((r) => !r.met).map((r) => r.label);
+
+    debounceRef.current = setTimeout(() => {
+      dismissPasswordToast();
+      passwordToastRef.current = sileo.info({
+        title: "Password must include",
+        description: (
+          <ul className={styles.requirementList}>
+            {missing.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
+        ),
         icon: <ShieldCheck size={18} />,
       });
-    }
-    setValue("password", value);
+    }, 200);
   }
 
   function handleConfirmChange(value: string) {

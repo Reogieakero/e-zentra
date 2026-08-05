@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Eye, EyeOff, Lock, X } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
 import { getPasswordStrength } from "@/lib/password";
 import styles from "./password-input.module.css";
 
@@ -77,14 +77,6 @@ export function PasswordInput({
               </span>
             ) : null}
           </div>
-          <ul className={styles.ruleList}>
-            {strength.rules.map((rule) => (
-              <li key={rule.key} className={`${styles.rule} ${rule.met ? styles.ruleMet : ""}`}>
-                {rule.met ? <Check size={12} aria-hidden /> : <X size={12} aria-hidden />}
-                <span>{rule.label}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       ) : null}
     </div>
