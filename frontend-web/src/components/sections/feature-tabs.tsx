@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, CheckCircle2, CircleDashed } from "lucide-react";
 import styles from "./feature-tabs.module.css";
 
@@ -167,6 +167,26 @@ function SummaryCard({ tab, data }: { tab: TabId; data: PanelData }) {
 export function FeatureTabs() {
   const [active, setActive] = useState<TabId>("attendance");
   const data = PANELS[active];
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startAuto = () => {
+    if (timer.current) clearInterval(timer.current);
+    timer.current = setInterval(() => {
+      setActive((prev) => TABS[(TABS.findIndex((t) => t.id === prev) + 1) % TABS.length].id);
+    }, 4500);
+  };
+
+  useEffect(() => {
+    startAuto();
+    return () => {
+      if (timer.current) clearInterval(timer.current);
+    };
+  }, []);
+
+  const handleSelect = (id: TabId) => {
+    setActive(id);
+    startAuto();
+  };
 
   return (
     <div>
@@ -176,7 +196,7 @@ export function FeatureTabs() {
             key={tab.id}
             role="tab"
             aria-selected={active === tab.id}
-            onClick={() => setActive(tab.id)}
+            onClick={() => handleSelect(tab.id)}
             className={`${styles.tab} ${active === tab.id ? styles.tabActive : ""}`}
           >
             {tab.label}
