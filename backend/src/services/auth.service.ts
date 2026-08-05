@@ -547,15 +547,70 @@ export async function changePassword(userId: string, currentPassword: string, ne
 const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_TTL_MS = config.passwordReset.ttlMs;
 
-function buildResetEmail(resetUrl: string, firstName: string): { subject: string; text: string; html: string } {
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export function buildResetEmail(resetUrl: string, firstName: string): { subject: string; text: string; html: string } {
+  const minutes = Math.round(RESET_TOKEN_TTL_MS / 60000);
+  const name = escapeHtml(firstName);
+  const year = new Date().getFullYear();
   const subject = 'Reset your password';
-  const text = `We received a request to reset your password. Follow the link below to choose a new one.\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`;
+
+  const text = `Hi ${firstName},
+
+We received a request to reset your password for your Zentra account. Follow the link below to choose a new one. This link expires in ${minutes} minutes.
+
+${resetUrl}
+
+If you didn't request this, you can safely ignore this email and your password will stay the same.
+
+— Zentra`;
+
   const html = `
-    <h2>Reset your password</h2>
-    <p>Hi ${firstName},</p>
-    <p>We received a request to reset your password. Follow the link below to choose a new one. This link expires in ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutes.</p>
-    <p><a href="${resetUrl}">Reset password</a></p>
-    <p>If you didn't request this, you can safely ignore this email.</p>`;
+  <!DOCTYPE html>
+  <html lang="en">
+  <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 16px 40px -12px rgba(0,0,0,0.18);">
+            <tr>
+              <td align="center" bgcolor="#16a34a" style="background-image:linear-gradient(135deg,#16a34a,#22c55e);background-color:#16a34a;padding:32px 24px 28px;">
+                <span style="display:inline-block;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:8px 16px;font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.01em;">Zentra</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px 40px 4px;">
+                <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#111827;letter-spacing:-0.02em;line-height:1.2;">Reset your password</h1>
+                <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#6b7280;">Hi ${name},</p>
+                <p style="margin:0;font-size:14px;line-height:1.7;color:#6b7280;">We received a request to reset your password for your Zentra account. Click the button below to choose a new one. This link expires in ${minutes} minutes.</p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px 40px;">
+                <a href="${resetUrl}" style="display:inline-block;background-image:linear-gradient(135deg,#16a34a,#22c55e);background-color:#16a34a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:12px 28px;border-radius:10px;box-shadow:0 6px 16px -6px rgba(22,163,74,0.5);">Reset password</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px 24px;">
+                <p style="margin:0 0 6px;font-size:12px;line-height:1.6;color:#9ca3af;">If the button doesn't work, copy and paste this link into your browser:</p>
+                <p style="margin:0;font-size:12px;line-height:1.6;word-break:break-all;color:#6b7280;">${resetUrl}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 40px;background-color:#f9fafb;border-top:1px solid #f3f4f6;">
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#9ca3af;">If you didn't request this, you can safely ignore this email and your password will stay the same.</p>
+                <p style="margin:12px 0 0;font-size:11px;color:#9ca3af;">&copy; ${year} Zentra &middot; Every learner&apos;s record, one system.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>`;
+
   return { subject, text, html };
 }
 
