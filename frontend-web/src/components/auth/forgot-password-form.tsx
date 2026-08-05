@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Check, KeyRound, Mail } from "lucide-react";
+import { Check, KeyRound, Mail, ShieldAlert } from "lucide-react";
 import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
 import type { Portal } from "@/lib/auth";
@@ -12,6 +12,7 @@ import resetStyles from "./password-reset.module.css";
 interface ResetRequestResult {
   delivered: boolean;
   devResetUrl: string | null;
+  mismatch: Portal | null;
 }
 
 const PORTAL_LABEL: Record<Portal, string> = {
@@ -33,41 +34,52 @@ export function ForgotPasswordForm() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { data } = await sileo.promise(
-        api<{ data: ResetRequestResult }>("/auth/password-reset/request", {
-          method: "POST",
-          body: { email, portal },
-        }),
-        {
-          loading: {
-            title: "Sending reset link…",
-            description: "Checking that email on our records.",
-          },
-          success: (res) =>
-            res.data.devResetUrl
-              ? {
-                  title: "SMTP isn't configured",
-                  description: "In development, your reset link is shown below instead of being emailed.",
-                  icon: <KeyRound size={18} />,
-                }
-              : {
-                  title: "Reset link sent",
-                  description: res.data.delivered
-                    ? "Check your inbox for instructions to reset your password."
-                    : "If an account exists for that email, reset instructions are on their way.",
-                  icon: <Mail size={18} />,
-                },
-          error: (err) => ({
-            title: "Request failed",
-            description: err instanceof ApiClientError ? err.message : "Something went wrong. Please try again.",
-          }),
-        }
-      );
+      const { data } = await api<{ data: ResetRequestResult }>("/auth/password-reset/request", {
+        method: "POST",
+        body: { email, portal },
+      });
+
+      // The email belongs to a different role than the page you're on.
+      if (data.mismatch) {
+        const actual = PORTAL_LABEL[data.mismatch];
+        sileo.error({
+          title: "Wrong account type",
+          description:
+            portal === data.mismatch
+              ? `This email belongs to a ${actual} account. Use the ${actual} sign-in page to reset it.`
+              : `This email is a ${actual} account, not a ${PORTAL_LABEL[portal ?? "staff"]} account. Use the ${actual} sign-in page to reset it.`,
+          icon: <ShieldAlert size={18} />,
+        });
+        return;
+      }
+
+      if (data.devResetUrl) {
+        sileo.info({
+          title: "SMTP isn't configured",
+          description: "In development, your reset link is shown below instead of being emailed.",
+          icon: <KeyRound size={18} />,
+        });
+      } else {
+        sileo.success({
+          title: portal ? `Reset link sent for ${PORTAL_LABEL[portal]} accounts` : "Reset link sent",
+          description: data.delivered
+            ? portal
+              ? `A reset link was sent to this email to reset your ${PORTAL_LABEL[portal]} account. Check your inbox.`
+              : "Check your inbox for instructions to reset your password."
+            : portal
+              ? `If this email belongs to a ${PORTAL_LABEL[portal]} account, a reset link is on its way.`
+              : "If an account exists for that email, reset instructions are on their way.",
+          icon: <Mail size={18} />,
+        });
+      }
 
       setDevResetUrl(data.devResetUrl);
       setSent(true);
-    } catch {
-      // sileo.promise already surfaced the error toast
+    } catch (err) {
+      sileo.error({
+        title: "Request failed",
+        description: err instanceof ApiClientError ? err.message : "Something went wrong. Please try again.",
+      });
     } finally {
       setSubmitting(false);
     }
