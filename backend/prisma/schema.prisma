@@ -271,6 +271,7 @@ model User {
   parentProfile           ParentProfile?               @relation("ParentProfileLink")
   staffProfile            StaffProfile?                @relation("StaffProfileLink")
   refreshTokens           RefreshToken[]
+  passwordResetTokens     PasswordResetToken[]
   notifications           Notification[]
   approvedAccounts        User[]                       @relation("AccountApproval")
   confirmedParentLinks    ParentStudentLink[]          @relation("ParentLinkConfirmation")
@@ -393,6 +394,20 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+
+model PasswordResetToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash") @db.Text
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 

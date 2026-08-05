@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Eye, EyeOff, GraduationCap, KeyRound, Lock, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, GraduationCap, Lock, Mail } from "lucide-react";
 import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
 import { setTokens, setUser, type LoginResponse, type Portal } from "@/lib/auth";
@@ -60,11 +60,7 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
   }
 
   function handleForgot() {
-    sileo.info({
-      title: "Password reset coming soon",
-      description: "Please contact your school administrator in the meantime.",
-      icon: <KeyRound size={18} />,
-    });
+    router.push("/forgot-password");
   }
 
   async function handleGoogle() {
