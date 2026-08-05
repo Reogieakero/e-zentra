@@ -3,9 +3,18 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config/env';
 import { prisma } from '../lib/prisma';
+import { getSupabaseStorage } from '../lib/supabase';
 import { ApiError } from '../utils/ApiError';
 
 const SERVED_DIRS = ['profile-photos', 'report-cards', 'adm-photos'] as const;
+
+const EXT_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+};
 
 const STAFF_VIEWERS: ReadonlySet<string> = new Set([
   'teacher',
@@ -31,14 +40,27 @@ export async function serveUpload(req: Request, res: Response, next: NextFunctio
     return next(ApiError.notFound('File not found'));
   }
 
+  if (!(await viewerMayReadFile(user, dir, fileName))) {
+    return next(ApiError.forbidden('You may not view this file'));
+  }
+
+  if (config.storage.backend === 'supabase') {
+    const { data, error } = await getSupabaseStorage().storage.from(config.storage.bucket).download(`${dir}/${fileName}`);
+    if (error || !data) {
+      return next(ApiError.notFound('File not found'));
+    }
+    const buffer = Buffer.from(await data.arrayBuffer());
+    const ext = path.extname(fileName).replace(/^\./, '').toLowerCase();
+    res.set('Content-Type', EXT_MIME[ext] ?? 'application/octet-stream');
+    res.set('Content-Length', String(buffer.length));
+    res.send(buffer);
+    return;
+  }
+
   const fullPath = path.resolve(config.security.uploadDir, dir, fileName);
   const baseDir = path.resolve(config.security.uploadDir);
   if (!fullPath.startsWith(baseDir + path.sep)) {
     return next(ApiError.forbidden('File access denied'));
-  }
-
-  if (!(await viewerMayReadFile(user, dir, fileName))) {
-    return next(ApiError.forbidden('You may not view this file'));
   }
 
   if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {

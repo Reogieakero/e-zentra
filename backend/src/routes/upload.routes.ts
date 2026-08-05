@@ -1,8 +1,5 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { randomUUID } from 'crypto';
-import fs from 'fs';
-import path from 'path';
 import { z } from 'zod';
 import { config } from '../config/env';
 import { prisma } from '../lib/prisma';
@@ -14,6 +11,7 @@ import { validateSchema } from '../middleware/validate';
 import { ApiError } from '../utils/ApiError';
 import { writeAudit } from '../services/audit.service';
 import { sniffMimeType, declaredMimeMatchesContent } from '../utils/fileSniff';
+import { storeFile, deleteFile, fileSize, newFileKey } from '../lib/storage';
 
 const PHOTO_MIMES = config.security.allowedImageMimes;
 const DOC_MIMES = [...PHOTO_MIMES, 'application/pdf'];
@@ -28,37 +26,12 @@ const KINDS = {
 
 type UploadKind = keyof typeof KINDS;
 
-const MIME_EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'application/pdf': 'pdf',
-};
-
 function kindOf(req: { params?: Record<string, unknown> }): UploadKind {
   return (req.params?.kind ?? '') as UploadKind;
 }
 
-function ensureDir(dir: string): void {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, _file, cb) => {
-      const cfg = KINDS[kindOf(req)];
-      if (!cfg) {
-        return cb(ApiError.badRequest('Unknown upload kind'), '');
-      }
-      const dir = path.resolve(config.security.uploadDir, cfg.dir);
-      ensureDir(dir);
-      cb(null, dir);
-    },
-    filename: (_req, file, cb) => {
-      const ext = MIME_EXT[file.mimetype] ?? path.extname(file.originalname).replace(/^\./, '');
-      cb(null, `${randomUUID()}${ext ? `.${ext}` : ''}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: config.security.maxUploadBytes, files: 1 },
   fileFilter: (req, file, cb) => {
     const cfg = KINDS[kindOf(req)];
@@ -107,54 +80,53 @@ router.post(
       throw ApiError.badRequest('No file uploaded (expected multipart field "file")');
     }
 
-    const header = fs.readFileSync(file.path);
-    const sniffed = sniffMimeType(new Uint8Array(header.subarray(0, 64)));
+    const header = file.buffer.subarray(0, 64);
+    const sniffed = sniffMimeType(new Uint8Array(header));
     if (!declaredMimeMatchesContent(file.mimetype, sniffed)) {
-      fs.unlinkSync(file.path);
       throw ApiError.validation(`File content does not match declared type '${file.mimetype}'`);
     }
 
-    const url = `/uploads/${KINDS[kind].dir}/${file.filename}`;
-
     const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, profilePhotoUrl: true, storageUsedBytes: true } });
     if (!user) {
-      fs.unlinkSync(file.path);
       throw ApiError.unauthorized();
     }
 
+    const key = newFileKey(KINDS[kind].dir, file.mimetype, file.originalname);
+
     let releasedBytes = 0;
+    let prevKey: string | null = null;
     if (kind === 'profile-photo' && user.profilePhotoUrl) {
-      const previousPath = path.resolve(config.security.uploadDir, user.profilePhotoUrl.replace(/^\/uploads\//, ''));
-      if (fs.existsSync(previousPath)) {
-        try {
-          releasedBytes = fs.statSync(previousPath).size;
-          fs.unlinkSync(previousPath);
-        } catch {
-          releasedBytes = 0;
-        }
+      prevKey = user.profilePhotoUrl.replace(/^\/uploads\//, '');
+      if (prevKey && prevKey !== key) {
+        releasedBytes = await fileSize(prevKey);
       }
     }
 
     const currentUsed = Number(user.storageUsedBytes) - releasedBytes;
     if (currentUsed + file.size > config.security.maxUserUploadBytes) {
-      fs.unlinkSync(file.path);
       throw ApiError.rateLimited('Upload quota exceeded');
     }
 
+    const stored = await storeFile({ dir: KINDS[kind].dir, key, buffer: file.buffer, contentType: file.mimetype });
+    if (prevKey && releasedBytes > 0) {
+      await deleteFile(prevKey).catch(() => undefined);
+    }
+
+    const newUsed = Math.max(0, currentUsed + stored.size);
     if (kind === 'profile-photo') {
-      await prisma.user.update({ where: { id: req.user!.id }, data: { profilePhotoUrl: url, storageUsedBytes: BigInt(Math.max(0, currentUsed + file.size)) } });
+      await prisma.user.update({ where: { id: req.user!.id }, data: { profilePhotoUrl: stored.url, storageUsedBytes: BigInt(newUsed) } });
     } else {
-      await prisma.user.update({ where: { id: req.user!.id }, data: { storageUsedBytes: BigInt(Math.max(0, currentUsed + file.size)) } });
+      await prisma.user.update({ where: { id: req.user!.id }, data: { storageUsedBytes: BigInt(newUsed) } });
     }
     await writeAudit({
       actorId: req.user!.id,
       action: 'UPLOAD',
       tableName: 'uploads',
       recordId: req.user!.id,
-      newValue: { kind, url, size: file.size, mimeType: file.mimetype },
+      newValue: { kind, url: stored.url, size: stored.size, mimeType: file.mimetype },
     });
     res.status(201).json({
-      data: { kind, url, fileName: file.filename, size: file.size, mimeType: file.mimetype },
+      data: { kind, url: stored.url, fileName: stored.key.split('/').pop(), size: stored.size, mimeType: file.mimetype },
     });
   })
 );
