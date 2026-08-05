@@ -114,7 +114,9 @@ export const config = {
     user: parsed.data.SMTP_USER,
     pass: parsed.data.SMTP_PASS,
     from: parsed.data.SMTP_FROM,
-    enabled: Boolean(parsed.data.SMTP_HOST && parsed.data.SMTP_USER && parsed.data.SMTP_PASS && parsed.data.SMTP_FROM),
+    enabled:
+      parsed.data.NODE_ENV !== 'test' &&
+      Boolean(parsed.data.SMTP_HOST && parsed.data.SMTP_USER && parsed.data.SMTP_PASS && parsed.data.SMTP_FROM),
   },
   passwordReset: {
     ttlMs: parsed.data.PASSWORD_RESET_TTL_MIN * 60 * 1000,

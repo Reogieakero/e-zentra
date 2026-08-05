@@ -548,21 +548,14 @@ const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_TTL_MS = config.passwordReset.ttlMs;
 
 function buildResetEmail(resetUrl: string, firstName: string): { subject: string; text: string; html: string } {
-  const subject = 'Reset your Zentra password';
-  const text = `Hi ${firstName},\n\nWe received a request to reset your Zentra password. Use the link below to choose a new one. This link expires in ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutes.\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\n— Zentra`;
+  const subject = 'Reset your password';
+  const text = `We received a request to reset your password. Follow the link below to choose a new one.\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`;
   const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; color: #111827; max-width: 480px; margin: 0 auto;">
-      <h2 style="color: #16a34a;">Zentra</h2>
-      <p>Hi ${firstName},</p>
-      <p>We received a request to reset your Zentra password. Click the button below to choose a new one. This link expires in ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutes.</p>
-      <p style="text-align: center; margin: 28px 0;">
-        <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #16a34a, #22c55e); color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Reset password</a>
-      </p>
-      <p>If the button doesn't work, copy and paste this link into your browser:</p>
-      <p style="word-break: break-all; color: #6b7280; font-size: 13px;">${resetUrl}</p>
-      <p style="color: #6b7280; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
-      <p style="color: #6b7280; font-size: 13px;">— Zentra</p>
-    </div>`;
+    <h2>Reset your password</h2>
+    <p>Hi ${firstName},</p>
+    <p>We received a request to reset your password. Follow the link below to choose a new one. This link expires in ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutes.</p>
+    <p><a href="${resetUrl}">Reset password</a></p>
+    <p>If you didn't request this, you can safely ignore this email.</p>`;
   return { subject, text, html };
 }
 
