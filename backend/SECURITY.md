@@ -52,8 +52,11 @@ The primary threats this API defends against:
 - Every file is content-sniffed by magic bytes (`utils/fileSniff.ts`) and rejected with `422` when
   the declared MIME does not match the actual content (blocks polyglot/spoofed files). The sniffing
   is unit-tested.
-- Files are stored under `UPLOAD_DIR` with randomized filenames and served statically with
-  content-type constraints; profile photos must be valid PNG/JPEG.
+- Files use randomized filenames and are served through the authz-gated `/uploads` endpoint with content-type
+  constraints; profile photos must be valid PNG/JPEG. Storage defaults to local disk under `UPLOAD_DIR`; when
+  Supabase Storage is configured (`SUPABASE_SERVICE_ROLE_KEY` + bucket), objects live in a private bucket and are
+  proxied through the same authz-gated endpoint via the backend service-role client — the bucket is never exposed
+  publicly, so the per-role access checks on report cards still apply.
 - **Per-user disk quota**: total storage per user is tracked in `users.storage_used_bytes`;
   uploads are rejected with `429` when `MAX_USER_UPLOAD_BYTES` (default 50 MB) would be exceeded.
   Replacing a profile photo releases the prior file's bytes.
@@ -84,8 +87,9 @@ The primary threats this API defends against:
   secrets in production.
 - Use `TRUST_PROXY` behind a TLS-terminating reverse proxy so rate limiter client-IP detection is
   correct, and set `NODE_ENV=production`.
-- Point `UPLOAD_DIR` at a dedicated volume with its own disk limits, and set
-  `MAX_USER_UPLOAD_BYTES` to match your capacity plan.
+- Point `UPLOAD_DIR` at a dedicated volume with its own disk limits (local storage mode) or configure
+  `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_STORAGE_BUCKET` to use Supabase Storage, and set
+  `MAX_USER_UPLOAD_BYTES` to match your capacity plan. Never expose the service role key outside the backend.
 - Run `prisma migrate deploy` in deployments and keep `DATABASE_URL` on the session pooler for
   IPv4 reachability.
 - Treat the integration test suite as destructive: it runs only against `TEST_DATABASE_URL` /

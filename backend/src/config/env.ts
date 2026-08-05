@@ -34,6 +34,8 @@ const envSchema = z.object({
   ENABLE_API_DOCS: z.string().optional(),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_STORAGE_BUCKET: z.string().default('zentra-uploads'),
   GOOGLE_OAUTH_REDIRECT_URL: z.string().url().optional(),
   OCR_ENGINE: z.enum(['fake', 'paddle', 'textract']).default('fake'),
   OCR_SERVICE_URL: z.string().url().optional(),
@@ -107,6 +109,11 @@ export const config = {
     anonKey: parsed.data.SUPABASE_ANON_KEY,
     googleRedirectUrl: parsed.data.GOOGLE_OAUTH_REDIRECT_URL,
     enabled: Boolean(parsed.data.SUPABASE_URL && parsed.data.SUPABASE_ANON_KEY),
+  },
+  storage: {
+    backend: parsed.data.SUPABASE_URL && parsed.data.SUPABASE_SERVICE_ROLE_KEY ? 'supabase' : 'local',
+    bucket: parsed.data.SUPABASE_STORAGE_BUCKET,
+    serviceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY,
   },
   smtp: {
     host: parsed.data.SMTP_HOST,
