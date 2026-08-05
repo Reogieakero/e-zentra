@@ -1,4 +1,4 @@
-﻿import { AccountStatus, GradeLevel, PrismaClient, Role, Sex, type TermNumber } from '@prisma/client';
+﻿import { AccountStatus, ExtractionStatus, GradeLevel, OcrJobStatus, PrismaClient, Role, Sex, type TermNumber } from '@prisma/client';
 import argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -798,6 +798,9 @@ async function seedDemoData(
     ['audit_log', () => prisma.auditLog.count()],
     ['student_reflections', () => prisma.studentReflection.count()],
     ['report_cards', () => prisma.reportCard.count()],
+    ['password_reset_tokens', () => prisma.passwordResetToken.count()],
+    ['ocr_jobs', () => prisma.ocrJob.count()],
+    ['report_card_extractions', () => prisma.reportCardExtraction.count()],
     ['notifications', () => prisma.notification.count()],
   ];
   const counts: Array<[string, number]> = [];
@@ -805,6 +808,101 @@ async function seedDemoData(
 
   console.log('Demo dataset complete. Per-table counts:');
   for (const [name, count] of counts) console.log(`  ${name.padEnd(30)} ${count}`);
+}
+
+/**
+ * Tops up the operational tables (password reset tokens, OCR jobs, report card
+ * extractions) so every table ends up with at least 10 demo rows. Each block is
+ * guarded by its own count so re-runs are idempotent and independent of the
+ * seedDemoData skip guard.
+ */
+async function seedOperationalTables() {
+  // 1. Password reset tokens — inert, already-expired demo tokens.
+  const resetCount = await prisma.passwordResetToken.count();
+  if (resetCount < 12) {
+    const users = await prisma.user.findMany({
+      where: { role: { in: ['student', 'parent', 'teacher'] } },
+      select: { id: true },
+      take: 12,
+    });
+    const data = [];
+    for (let i = 0; i < 12 - resetCount; i++) {
+      data.push({
+        userId: users[i % users.length].id,
+        tokenHash: await hash(`demo-reset-token-${Date.now()}-${i}`),
+        expiresAt: new Date(Date.now() - 60 * 60 * 1000),
+        usedAt: i % 3 === 0 ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) : null,
+      });
+    }
+    await prisma.passwordResetToken.createMany({ data });
+  }
+
+  // 2. OCR jobs — one per existing report card (max 12).
+  const reportCards = await prisma.reportCard.findMany({ select: { id: true }, take: 12 });
+  const ocrCount = await prisma.ocrJob.count();
+  if (reportCards.length > 0 && ocrCount < reportCards.length) {
+    const actor = await prisma.user.findFirst({
+      where: { role: { in: ['record_keeper', 'registrar'] } },
+      select: { id: true },
+    });
+    if (actor) {
+      const statuses: OcrJobStatus[] = ['succeeded', 'succeeded', 'partial', 'partial', 'failed'];
+      const data = [];
+      for (let i = ocrCount; i < reportCards.length; i++) {
+        const status = statuses[i % statuses.length];
+        data.push({
+          actorId: actor.id,
+          reportCardId: reportCards[i].id,
+          kind: 'report_card',
+          fileUrl: `/uploads/report-cards/demo-ocr-${i + 1}.pdf`,
+          fileHash: `demo${String(i + 1).padStart(8, '0')}${'0'.repeat(54)}`,
+          status,
+          retryCount: status === 'failed' ? 2 : 0,
+          errorCode: status === 'failed' ? 'TEXTRACT_ERROR' : null,
+          errorMessage: status === 'failed' ? 'Engine could not read the document' : null,
+          engine: 'fake',
+          startedAt: status === 'queued' ? null : new Date(Date.now() - 3 * 60 * 60 * 1000),
+          completedAt: status === 'queued' || status === 'processing' ? null : new Date(Date.now() - 2 * 60 * 60 * 1000),
+        });
+      }
+      await prisma.ocrJob.createMany({ data });
+    }
+  }
+
+  // 3. Report card extractions — one per succeeded/partial OCR job.
+  const jobs = await prisma.ocrJob.findMany({
+    where: { status: { in: ['succeeded', 'partial'] } },
+    select: { id: true, reportCardId: true },
+    take: 12,
+  });
+  const extCount = await prisma.reportCardExtraction.count();
+  if (jobs.length > 0 && extCount < jobs.length) {
+    const reviewer = await prisma.user.findFirst({
+      where: { role: { in: ['record_keeper', 'registrar'] } },
+      select: { id: true },
+    });
+    const data = [];
+    for (let i = extCount; i < jobs.length; i++) {
+      const approved = i % 4 === 0;
+      data.push({
+        ocrJobId: jobs[i].id,
+        reportCardId: jobs[i].reportCardId,
+        engine: 'fake',
+        overallConfidence: 0.92 + (i % 3) * 0.02,
+        studentMatch: { firstName: 'Demo', lastName: 'Student', confidence: 0.99 },
+        gradeRows: [
+          { subject: 'Mathematics', grade: 88 },
+          { subject: 'English', grade: 90 },
+        ],
+        validation: [],
+        corrections: [],
+        status: (approved ? 'approved' : 'needs_review') as ExtractionStatus,
+        reviewedBy: approved ? reviewer?.id ?? null : null,
+        reviewedAt: approved ? new Date(Date.now() - 60 * 60 * 1000) : null,
+      });
+    }
+    await prisma.reportCardExtraction.createMany({ data });
+  }
 }
 
 async function main() {
@@ -863,6 +961,7 @@ async function main() {
   await seedTeacherAssignments(sectionsByGrade);
   await seedGradeComponents(termMap);
   await seedDemoData(sectionsByGrade, termMap);
+  await seedOperationalTables();
 
   const count = await prisma.user.count();
   console.log(`Seed complete. ${count} user accounts, 6 sections, 24 subjects, 6 terms (3 per grade band).`);
