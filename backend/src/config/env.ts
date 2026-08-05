@@ -42,6 +42,13 @@ const envSchema = z.object({
   OCR_AUTO_APPROVE_THRESHOLD: z.coerce.number().default(0.97),
   OCR_JOB_BATCH_SIZE: z.coerce.number().default(5),
   OCR_JOB_POLL_MS: z.coerce.number().default(2000),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().email().optional(),
+  PASSWORD_RESET_TTL_MIN: z.coerce.number().default(30),
+  FRONTEND_URL: z.string().url().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -101,6 +108,18 @@ export const config = {
     googleRedirectUrl: parsed.data.GOOGLE_OAUTH_REDIRECT_URL,
     enabled: Boolean(parsed.data.SUPABASE_URL && parsed.data.SUPABASE_ANON_KEY),
   },
+  smtp: {
+    host: parsed.data.SMTP_HOST,
+    port: parsed.data.SMTP_PORT,
+    user: parsed.data.SMTP_USER,
+    pass: parsed.data.SMTP_PASS,
+    from: parsed.data.SMTP_FROM,
+    enabled: Boolean(parsed.data.SMTP_HOST && parsed.data.SMTP_USER && parsed.data.SMTP_PASS && parsed.data.SMTP_FROM),
+  },
+  passwordReset: {
+    ttlMs: parsed.data.PASSWORD_RESET_TTL_MIN * 60 * 1000,
+  },
+  frontendUrl: parsed.data.FRONTEND_URL ?? 'http://localhost:3001',
 };
 
 export type AppConfig = typeof config;

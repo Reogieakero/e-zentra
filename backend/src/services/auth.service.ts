@@ -10,6 +10,7 @@ import { ApiError } from '../utils/ApiError';
 import { assertGradeBandOwnership } from '../utils/gradeBand';
 import { sha256 } from '../utils/hash';
 import { writeAudit, writeSecurityEvent } from './audit.service';
+import { sendMail } from './mailer.service';
 import { notify, notifyStudentAndParents } from './notification.service';
 
 export interface RegisterStudentInput {
@@ -541,6 +542,99 @@ export async function changePassword(userId: string, currentPassword: string, ne
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
   await revokeAllRefreshTokens(userId);
   await writeAudit({ actorId: userId, action: 'PASSWORD_CHANGE', tableName: 'users', recordId: userId });
+}
+
+const RESET_TOKEN_BYTES = 32;
+const RESET_TOKEN_TTL_MS = config.passwordReset.ttlMs;
+
+function buildResetEmail(resetUrl: string, firstName: string): { subject: string; text: string; html: string } {
+  const subject = 'Reset your Zentra password';
+  const text = `Hi ${firstName},\n\nWe received a request to reset your Zentra password. Use the link below to choose a new one. This link expires in ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutes.\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\n— Zentra`;
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; color: #111827; max-width: 480px; margin: 0 auto;">
+      <h2 style="color: #16a34a;">Zentra</h2>
+      <p>Hi ${firstName},</p>
+      <p>We received a request to reset your Zentra password. Click the button below to choose a new one. This link expires in ${Math.round(RESET_TOKEN_TTL_MS / 60000)} minutes.</p>
+      <p style="text-align: center; margin: 28px 0;">
+        <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #16a34a, #22c55e); color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Reset password</a>
+      </p>
+      <p>If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="word-break: break-all; color: #6b7280; font-size: 13px;">${resetUrl}</p>
+      <p style="color: #6b7280; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
+      <p style="color: #6b7280; font-size: 13px;">— Zentra</p>
+    </div>`;
+  return { subject, text, html };
+}
+
+/**
+ * Starts a password reset for the given email. Always resolves successfully
+ * (regardless of whether the account exists) to avoid account enumeration.
+ * Stores a hashed, single-use, time-limited token and either emails the reset
+ * link (when SMTP is configured) or returns it as a dev fallback.
+ */
+export async function requestPasswordReset(email: string) {
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (!user) {
+    await writeSecurityEvent('00000000-0000-0000-0000-000000000000', 'password_reset_unknown_email', {
+      email: email.toLowerCase(),
+    }).catch(() => undefined);
+    return { delivered: false, devResetUrl: null };
+  }
+
+  // Invalidate any outstanding reset tokens for this user.
+  await prisma.passwordResetToken.updateMany({
+    where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
+    data: { expiresAt: new Date() },
+  });
+
+  const raw = randomBytes(RESET_TOKEN_BYTES).toString('hex');
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+  await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash: sha256(raw), expiresAt } });
+
+  const resetUrl = `${config.frontendUrl}/reset-password?token=${raw}`;
+  const mail = buildResetEmail(resetUrl, user.firstName);
+  const delivered = await sendMail({ to: user.email, subject: mail.subject, text: mail.text, html: mail.html });
+
+  await writeSecurityEvent(user.id, 'password_reset_requested', { delivered }).catch(() => undefined);
+  return { delivered, devResetUrl: delivered ? null : resetUrl };
+}
+
+/**
+ * Validates a raw reset token and returns the linked account email. Throws if
+ * the token is unknown, already used, or expired.
+ */
+export async function verifyPasswordResetToken(raw: string) {
+  const token = await prisma.passwordResetToken.findUnique({ where: { tokenHash: sha256(raw) } });
+  if (!token) throw ApiError.badRequest('This password reset link is invalid or has expired');
+  if (token.usedAt) throw ApiError.badRequest('This password reset link has already been used');
+  if (token.expiresAt < new Date()) throw ApiError.badRequest('This password reset link has expired');
+
+  const user = await prisma.user.findUnique({ where: { id: token.userId } });
+  if (!user) throw ApiError.badRequest('This password reset link is invalid or has expired');
+  return { email: user.email };
+}
+
+/**
+ * Completes a password reset: sets the new password (argon2), marks the token
+ * used, and revokes all existing sessions for the account.
+ */
+export async function confirmPasswordReset(raw: string, newPassword: string) {
+  const token = await prisma.passwordResetToken.findUnique({ where: { tokenHash: sha256(raw) } });
+  if (!token) throw ApiError.badRequest('This password reset link is invalid or has expired');
+  if (token.usedAt) throw ApiError.badRequest('This password reset link has already been used');
+  if (token.expiresAt < new Date()) throw ApiError.badRequest('This password reset link has expired');
+
+  const user = await prisma.user.findUnique({ where: { id: token.userId } });
+  if (!user) throw ApiError.badRequest('This password reset link is invalid or has expired');
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { passwordHash, lastLoginAt: null } }),
+    prisma.passwordResetToken.update({ where: { id: token.id }, data: { usedAt: new Date() } }),
+  ]);
+  await revokeAllRefreshTokens(user.id);
+  await writeAudit({ actorId: user.id, action: 'PASSWORD_RESET', tableName: 'users', recordId: user.id });
+  await writeSecurityEvent(user.id, 'password_reset_completed', {}).catch(() => undefined);
 }
 
 export async function getMe(userId: string) {

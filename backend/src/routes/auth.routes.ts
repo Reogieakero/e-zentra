@@ -10,6 +10,7 @@ import { emailSchema, passwordSchema, nameSchema, optionalName, gradeLevelEnum }
 import {
   authenticateGoogleToken,
   changePassword,
+  confirmPasswordReset,
   getGoogleAuthUrl,
   getMe,
   login,
@@ -20,6 +21,8 @@ import {
   registerParent,
   registerStudent,
   registerTeacher,
+  requestPasswordReset,
+  verifyPasswordResetToken,
 } from '../services/auth.service';
 
 const router = Router();
@@ -239,6 +242,32 @@ router.post('/refresh', authLimiter, validateSchema({ body: refreshSchema }), as
 
 router.post('/logout', authLimiter, validateSchema({ body: refreshSchema }), asyncHandler(async (req, res) => {
   await logout(req.body.refreshToken);
+  res.status(204).send();
+}));
+
+const passwordResetRequestSchema = z
+  .object({ email: emailSchema })
+  .strict();
+
+const passwordResetConfirmSchema = z
+  .object({
+    token: z.string().min(32).max(256),
+    newPassword: passwordSchema,
+  })
+  .strict();
+
+router.post('/password-reset/request', authLimiter, validateSchema({ body: passwordResetRequestSchema }), asyncHandler(async (req, res) => {
+  const result = await requestPasswordReset(req.body.email);
+  res.json({ data: result });
+}));
+
+router.get('/password-reset/verify/:token', authLimiter, asyncHandler(async (req, res) => {
+  const result = await verifyPasswordResetToken(req.params.token);
+  res.json({ data: result });
+}));
+
+router.post('/password-reset/confirm', authLimiter, validateSchema({ body: passwordResetConfirmSchema }), asyncHandler(async (req, res) => {
+  await confirmPasswordReset(req.body.token, req.body.newPassword);
   res.status(204).send();
 }));
 

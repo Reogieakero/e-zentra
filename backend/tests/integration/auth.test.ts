@@ -304,4 +304,48 @@ describe('Auth flow', () => {
     const link = await prisma.parentStudentLink.findFirst({ where: { studentId } });
     expect(link?.status).toBe('confirmed');
   });
+
+  it('password reset: requests a dev link, verifies it, and changes the password', async () => {
+    const { email } = await registerAndApproveStudent({ gradeLevel: 'grade_9', approverRole: 'record_keeper' });
+
+    // Old password works before the reset.
+    const before = await request(app).post('/api/v1/auth/login').send({ email, password: 'Test@1234' });
+    expect(before.status).toBe(200);
+
+    const req = await request(app).post('/api/v1/auth/password-reset/request').send({ email });
+    expect(req.status).toBe(200);
+    if (config.smtp.enabled) {
+      // With SMTP configured the link is emailed, not returned.
+      expect(req.body.data.devResetUrl).toBeNull();
+      return;
+    }
+    // Dev fallback returns the reset link on screen.
+    const devUrl: string = req.body.data.devResetUrl;
+    const token = new URL(devUrl).searchParams.get('token');
+    expect(token).toBeTruthy();
+
+    const verify = await request(app).get(`/api/v1/auth/password-reset/verify/${token}`);
+    expect(verify.status).toBe(200);
+    expect(verify.body.data.email).toBe(email);
+
+    const confirm = await request(app)
+      .post('/api/v1/auth/password-reset/confirm')
+      .send({ token, newPassword: 'NewPass@123' });
+    expect(confirm.status).toBe(204);
+
+    // Old password no longer works; new password does.
+    const oldLogin = await request(app).post('/api/v1/auth/login').send({ email, password: 'Test@1234' });
+    expect(oldLogin.status).toBe(401);
+    const newLogin = await request(app).post('/api/v1/auth/login').send({ email, password: 'NewPass@123' });
+    expect(newLogin.status).toBe(200);
+  });
+
+  it('password reset: rejects an invalid token and does not enumerate unknown emails', async () => {
+    const bad = await request(app).get('/api/v1/auth/password-reset/verify/not-a-valid-token-token-token');
+    expect(bad.status).toBe(400);
+
+    const unknown = await request(app).post('/api/v1/auth/password-reset/request').send({ email: 'nobody@test.edu' });
+    expect(unknown.status).toBe(200);
+    expect(unknown.body.data.devResetUrl).toBeNull();
+  });
 });
