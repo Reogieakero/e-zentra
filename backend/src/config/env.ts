@@ -32,6 +32,9 @@ const envSchema = z.object({
   RECORD_FLAG_ESCALATION_ENABLED: boolFromString(true),
   RECORD_FLAG_ESCALATION_DAYS: z.coerce.number().default(7),
   ENABLE_API_DOCS: z.string().optional(),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_ANON_KEY: z.string().optional(),
+  GOOGLE_OAUTH_REDIRECT_URL: z.string().url().optional(),
   OCR_ENGINE: z.enum(['fake', 'paddle', 'textract']).default('fake'),
   OCR_SERVICE_URL: z.string().url().optional(),
   OCR_SERVICE_TOKEN: z.string().optional(),
@@ -92,6 +95,12 @@ export const config = {
     jobPollMs: parsed.data.OCR_JOB_POLL_MS,
   },
   enableApiDocs: parsed.data.ENABLE_API_DOCS === undefined ? parsed.data.NODE_ENV !== 'production' : parsed.data.ENABLE_API_DOCS === 'true',
+  supabase: {
+    url: parsed.data.SUPABASE_URL,
+    anonKey: parsed.data.SUPABASE_ANON_KEY,
+    googleRedirectUrl: parsed.data.GOOGLE_OAUTH_REDIRECT_URL,
+    enabled: Boolean(parsed.data.SUPABASE_URL && parsed.data.SUPABASE_ANON_KEY),
+  },
 };
 
 export type AppConfig = typeof config;

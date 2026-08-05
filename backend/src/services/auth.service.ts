@@ -3,6 +3,7 @@ import argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { config } from '../config/env';
 import { prisma } from '../lib/prisma';
+import { getSupabase } from '../lib/supabase';
 import { signAccessToken } from '../middleware/authenticate';
 import { isLoginLockedOut, recordLoginFailure, resetLoginFailures } from '../middleware/rateLimiter';
 import { ApiError } from '../utils/ApiError';
@@ -357,6 +358,12 @@ export async function rejectAccount(targetUserId: string, approverId: string): P
   return { user };
 }
 
+const STAFF_ROLES: Role[] = ['teacher', 'registrar', 'record_keeper', 'adm_coordinator', 'guidance_counselor', 'principal', 'nurse'];
+
+function isStaffRole(role: Role): boolean {
+  return STAFF_ROLES.includes(role);
+}
+
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) {
@@ -402,6 +409,28 @@ export async function login(email: string, password: string) {
 
   const publicUser = await prisma.user.findUnique({ where: { id: user.id }, select: PUBLIC_SELECT });
   return { user: publicUser, tokens: await issueTokens(user.id) };
+}
+
+/**
+ * Like login(), but enforces that the account's role matches the portal
+ * the user signed in from (student / parent / any staff member).
+ */
+export async function loginForPortal(email: string, password: string, portal: 'student' | 'parent' | 'staff') {
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (!user) throw ApiError.unauthorized('Invalid email or password');
+
+  if (portal === 'student' && user.role !== 'student') {
+    throw ApiError.forbidden('This account is not a student account');
+  }
+  if (portal === 'parent' && user.role !== 'parent') {
+    throw ApiError.forbidden('This account is not a parent account');
+  }
+  if (portal === 'staff' && !isStaffRole(user.role)) {
+    throw ApiError.forbidden('This account is not a staff account');
+  }
+
+  const result = await login(email, password);
+  return result;
 }
 
 function generateRefreshToken(): string {
@@ -508,6 +537,57 @@ export async function getMe(userId: string) {
   });
   if (!user) throw ApiError.notFound('Account not found');
   return { user };
+}
+
+/**
+ * Returns the Supabase Google sign-in URL. The frontend sends the resulting
+ * session/access token to {@link authenticateGoogleToken} to finish login.
+ */
+export async function getGoogleAuthUrl(redirectTo: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo },
+  });
+  if (error) throw ApiError.internal(`Google sign-in could not be started: ${error.message}`);
+  return { url: data.url };
+}
+
+/**
+ * Completes a Google sign-in performed on the client via Supabase. Verifies
+ * the received access token against Supabase, then matches the Supabase user
+ * to an existing Zentra account by email (Google is used only to authenticate
+ * an already provisioned school account). Issues Zentra JWT on success.
+ */
+export async function authenticateGoogleToken(accessToken: string, portal: 'student' | 'parent' | 'staff') {
+  const supabase = getSupabase();
+  const {
+    data: { user: sbUser },
+    error,
+  } = await supabase.auth.getUser(accessToken);
+  if (error || !sbUser?.email) {
+    throw ApiError.unauthorized('Invalid Google session');
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: sbUser.email.toLowerCase() } });
+  if (!user) throw ApiError.unauthorized('No Zentra account is linked to this Google account');
+
+  if (portal === 'student' && user.role !== 'student') {
+    throw ApiError.forbidden('This Google account is not linked to a student account');
+  }
+  if (portal === 'parent' && user.role !== 'parent') {
+    throw ApiError.forbidden('This Google account is not linked to a parent account');
+  }
+  if (portal === 'staff' && !isStaffRole(user.role)) {
+    throw ApiError.forbidden('This Google account is not linked to a staff account');
+  }
+  if (user.accountStatus !== 'active') {
+    throw ApiError.forbidden(`Account status is '${user.accountStatus}'; login is only allowed for active accounts`);
+  }
+
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  const publicUser = await prisma.user.findUnique({ where: { id: user.id }, select: PUBLIC_SELECT });
+  return { user: publicUser, tokens: await issueTokens(user.id) };
 }
 
 export { PUBLIC_SELECT };

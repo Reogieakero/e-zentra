@@ -202,6 +202,44 @@ describe('Auth flow', () => {
     expect(badToken.status).toBe(401);
   });
 
+  it('role-scoped login: student portal only accepts student accounts', async () => {
+    await createUser({ role: 'student', email: 'scoped.student@test.edu', gradeLevel: 'grade_7' });
+    await createUser({ role: 'parent', email: 'scoped.parent@test.edu' });
+
+    const ok = await request(app).post('/api/v1/auth/login/student').send({ email: 'scoped.student@test.edu', password: 'Test@1234' });
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.user.role).toBe('student');
+
+    const wrongPortal = await request(app).post('/api/v1/auth/login/student').send({ email: 'scoped.parent@test.edu', password: 'Test@1234' });
+    expect(wrongPortal.status).toBe(403);
+    expect(wrongPortal.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('role-scoped login: staff portal accepts any staff role but rejects non-staff', async () => {
+    await createUser({ role: 'teacher', email: 'scoped.teacher@test.edu', employeeId: 'EMP-SCOPED' });
+    await createUser({ role: 'principal', email: 'scoped.principal@test.edu', employeeId: 'EMP-SCOPED-P' });
+    await createUser({ role: 'student', email: 'scoped.student2@test.edu', gradeLevel: 'grade_7' });
+
+    const teacher = await request(app).post('/api/v1/auth/login/staff').send({ email: 'scoped.teacher@test.edu', password: 'Test@1234' });
+    expect(teacher.status).toBe(200);
+    expect(teacher.body.data.user.role).toBe('teacher');
+
+    const principal = await request(app).post('/api/v1/auth/login/staff').send({ email: 'scoped.principal@test.edu', password: 'Test@1234' });
+    expect(principal.status).toBe(200);
+    expect(principal.body.data.user.role).toBe('principal');
+
+    const student = await request(app).post('/api/v1/auth/login/staff').send({ email: 'scoped.student2@test.edu', password: 'Test@1234' });
+    expect(student.status).toBe(403);
+  });
+
+  it('Google OAuth endpoints are unavailable when Supabase is not configured', async () => {
+    const urlRes = await request(app).get('/api/v1/auth/oauth/google/url');
+    expect(urlRes.status).toBe(404);
+
+    const cb = await request(app).post('/api/v1/auth/oauth/google/callback').send({ accessToken: 'not-a-real-token-that-is-long-enough', portal: 'student' });
+    expect(cb.status).toBe(404);
+  });
+
   it('creates and confirms parent-student link on approval', async () => {
     const reg = await request(app).post('/api/v1/auth/register/student').send({
       email: 'child.link@test.edu',

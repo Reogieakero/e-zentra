@@ -8,9 +8,12 @@ import { redisRateLimit } from '../middleware/rateLimiter';
 import { validateSchema } from '../middleware/validate';
 import { emailSchema, passwordSchema, nameSchema, optionalName, gradeLevelEnum } from '../schemas/common';
 import {
+  authenticateGoogleToken,
   changePassword,
+  getGoogleAuthUrl,
   getMe,
   login,
+  loginForPortal,
   logout,
   refreshTokens,
   registerParent,
@@ -128,6 +131,44 @@ router.post('/register/teacher', authLimiter, validateSchema({ body: registerTea
 
 router.post('/login', authLimiter, validateSchema({ body: loginSchema }), asyncHandler(async (req, res) => {
   const result = await login(req.body.email, req.body.password);
+  res.json({ data: result });
+}));
+
+router.post('/login/student', authLimiter, validateSchema({ body: loginSchema }), asyncHandler(async (req, res) => {
+  const result = await loginForPortal(req.body.email, req.body.password, 'student');
+  res.json({ data: result });
+}));
+
+router.post('/login/parent', authLimiter, validateSchema({ body: loginSchema }), asyncHandler(async (req, res) => {
+  const result = await loginForPortal(req.body.email, req.body.password, 'parent');
+  res.json({ data: result });
+}));
+
+router.post('/login/staff', authLimiter, validateSchema({ body: loginSchema }), asyncHandler(async (req, res) => {
+  const result = await loginForPortal(req.body.email, req.body.password, 'staff');
+  res.json({ data: result });
+}));
+
+const googleUrlQuery = z
+  .object({
+    redirectTo: z.string().url().optional().or(z.string().trim().min(1)),
+  })
+  .strict();
+
+const googleCallbackSchema = z
+  .object({
+    accessToken: z.string().min(20),
+    portal: z.enum(['student', 'parent', 'staff']),
+  })
+  .strict();
+
+router.get('/oauth/google/url', authLimiter, validateSchema({ query: googleUrlQuery }), asyncHandler(async (req, res) => {
+  const result = await getGoogleAuthUrl(req.query.redirectTo as string | undefined ?? config.supabase.googleRedirectUrl ?? '');
+  res.json({ data: result });
+}));
+
+router.post('/oauth/google/callback', authLimiter, validateSchema({ body: googleCallbackSchema }), asyncHandler(async (req, res) => {
+  const result = await authenticateGoogleToken(req.body.accessToken, req.body.portal);
   res.json({ data: result });
 }));
 
