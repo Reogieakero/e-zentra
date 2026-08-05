@@ -13,10 +13,21 @@ export function getSupabase(): SupabaseClient {
   return client;
 }
 
-export async function googleSignIn(portal?: string): Promise<void> {
+export interface GoogleSignInOptions {
+  portal?: "student" | "parent" | "staff";
+  mode?: "login" | "signup";
+}
+
+export async function googleSignIn(opts?: GoogleSignInOptions): Promise<void> {
   const supabase = getSupabase();
   const base = env.googleRedirectUrl || window.location.origin + "/auth/callback";
-  const redirectTo = portal ? `${base}?portal=${portal}` : base;
+
+  const params = new URLSearchParams();
+  if (opts?.portal) params.set("portal", opts.portal);
+  if (opts?.mode) params.set("mode", opts.mode);
+  const qs = params.toString();
+  const redirectTo = qs ? `${base}?${qs}` : base;
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },

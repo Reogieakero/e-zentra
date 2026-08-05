@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { SignupForm } from "@/components/auth/signup-form";
+import { SignupMethods } from "@/components/auth/signup-methods";
 
 export const metadata: Metadata = {
   title: "Create an Account — Zentra",
@@ -21,7 +22,9 @@ export default function SignupPage() {
         </>
       }
     >
-      <SignupForm />
+      <Suspense fallback={<div aria-hidden />}>
+        <SignupMethods />
+      </Suspense>
     </AuthShell>
   );
 }

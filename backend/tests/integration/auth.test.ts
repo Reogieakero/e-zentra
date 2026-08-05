@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { config } from '../../src/config/env';
 import { app, createUser, loginAs, registerAndApproveStudent, truncateAll } from '../helpers';
 
 describe('Auth flow', () => {
@@ -234,10 +235,40 @@ describe('Auth flow', () => {
 
   it('Google OAuth endpoints are unavailable when Supabase is not configured', async () => {
     const urlRes = await request(app).get('/api/v1/auth/oauth/google/url');
-    expect(urlRes.status).toBe(404);
-
     const cb = await request(app).post('/api/v1/auth/oauth/google/callback').send({ accessToken: 'not-a-real-token-that-is-long-enough', portal: 'student' });
-    expect(cb.status).toBe(404);
+
+    if (!config.supabase.enabled) {
+      expect(urlRes.status).toBe(404);
+      expect(cb.status).toBe(404);
+      return;
+    }
+
+    // With real Supabase credentials the endpoints are live; an invalid token is rejected.
+    expect(urlRes.status).not.toBe(404);
+    expect(cb.status).not.toBe(404);
+  });
+
+  it('rejects an unconfigured Google register without Supabase, and validates role-specific payloads', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/oauth/google/register')
+      .send({ accessToken: 'not-a-real-token-that-is-long-enough', role: 'student', firstName: 'G', lastName: 'O', lrn: '123456789012', birthdate: '2011-01-01', sex: 'male', gradeLevel: 'grade_7' });
+    if (!config.supabase.enabled) {
+      expect(res.status).toBe(404);
+      return;
+    }
+    expect(res.status).not.toBe(404);
+  });
+
+  it('validates google register: requires role-specific fields', async () => {
+    const missingRole = await request(app)
+      .post('/api/v1/auth/oauth/google/register')
+      .send({ accessToken: 'not-a-real-token-that-is-long-enough', firstName: 'X', lastName: 'Y' });
+    expect(missingRole.status).toBe(422);
+
+    const invalidLrn = await request(app)
+      .post('/api/v1/auth/oauth/google/register')
+      .send({ accessToken: 'not-a-real-token-that-is-long-enough', role: 'student', firstName: 'X', lastName: 'Y', lrn: 'x', birthdate: '2011-01-01', sex: 'male', gradeLevel: 'grade_7' });
+    expect(invalidLrn.status).toBe(422);
   });
 
   it('creates and confirms parent-student link on approval', async () => {

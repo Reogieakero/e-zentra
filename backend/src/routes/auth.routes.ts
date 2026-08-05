@@ -16,6 +16,7 @@ import {
   loginForPortal,
   logout,
   refreshTokens,
+  registerGoogleAccount,
   registerParent,
   registerStudent,
   registerTeacher,
@@ -158,7 +159,8 @@ const googleUrlQuery = z
 const googleCallbackSchema = z
   .object({
     accessToken: z.string().min(20),
-    portal: z.enum(['student', 'parent', 'staff']),
+    portal: z.enum(['student', 'parent', 'staff']).optional(),
+    mode: z.enum(['login', 'signup']).optional(),
   })
   .strict();
 
@@ -168,8 +170,66 @@ router.get('/oauth/google/url', authLimiter, validateSchema({ query: googleUrlQu
 }));
 
 router.post('/oauth/google/callback', authLimiter, validateSchema({ body: googleCallbackSchema }), asyncHandler(async (req, res) => {
-  const result = await authenticateGoogleToken(req.body.accessToken, req.body.portal);
+  const result = await authenticateGoogleToken(req.body.accessToken, req.body.portal, req.body.mode ?? 'login');
   res.json({ data: result });
+}));
+
+const googleRegisterBase = {
+  accessToken: z.string().min(20),
+  middleName: optionalName,
+  suffix: z.string().trim().max(10).optional().or(z.literal('')),
+  contactNumber: z.string().trim().max(20).optional().or(z.literal('')),
+};
+
+const googleRegisterStudentSchema = z
+  .object({
+    ...googleRegisterBase,
+    role: z.literal('student'),
+    firstName: nameSchema,
+    lastName: nameSchema,
+    lrn: z.string().trim().min(5).max(20),
+    birthdate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+    sex: z.enum(['male', 'female']),
+    gradeLevel: gradeLevelEnum,
+    address: z.string().trim().max(1000).optional(),
+  })
+  .strict();
+
+const googleRegisterParentSchema = z
+  .object({
+    ...googleRegisterBase,
+    role: z.literal('parent'),
+    firstName: nameSchema,
+    lastName: nameSchema,
+    relationship: z.enum(['mother', 'father', 'guardian']),
+    occupation: z.string().trim().max(100).optional(),
+    address: z.string().trim().max(1000).optional(),
+    childEmail: emailSchema.optional(),
+    childLrn: z.string().trim().max(20).optional(),
+  })
+  .strict();
+
+const googleRegisterTeacherSchema = z
+  .object({
+    ...googleRegisterBase,
+    role: z.literal('teacher'),
+    firstName: nameSchema,
+    lastName: nameSchema,
+    employeeId: z.string().trim().min(2).max(20),
+    department: z.string().trim().max(100).optional(),
+    dateHired: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  })
+  .strict();
+
+const googleRegisterSchema = z.discriminatedUnion('role', [
+  googleRegisterStudentSchema,
+  googleRegisterParentSchema,
+  googleRegisterTeacherSchema,
+]);
+
+router.post('/oauth/google/register', authLimiter, validateSchema({ body: googleRegisterSchema }), asyncHandler(async (req, res) => {
+  const { user } = await registerGoogleAccount(req.body);
+  res.status(201).json({ data: user });
 }));
 
 router.post('/refresh', authLimiter, validateSchema({ body: refreshSchema }), asyncHandler(async (req, res) => {
