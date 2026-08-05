@@ -17,6 +17,7 @@ export interface OwnedReportCard {
 export interface ScopedSection {
   id: string;
   adviserId: string | null;
+  assignedTeacherIds?: string[];
 }
 
 export function isBandOwner(role: Role, gradeLevel: GradeLevel): boolean {
@@ -44,7 +45,15 @@ export function isPrincipal(viewer: Viewer): boolean {
 export function isAdviserOrAssignedTeacher(viewer: Viewer, section: ScopedSection): boolean {
   if (viewer.role !== 'teacher') return false;
   if (section.adviserId === viewer.id) return true;
-  return false;
+  return Boolean(section.assignedTeacherIds?.includes(viewer.id));
+}
+
+export async function getSectionAssignedTeacherIds(sectionId: string): Promise<string[]> {
+  const rows = await prisma.teacherSubjectAssignment.findMany({
+    where: { sectionId, isActive: true },
+    select: { teacherId: true },
+  });
+  return [...new Set(rows.map((r) => r.teacherId))];
 }
 
 export async function getConfirmedChildIds(parentId: string): Promise<string[]> {
@@ -99,7 +108,10 @@ export async function assertCanViewReportCard(viewer: Viewer, card: OwnedReportC
 
 export async function canViewSectionStudents(viewer: Viewer, section: ScopedSection): Promise<boolean> {
   if (isStaffRole(viewer.role)) {
-    if (viewer.role === 'teacher') return isAdviserOrAssignedTeacher(viewer, section);
+    if (viewer.role === 'teacher') {
+      const assignedTeacherIds = await getSectionAssignedTeacherIds(section.id);
+      return isAdviserOrAssignedTeacher(viewer, { ...section, assignedTeacherIds });
+    }
     return true;
   }
   return false;
@@ -116,7 +128,10 @@ export async function assertCanViewSectionStudents(viewer: Viewer, section: Scop
 export async function canViewSectionAttendance(viewer: Viewer, section: ScopedSection): Promise<boolean> {
   if (viewer.role === 'student') return false;
   if (viewer.role === 'parent') return false;
-  if (viewer.role === 'teacher') return isAdviserOrAssignedTeacher(viewer, section);
+  if (viewer.role === 'teacher') {
+    const assignedTeacherIds = await getSectionAssignedTeacherIds(section.id);
+    return isAdviserOrAssignedTeacher(viewer, { ...section, assignedTeacherIds });
+  }
   return isStaffRole(viewer.role);
 }
 

@@ -398,11 +398,11 @@
     <div class="section-head">
       <p class="overline">04 · Daily</p>
       <h2>Attendance — recording, alerts &amp; the risk feed</h2>
-      <p>Attendance is recorded per section, per date, per session. The section adviser owns the marks; confirmed parents get an alert the moment a child is marked absent or late; and every write feeds straight back into the student's risk profile.</p>
+      <p>Attendance is recorded per section, per date, per session. The section adviser (or an assigned subject teacher) owns the marks; confirmed parents get an alert the moment a child is marked absent or late; and every write feeds straight back into the student's risk profile.</p>
     </div>
 
     <div class="flow" style="margin-bottom:24px">
-      <div class="flow-step"><div class="n">1</div><div class="t">Adviser marks</div><div class="d"><code>POST /sections/:id/attendance</code> — teacher only, and must be the section's adviser</div></div>
+      <div class="flow-step"><div class="n">1</div><div class="t">Adviser or assigned teacher marks</div><div class="d"><code>POST /sections/:id/attendance</code> — teacher only, and must be the section's adviser or an assigned subject teacher</div></div>
       <div class="flow-arrow">→</div>
       <div class="flow-step"><div class="n">2</div><div class="t">Validate</div><div class="d">Every student must belong to the section; status ∈ present · absent · late · excused</div></div>
       <div class="flow-arrow">→</div>
@@ -415,10 +415,10 @@
       <table>
         <thead><tr><th>Endpoint</th><th>Access</th><th>Behaviour</th></tr></thead>
         <tbody>
-          <tr><td><code>POST /sections/:id/attendance</code></td><td><span class="badge">teacher</span> (adviser)</td><td>Bulk mark 1–100 rows for one <span class="mono">termId + attendanceDate + session</span>. Students outside the section → <code class="inline">400</code> listing them. Returns <code class="inline">{ created, skipped }</code>.</td></tr>
-          <tr><td><code>GET /sections/:id/attendance</code></td><td>any authenticated user</td><td>Cursor-paginated section ledger, newest date first; filters <span class="mono">studentId · status · session · from · to</span>; includes the student's name + email.</td></tr>
+          <tr><td><code>POST /sections/:id/attendance</code></td><td><span class="badge">teacher</span> (adviser or assigned)</td><td>Bulk mark 1–100 rows for one <span class="mono">termId + attendanceDate + session</span>. Students outside the section → <code class="inline">400</code> listing them. Returns <code class="inline">{ created, skipped }</code>.</td></tr>
+          <tr><td><code>GET /sections/:id/attendance</code></td><td>teacher (adviser or assigned) · records admins · guidance</td><td>Cursor-paginated section ledger, newest date first; filters <span class="mono">studentId · status · session · from · to</span>; includes the student's name + email.</td></tr>
           <tr><td><code>GET /students/:id/attendance</code></td><td>staff · adviser · student · parent</td><td>Offset-paginated per-student history; filters <span class="mono">termId · from · to</span>. A student sees only their own rows; a parent only their confirmed children — enforced in <span class="mono">assertCanViewStudent</span>.</td></tr>
-          <tr><td><code>PATCH /attendance/:id</code></td><td><span class="badge">teacher</span> (adviser)</td><td>Correct <span class="mono">status</span>/<span class="mono">remarks</span> on an existing row; re-alerts parents if the new status is absent/late; re-runs risk.</td></tr>
+          <tr><td><code>PATCH /attendance/:id</code></td><td><span class="badge">teacher</span> (adviser or assigned)</td><td>Correct <span class="mono">status</span>/<span class="mono">remarks</span> on an existing row; re-alerts parents if the new status is absent/late; re-runs risk.</td></tr>
         </tbody>
       </table>
     </div>

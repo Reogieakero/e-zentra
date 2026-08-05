@@ -989,7 +989,7 @@ export const openApiSpec = {
     '/sections/{id}/students': {
       get: {
         tags: ['Sections'],
-        summary: 'List students enrolled in a section',
+        summary: 'List students enrolled in a section (section adviser, assigned subject teacher, or staff)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { 200: { description: 'Paginated students' } },
@@ -998,7 +998,7 @@ export const openApiSpec = {
     '/sections/{id}/attendance': {
       post: {
         tags: ['Attendance & Grading'],
-        summary: 'Mark attendance for a section session (assigned teacher)',
+        summary: 'Mark attendance for a section session (section adviser or assigned subject teacher)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: {
@@ -1035,7 +1035,7 @@ export const openApiSpec = {
       },
       get: {
         tags: ['Attendance & Grading'],
-        summary: 'List section attendance records',
+        summary: 'List section attendance records (section adviser, assigned subject teacher, or staff)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { 200: { description: 'Paginated attendance' } },
@@ -1053,7 +1053,7 @@ export const openApiSpec = {
     '/attendance/{id}': {
       patch: {
         tags: ['Attendance & Grading'],
-        summary: 'Update an attendance record (assigned teacher)',
+        summary: 'Update an attendance record (section adviser or assigned subject teacher)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: {
