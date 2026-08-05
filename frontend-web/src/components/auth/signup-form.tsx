@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { GraduationCap, Presentation, Users } from "lucide-react";
+import { GraduationCap, Presentation, UserPlus, Users } from "lucide-react";
+import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
 import type { RegisterResponse } from "@/lib/auth";
 import styles from "./signup-form.module.css";
@@ -33,8 +34,6 @@ const TABS: { role: SignupRole; icon: typeof GraduationCap; label: string }[] = 
 export function SignupForm() {
   const router = useRouter();
   const [role, setRole] = useState<SignupRole>("student");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
 
@@ -42,10 +41,18 @@ export function SignupForm() {
     setValues((prev) => ({ ...prev, [key]: value }));
   }
 
+  function switchRole(next: SignupRole) {
+    if (next === role) return;
+    setRole(next);
+    sileo.info({
+      title: `Creating a ${next} account`,
+      description: next === "parent" ? "You can link your child using their email or LRN." : "Fill in the details below to register.",
+      icon: <UserPlus size={18} />,
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
     setSubmitting(true);
 
     const base = {
@@ -97,11 +104,31 @@ export function SignupForm() {
     }
 
     try {
-      await api<{ data: RegisterResponse }>(endpoint, { method: "POST", body });
-      setSuccess("Your registration was submitted. A school administrator will review and approve your account.");
+      await sileo.promise(
+        api<{ data: RegisterResponse }>(endpoint, { method: "POST", body }),
+        {
+          loading: {
+            title: `Creating ${role} account…`,
+            description: "Submitting your registration.",
+          },
+          success: {
+            title: "Registration submitted!",
+            description: "A school administrator will review and approve your account.",
+            icon: <UserPlus size={18} />,
+            button: {
+              title: "Go to sign in",
+              onClick: () => router.push("/login"),
+            },
+          },
+          error: (err) => ({
+            title: "Registration failed",
+            description: err instanceof ApiClientError ? err.message : "Something went wrong. Please try again.",
+          }),
+        }
+      );
       router.refresh();
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Something went wrong. Please try again.");
+    } catch {
+      // sileo.promise already surfaced the error toast
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +144,7 @@ export function SignupForm() {
             role="tab"
             aria-selected={role === r}
             className={`${styles.tabBtn} ${role === r ? styles.tabBtnActive : ""}`}
-            onClick={() => setRole(r)}
+            onClick={() => switchRole(r)}
           >
             <Icon size={16} />
             <span>{label}</span>
@@ -217,11 +244,6 @@ export function SignupForm() {
           <label className={styles.label} htmlFor="password">Password <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(min 8 characters)</span></label>
           <input id="password" type="password" className={styles.input} required minLength={8} value={values.password ?? ""} onChange={(e) => setValue("password", e.target.value)} />
         </div>
-
-        {error ? (
-          <div className={`${styles.error} ${styles.errorVisible}`} role="alert">{error}</div>
-        ) : null}
-        {success ? <div className={styles.success}>{success}</div> : null}
 
         <button type="submit" className={styles.submitBtn} disabled={submitting}>
           {submitting ? <span className={styles.spinner} /> : `Create ${role} account`}

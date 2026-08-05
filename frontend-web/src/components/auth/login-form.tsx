@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, GraduationCap, KeyRound, Lock, Mail } from "lucide-react";
+import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
 import { setTokens, setUser, type LoginResponse, type Portal } from "@/lib/auth";
 import { googleSignIn } from "@/lib/supabase";
@@ -20,40 +21,74 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setSubmitting(true);
     try {
-      const { data } = await api<{ data: LoginResponse }>(endpoint, {
-        method: "POST",
-        body: { email, password },
-      });
+      const { data } = await sileo.promise(
+        api<{ data: LoginResponse }>(endpoint, {
+          method: "POST",
+          body: { email, password },
+        }),
+        {
+          loading: {
+            title: "Signing you in…",
+            description: "Verifying your credentials.",
+          },
+          success: (res) => ({
+            title: `Welcome back${res.data.user.firstName ? `, ${res.data.user.firstName}` : ""}!`,
+            description: "You're now signed in to Zentra.",
+            icon: <GraduationCap size={18} />,
+          }),
+          error: (err) => ({
+            title: "Sign-in failed",
+            description: err instanceof ApiClientError ? err.message : "Something went wrong. Please try again.",
+          }),
+        }
+      );
       setTokens(data.tokens);
       setUser(data.user);
       router.push("/");
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Something went wrong. Please try again.");
+    } catch {
+      // sileo.promise already surfaced the error toast
     } finally {
       setSubmitting(false);
     }
   }
 
+  function handleForgot() {
+    sileo.info({
+      title: "Password reset coming soon",
+      description: "Please contact your school administrator in the meantime.",
+      icon: <KeyRound size={18} />,
+    });
+  }
+
   async function handleGoogle() {
-    setError(null);
+    if (!env.supabaseConfigured) {
+      sileo.warning({
+        title: "Google sign-in isn't configured",
+        description: "Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.",
+      });
+      return;
+    }
+
+    sileo.info({
+      title: "Redirecting to Google…",
+      description: "Authorize your Google account to continue.",
+    });
+
     setGoogleLoading(true);
     try {
-      if (env.supabaseConfigured) {
-        await googleSignIn(portal);
-        return;
-      }
-      setError("Google sign-in is not configured yet.");
+      await googleSignIn(portal);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed.");
+      sileo.error({
+        title: "Google sign-in failed",
+        description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
+      });
     } finally {
       setGoogleLoading(false);
     }
@@ -86,9 +121,9 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
             <label className={styles.label} htmlFor="password">
               Password
             </label>
-            <a href="#" className={styles.forgot} onClick={(e) => e.preventDefault()}>
+            <button type="button" className={styles.forgot} onClick={handleForgot}>
               Forgot password?
-            </a>
+            </button>
           </div>
           <div className={styles.inputWrap}>
             <Lock size={16} className={styles.inputIcon} />
@@ -119,12 +154,6 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
             <span>Remember me</span>
           </label>
         </div>
-
-        {error ? (
-          <div className={`${styles.error} ${styles.errorVisible}`} role="alert">
-            {error}
-          </div>
-        ) : null}
 
         <button type="submit" className={styles.submitBtn} disabled={submitting}>
           {submitting ? <span className={styles.spinner} /> : "Sign In"}
