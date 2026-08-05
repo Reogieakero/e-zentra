@@ -23,10 +23,10 @@
   --info: #0284c7;
 
   /* Radius */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 8px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
   /* Shadows */
@@ -36,7 +36,8 @@
   --shadow-lg: 0 16px 40px -12px rgba(0, 0, 0, 0.18);
 
   /* Type */
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
 }
 
 html {
