@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
@@ -21,7 +22,9 @@ export default function ForgotPasswordPage() {
         </>
       }
     >
-      <ForgotPasswordForm />
+      <Suspense fallback={<div aria-hidden />}>
+        <ForgotPasswordForm />
+      </Suspense>
     </AuthShell>
   );
 }

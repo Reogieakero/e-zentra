@@ -383,6 +383,14 @@ function isStaffRole(role: Role): boolean {
   return STAFF_ROLES.includes(role);
 }
 
+export type ResetPortal = 'student' | 'parent' | 'staff';
+
+function roleMatchesPortal(role: Role, portal: ResetPortal): boolean {
+  if (portal === 'student') return role === 'student';
+  if (portal === 'parent') return role === 'parent';
+  return isStaffRole(role);
+}
+
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) {
@@ -617,14 +625,18 @@ If you didn't request this, you can safely ignore this email and your password w
 /**
  * Starts a password reset for the given email. Always resolves successfully
  * (regardless of whether the account exists) to avoid account enumeration.
+ * When a portal is supplied, the account's role must match it; mismatches are
+ * treated the same as an unknown email so existence isn't leaked.
  * Stores a hashed, single-use, time-limited token and either emails the reset
  * link (when SMTP is configured) or returns it as a dev fallback.
  */
-export async function requestPasswordReset(email: string) {
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user) {
+export async function requestPasswordReset(email: string, portal?: ResetPortal) {
+  const normalized = email.toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email: normalized } });
+  if (!user || (portal && !roleMatchesPortal(user.role, portal))) {
     await writeSecurityEvent('00000000-0000-0000-0000-000000000000', 'password_reset_unknown_email', {
-      email: email.toLowerCase(),
+      email: normalized,
+      portal,
     }).catch(() => undefined);
     return { delivered: false, devResetUrl: null };
   }

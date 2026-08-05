@@ -246,7 +246,10 @@ router.post('/logout', authLimiter, validateSchema({ body: refreshSchema }), asy
 }));
 
 const passwordResetRequestSchema = z
-  .object({ email: emailSchema })
+  .object({
+    email: emailSchema,
+    portal: z.enum(['student', 'parent', 'staff']).optional(),
+  })
   .strict();
 
 const passwordResetConfirmSchema = z
@@ -257,7 +260,7 @@ const passwordResetConfirmSchema = z
   .strict();
 
 router.post('/password-reset/request', authLimiter, validateSchema({ body: passwordResetRequestSchema }), asyncHandler(async (req, res) => {
-  const result = await requestPasswordReset(req.body.email);
+  const result = await requestPasswordReset(req.body.email, req.body.portal);
   res.json({ data: result });
 }));
 

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Check, KeyRound, Mail } from "lucide-react";
 import { sileo } from "sileo";
 import { api, ApiClientError } from "@/lib/api";
+import type { Portal } from "@/lib/auth";
 import styles from "./auth-form.module.css";
 import resetStyles from "./password-reset.module.css";
 
@@ -12,7 +14,15 @@ interface ResetRequestResult {
   devResetUrl: string | null;
 }
 
+const PORTAL_LABEL: Record<Portal, string> = {
+  student: "student",
+  parent: "parent",
+  staff: "staff",
+};
+
 export function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
+  const portal = (searchParams.get("portal") as Portal | null) ?? undefined;
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -26,7 +36,7 @@ export function ForgotPasswordForm() {
       const { data } = await sileo.promise(
         api<{ data: ResetRequestResult }>("/auth/password-reset/request", {
           method: "POST",
-          body: { email },
+          body: { email, portal },
         }),
         {
           loading: {
@@ -104,6 +114,12 @@ export function ForgotPasswordForm() {
           {submitting ? <span className={styles.spinner} /> : "Send reset link"}
         </button>
       </form>
+
+      {portal ? (
+        <p className={resetStyles.hint}>
+          Reset links are only sent for <strong>{PORTAL_LABEL[portal]}</strong> accounts.
+        </p>
+      ) : null}
 
       {sent ? (
         <div className={resetStyles.successCard} role="status">
