@@ -1,7 +1,9 @@
 .shell {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: 1fr;
+  overflow: hidden;
 }
 
 @media (min-width: 1024px) {
@@ -158,6 +160,7 @@
 
 .featureList {
   padding: 14px;
+  background: var(--card);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -184,7 +187,7 @@
 
 .featureText {
   font-size: 12px;
-  color: var(--foreground);
+  color: #1f2937;
   line-height: 1.45;
 }
 
@@ -245,7 +248,8 @@
 .formPanel {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  overflow-y: auto;
+  min-height: 0;
   padding: 48px 24px;
   position: relative;
 }
@@ -315,7 +319,7 @@
 .formWrap {
   width: 100%;
   max-width: 24rem;
-  margin: 0 auto;
+  margin: auto;
 }
 
 .formTitle {
