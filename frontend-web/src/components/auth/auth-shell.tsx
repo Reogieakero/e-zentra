@@ -24,29 +24,37 @@ export function AuthShell({ title, subtitle, children, footNote }: AuthShellProp
         <div className={styles.blobTop + " " + styles.blob} />
         <div className={styles.blobBottom + " " + styles.blob} />
 
-        <div className={styles.brandInner}>
-          <Link href="/" className={styles.brandTop}>
-            <span className={styles.brandMark}>
-              <GraduationCap size={18} />
-            </span>
-            <span className={styles.brandName}>Zentra</span>
-          </Link>
+        <Link href="/" className={styles.brandTop}>
+          <span className={styles.brandMark}>
+            <GraduationCap size={18} />
+          </span>
+          <span className={styles.brandName}>Zentra</span>
+        </Link>
 
+        <div className={styles.brandInner}>
           <h1 className={styles.headline}>Every learner&apos;s record, one system, not a filing cabinet.</h1>
           <p className={styles.subhead}>
             Sign in to pick up right where your school left off — attendance, grades, SF10, anecdotal
             reports, and ADM referrals, all in one place.
           </p>
 
-          <div className={styles.features}>
-            {FEATURES.map(({ icon: Icon, text }) => (
-              <div key={text} className={styles.featureRow}>
-                <span className={styles.featureIcon}>
-                  <Icon size={16} />
-                </span>
-                <span className={styles.featureText}>{text}</span>
-              </div>
-            ))}
+          <div className={styles.window}>
+            <div className={styles.windowBar}>
+              <span className={styles.dotRed} />
+              <span className={styles.dotAmber} />
+              <span className={styles.dotGreen} />
+              <span className={styles.url}>zentra.app/overview</span>
+            </div>
+            <div className={styles.featureList}>
+              {FEATURES.map(({ icon: Icon, text }) => (
+                <div key={text} className={styles.featureRow}>
+                  <span className={styles.featureIcon}>
+                    <Icon size={16} />
+                  </span>
+                  <span className={styles.featureText}>{text}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -61,10 +69,10 @@ export function AuthShell({ title, subtitle, children, footNote }: AuthShellProp
             full history in front of me.&rdquo;
           </p>
           <div className={styles.quoteAuthor}>
-            <span className={styles.featureIcon}>
+            <span className={styles.quoteAuthorMark}>
               <GraduationCap size={14} />
             </span>
-            <span className={styles.featureText}>Elena Vance · School Principal</span>
+            <span className={styles.quoteAuthorText}>Elena Vance · School Principal</span>
           </div>
         </div>
       </div>
