@@ -13,10 +13,13 @@ describe('viewer access helpers', () => {
     expect(isPrincipal({ id: 't', role: 'teacher' })).toBe(false);
   });
 
-  it('recognizes adviser but not unrelated teachers', () => {
+  it('recognizes advisers and assigned subject teachers, not unrelated teachers', () => {
     const section = { id: 'sec', adviserId: 'teacher-a' };
     expect(isAdviserOrAssignedTeacher({ id: 'teacher-a', role: 'teacher' }, section)).toBe(true);
     expect(isAdviserOrAssignedTeacher({ id: 'teacher-b', role: 'teacher' }, section)).toBe(false);
+    expect(
+      isAdviserOrAssignedTeacher({ id: 'teacher-b', role: 'teacher' }, { id: 'sec', adviserId: null, assignedTeacherIds: ['teacher-b'] })
+    ).toBe(true);
     expect(isAdviserOrAssignedTeacher({ id: 'teacher-a', role: 'registrar' }, section)).toBe(false);
     expect(isAdviserOrAssignedTeacher({ id: 'teacher-b', role: 'teacher' }, { id: 'sec', adviserId: null })).toBe(false);
   });
