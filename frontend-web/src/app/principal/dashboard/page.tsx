@@ -111,10 +111,56 @@ export default function DashboardPage() {
 
   if (loading && !data) {
     return (
-      <div className={styles.pageHeading}>
-        <h1 className={styles.pageTitle}>Dashboard</h1>
-        <p className={styles.pageSubtitle}>Loading the latest aggregates from the school records…</p>
-      </div>
+      <>
+        <div className={styles.skHeaderRow}>
+          <div className={styles.pageHeading}>
+            <h1 className={styles.pageTitle}>Dashboard</h1>
+            <p className={styles.pageSubtitle}>Loading the latest aggregates from the school records…</p>
+          </div>
+        </div>
+
+        <div className={styles.skKpiGrid}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className={styles.skCard}>
+              <div className={`${styles.skeleton} ${styles.skCardHeaderLine}`} />
+              <div className={styles.skStatGrid}>
+                <div className={`${styles.skStat} ${styles.skeleton}`}>
+                  <div className={`${styles.skeleton} ${styles.skStatLineSm}`} />
+                  <div className={`${styles.skeleton} ${styles.skStatLineLg}`} />
+                </div>
+                <div className={`${styles.skStat} ${styles.skeleton}`}>
+                  <div className={`${styles.skeleton} ${styles.skStatLineSm}`} />
+                  <div className={`${styles.skeleton} ${styles.skStatLineLg}`} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className={`${styles.dashboardGrid} ${styles.skLayoutGrid}`}>
+          <div className={styles.skRail}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className={styles.skRailItem}>
+                <div className={`${styles.skeleton} ${styles.skRailTitle}`} />
+                <div className={`${styles.skeleton} ${i === 1 ? styles.skRailRowSm : styles.skRailRow}`} />
+                <div className={`${styles.skeleton} ${styles.skRailRowSm}`} />
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.skPanel}>
+            <div className={styles.skPanelHeader}>
+              <div className={`${styles.skeleton} ${styles.skPanelTitle}`} />
+              <div className={`${styles.skeleton} ${styles.skBadge}`} />
+            </div>
+            <div className={styles.skChartGrid}>
+              <div className={`${styles.skeleton} ${styles.skChart}`} />
+              <div className={`${styles.skeleton} ${styles.skChart}`} />
+            </div>
+            <div className={`${styles.skeleton} ${styles.skFullChart}`} />
+          </div>
+        </div>
+      </>
     );
   }
 
