@@ -52,6 +52,7 @@ export interface DailyTrend {
 
 export interface HeatmapDay {
   day: string;
+  label: string;
   rate: number;
   level: number;
 }

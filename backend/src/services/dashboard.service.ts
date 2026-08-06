@@ -4,6 +4,11 @@ import { prisma } from '../lib/prisma';
 const AT_RISK_LIMIT = 3;
 const ADM_APPROVAL_LIMIT = 3;
 const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function shortDate(d: Date): string {
+  return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+}
 
 export async function getDashboardOverview() {
   const today = new Date();
@@ -241,10 +246,12 @@ async function getSectionHeatmap() {
   monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
   monday.setHours(0, 0, 0, 0);
 
+  const weekDates: Date[] = [];
   const weekKeys: string[] = [];
   for (let i = 0; i < HEATMAP_DAYS.length; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
+    weekDates.push(d);
     weekKeys.push(d.toISOString().slice(0, 10));
   }
 
@@ -278,9 +285,11 @@ async function getSectionHeatmap() {
     const dayMap = bySectionDay.get(s.id);
     const days = HEATMAP_DAYS.map((day, i) => {
       const bucket = dayMap?.get(weekKeys[i]);
-      if (!bucket || bucket.total === 0) return { day, rate: 0, level: 0 };
+      if (!bucket || bucket.total === 0) {
+        return { day, label: `${shortDate(weekDates[i])} - ${day}`, rate: 0, level: 0 };
+      }
       const rate = Math.round((bucket.present / bucket.total) * 1000) / 10;
-      return { day, rate, level: heatmapLevel(rate) };
+      return { day, label: `${shortDate(weekDates[i])} - ${day}`, rate, level: heatmapLevel(rate) };
     });
     return { sectionId: s.id, sectionName: s.sectionName, days };
   });
@@ -318,7 +327,7 @@ async function getDailyTrend(today: Date) {
     const bucket = byDate.get(key);
     return {
       day: HEATMAP_DAYS[i],
-      label: HEATMAP_DAYS[i],
+      label: `${shortDate(d)} - ${HEATMAP_DAYS[i]}`,
       rate: bucket && bucket.total > 0 ? Math.round((bucket.present / bucket.total) * 1000) / 10 : null,
     };
   });
