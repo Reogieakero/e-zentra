@@ -1022,15 +1022,6 @@ async function seedAttendanceHistory() {
   const start = new Date(today);
   start.setDate(today.getDate() - 27);
 
-  const dateKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-  const existing = await prisma.attendanceRecord.findMany({
-    where: { attendanceDate: { gte: start, lte: today } },
-    select: { attendanceDate: true },
-  });
-  const existingKeys = new Set(existing.map((r) => dateKey(r.attendanceDate)));
-
   const pick = <T,>(arr: readonly T[], i: number): T => arr[i % arr.length];
   const statuses = ['present', 'present', 'present', 'absent', 'present', 'late', 'present', 'present', 'excused', 'absent'] as const;
 
@@ -1042,7 +1033,7 @@ async function seedAttendanceHistory() {
   const teachers = await prisma.user.findMany({ where: { role: 'teacher', accountStatus: 'active' } });
   const sections = await prisma.section.findMany({
     where: { status: 'active', schoolYearId: activeYear.id },
-    include: { students: { where: { user: { accountStatus: 'active' } } } },
+    include: { students: true },
   });
 
   const days: Date[] = [];
@@ -1055,8 +1046,13 @@ async function seedAttendanceHistory() {
   }
 
   let created = 0;
+  let skipped = 0;
   for (const day of days) {
-    if (existingKeys.has(dateKey(day))) continue;
+    const existing = await prisma.attendanceRecord.findMany({
+      where: { attendanceDate: day },
+      select: { studentId: true },
+    });
+    const existingIds = new Set(existing.map((r) => r.studentId));
     const rows: Array<{
       studentId: string;
       sectionId: string;
@@ -1066,9 +1062,14 @@ async function seedAttendanceHistory() {
       status: (typeof statuses)[number];
       recordedBy: string;
     }> = [];
+    let si = 0;
     for (const section of sections) {
       const term = await termForGrade(section.gradeLevel);
-      section.students.slice(0, 4).forEach((sp, si) => {
+      for (const sp of section.students) {
+        if (existingIds.has(sp.id)) {
+          skipped += 1;
+          continue;
+        }
         rows.push({
           studentId: sp.id,
           sectionId: section.id,
@@ -1078,7 +1079,8 @@ async function seedAttendanceHistory() {
           status: pick(statuses, day.getDate() + si * 3),
           recordedBy: pick(teachers, si).id,
         });
-      });
+        si += 1;
+      }
     }
     if (rows.length > 0) {
       await prisma.attendanceRecord.createMany({ data: rows });
@@ -1086,7 +1088,7 @@ async function seedAttendanceHistory() {
     }
   }
 
-  console.log(`Attendance history demo: seeded ${created} records over the past 28 days (incl. today).`);
+  console.log(`Attendance history demo: seeded ${created} records over the past 28 weekdays (incl. today); ${skipped} already present.`);
 }
 
 async function main() {

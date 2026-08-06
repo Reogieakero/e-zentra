@@ -27,7 +27,7 @@ export async function getDashboardOverview() {
     openFlags,
     pendingAccounts,
   ] = await Promise.all([
-    prisma.studentProfile.count(),
+    countEnrolledStudents(activeYear?.id ?? null),
     prisma.attendanceRecord.findMany({ where: { attendanceDate: today }, select: { status: true } }),
     prisma.anecdotalRecord.count({ where: { createdAt: { gte: monthStart } } }),
     prisma.reportCard.count({ where: { status: { in: ['ready', 'released'] } } }),
@@ -83,6 +83,13 @@ export async function getDashboardOverview() {
       schoolYear: activeYear?.yearLabel ?? null,
     },
   };
+}
+
+async function countEnrolledStudents(activeYearId: string | null): Promise<number> {
+  if (!activeYearId) return 0;
+  return prisma.studentProfile.count({
+    where: { section: { status: 'active', schoolYearId: activeYearId } },
+  });
 }
 
 function buildAtRiskWhere(schoolYearId: string | null): Prisma.StudentRiskAssessmentWhereInput {
