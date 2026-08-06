@@ -77,7 +77,7 @@ export default function AuthCallbackClient() {
 
         setTokens(result.tokens);
         setUser(result.user);
-        router.replace("/");
+        router.replace(result.user.role === "principal" ? "/dashboard" : "/");
       } catch (err) {
         clearSession();
 
