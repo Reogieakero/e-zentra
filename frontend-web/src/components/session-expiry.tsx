@@ -7,7 +7,11 @@ import { api } from "@/lib/api";
 import { clearSession, getTokens, getUser, setTokens, type AuthTokens } from "@/lib/auth";
 import styles from "./session-expiry.module.css";
 
-const WARNING_MS = 60_000;
+const IDLE_WARN_MS = 5 * 60 * 1000;
+const EXPIRY_WARN_MS = 60_000;
+const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"] as const;
+
+type Reason = "idle" | "expiry";
 
 function accessTokenExpiry(token: string): number | null {
   try {
@@ -43,9 +47,25 @@ function loginRedirect(role?: string): string {
 export function SessionExpiry() {
   const router = useRouter();
   const [show, setShow] = useState(false);
-  const [expired, setExpired] = useState(false);
+  const [reason, setReason] = useState<Reason>("expiry");
   const [extending, setExtending] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastActivityRef = useRef(0);
+  const showRef = useRef(false);
+
+  const openOverlay = useCallback((next: Reason) => {
+    if (showRef.current) return;
+    showRef.current = true;
+    setReason(next);
+    setShow(true);
+  }, []);
+
+  const closeOverlay = useCallback(() => {
+    showRef.current = false;
+    setShow(false);
+    lastActivityRef.current = Date.now();
+  }, []);
 
   const schedule = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -54,19 +74,29 @@ export function SessionExpiry() {
     const exp = accessTokenExpiry(tokens.accessToken);
     if (exp == null) return;
     const remaining = exp - Date.now();
-    const delay = Math.max(0, remaining - WARNING_MS);
-    timerRef.current = setTimeout(() => {
-      setExpired(remaining <= 0);
-      setShow(true);
-    }, delay);
-  }, []);
+    const delay = Math.max(0, remaining - EXPIRY_WARN_MS);
+    timerRef.current = setTimeout(() => openOverlay("expiry"), delay);
+  }, [openOverlay]);
 
   useEffect(() => {
+    lastActivityRef.current = Date.now();
     schedule();
+    const onActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+    ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, onActivity, { passive: true }));
+    intervalRef.current = setInterval(() => {
+      if (showRef.current) return;
+      const tokens = getTokens();
+      if (!tokens?.accessToken) return;
+      if (Date.now() - lastActivityRef.current >= IDLE_WARN_MS) openOverlay("idle");
+    }, 1000);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, onActivity));
     };
-  }, [schedule]);
+  }, [schedule, openOverlay]);
 
   async function handleStay() {
     setExtending(true);
@@ -77,8 +107,7 @@ export function SessionExpiry() {
         body: { refreshToken: tokens?.refreshToken },
       });
       setTokens(data);
-      setShow(false);
-      setExpired(false);
+      closeOverlay();
       schedule();
     } catch {
       clearSession();
@@ -99,16 +128,18 @@ export function SessionExpiry() {
 
   if (!show) return null;
 
+  const isIdle = reason === "idle";
+
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Session expiring">
       <div className={styles.card}>
         <div className={styles.iconWrap}>
           <Clock className={styles.icon} />
         </div>
-        <h2 className={styles.title}>{expired ? "Your session has expired" : "Your session is about to expire"}</h2>
+        <h2 className={styles.title}>{isIdle ? "Are you still there?" : "Your session is about to expire"}</h2>
         <p className={styles.message}>
-          {expired
-            ? "You've been signed out for security. Stay signed in to continue where you left off."
+          {isIdle
+            ? "You've been idle for a while. Select \"I'm still here\" to keep your session active, or sign out now."
             : "For security, you'll be signed out shortly. Select \"I'm still here\" to stay signed in, or sign out now."}
         </p>
         <div className={styles.actions}>
