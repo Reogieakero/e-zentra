@@ -51,7 +51,7 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
       );
       setTokens(data.tokens);
       setUser(data.user);
-      router.push(data.user.role === "principal" ? "/dashboard" : "/");
+      router.push(data.user.role === "principal" ? "/principal/dashboard" : "/");
     } catch {
       // sileo.promise already surfaced the error toast
     } finally {

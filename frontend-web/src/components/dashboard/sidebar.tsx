@@ -13,7 +13,7 @@ import Link from "next/link";
 import styles from "./sidebar.module.css";
 
 const mainNav = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", active: true },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/principal/dashboard", active: true },
   { key: "students", label: "Students", icon: Users, href: "#" },
   { key: "attendance", label: "Attendance", icon: CalendarCheck2, href: "#" },
   { key: "sf10", label: "SF10 Records", icon: FileText, href: "#" },
