@@ -65,14 +65,22 @@ export function SessionExpiry() {
     }
   }, []);
 
+  const closeOverlay = useCallback(() => {
+    showRef.current = false;
+    setShow(false);
+    lastActivityRef.current = Date.now();
+    clearAutoLogout();
+  }, [clearAutoLogout]);
+
   const handleLogout = useCallback(() => {
+    closeOverlay();
     const tokens = getTokens();
     if (tokens?.refreshToken) {
       void api("/auth/logout", { method: "POST", body: { refreshToken: tokens.refreshToken } }).catch(() => undefined);
     }
     clearSession();
     router.replace(loginRedirect(getUser()?.role));
-  }, [router]);
+  }, [router, closeOverlay]);
 
   const startAutoLogout = useCallback(() => {
     clearAutoLogout();
@@ -92,13 +100,6 @@ export function SessionExpiry() {
     },
     [startAutoLogout]
   );
-
-  const closeOverlay = useCallback(() => {
-    showRef.current = false;
-    setShow(false);
-    lastActivityRef.current = Date.now();
-    clearAutoLogout();
-  }, [clearAutoLogout]);
 
   const schedule = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -152,6 +153,7 @@ export function SessionExpiry() {
       closeOverlay();
       schedule();
     } catch {
+      closeOverlay();
       clearSession();
       router.replace(loginRedirect(getUser()?.role));
     } finally {

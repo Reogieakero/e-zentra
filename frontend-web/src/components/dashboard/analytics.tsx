@@ -64,7 +64,6 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   );
 }
 
-const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const heatLevels = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
 const TOOLTIP_CURSOR = { stroke: "#d1d5db" };
 
@@ -164,8 +163,8 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
 
             <div className={styles.heatmap}>
               <div className={styles.heatmapDays}>
-                {dayLabels.map((d) => (
-                  <span key={d}>{d}</span>
+                {heatmap[0]?.days.map((d) => (
+                  <span key={d.day}>{d.label}</span>
                 ))}
               </div>
               <div className={styles.heatmapColumns}>
@@ -180,7 +179,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
                               ? `${styles.heatCell} ${styles[heatLevels[cell.level - 1]]}`
                               : styles.heatCell
                           }
-                          title={`${cell.day}: ${cell.rate}%`}
+                          title={`${cell.label}: ${cell.rate}%`}
                         />
                       ))}
                     </div>
