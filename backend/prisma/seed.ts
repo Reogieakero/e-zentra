@@ -905,6 +905,140 @@ async function seedOperationalTables() {
   }
 }
 
+async function seedCurrentWeekDemo() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+
+  const existing = await prisma.attendanceRecord.findFirst({ where: { attendanceDate: monday } });
+  if (existing) {
+    console.log('Current-week dashboard demo already seeded; skipping.');
+    return;
+  }
+
+  const activeYear = await prisma.schoolYear.findFirst({ where: { status: 'active' } });
+  if (!activeYear) {
+    console.log('No active school year; skipping current-week dashboard demo.');
+    return;
+  }
+
+  const pick = <T,>(arr: readonly T[], i: number): T => arr[i % arr.length];
+
+  const termForGrade = async (grade: GradeLevel) =>
+    prisma.term.findFirstOrThrow({
+      where: { schoolYearId: activeYear.id, gradeBand: grade === 'grade_11' || grade === 'grade_12' ? 'senior_high' : 'junior_high', termNumber: 'term_1' },
+    });
+
+  const counselor = await prisma.user.findUniqueOrThrow({ where: { email: 'counselor@zentra.edu' } });
+  const teachers = await prisma.user.findMany({ where: { role: 'teacher', accountStatus: 'active' } });
+
+  const sections = await prisma.section.findMany({
+    where: { status: 'active', schoolYearId: activeYear.id },
+    include: { students: { where: { user: { accountStatus: 'active' } } } },
+  });
+
+  const statuses = ['present', 'present', 'present', 'absent', 'present', 'late', 'present', 'present', 'excused', 'absent'] as const;
+  const attendanceRows: Array<{
+    studentId: string;
+    sectionId: string;
+    termId: string;
+    attendanceDate: Date;
+    session: 'morning' | 'afternoon';
+    status: (typeof statuses)[number];
+    recordedBy: string;
+  }> = [];
+  for (const section of sections) {
+    const term = await termForGrade(section.gradeLevel);
+    section.students.slice(0, 4).forEach((sp, si) => {
+      for (let d = 0; d < 5; d++) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + d);
+        attendanceRows.push({
+          studentId: sp.id,
+          sectionId: section.id,
+          termId: term.id,
+          attendanceDate: day,
+          session: d % 2 === 0 ? 'morning' : 'afternoon',
+          status: pick(statuses, d + si * 3),
+          recordedBy: pick(teachers, si).id,
+        });
+      }
+    });
+  }
+  await prisma.attendanceRecord.createMany({ data: attendanceRows });
+
+  const riskCandidates = sections.flatMap((s) => s.students.slice(0, 1));
+  for (let i = 0; i < Math.min(3, riskCandidates.length); i++) {
+    const sp = riskCandidates[i];
+    const section = sections.find((s) => s.id === sp.sectionId);
+    if (!section) continue;
+    const term = await termForGrade(section.gradeLevel);
+    await prisma.studentRiskAssessment.upsert({
+      where: { studentId_termId: { studentId: sp.id, termId: term.id } },
+      update: {},
+      create: {
+        studentId: sp.id,
+        sectionId: section.id,
+        termId: term.id,
+        academicRisk: i === 0,
+        attendanceRisk: i !== 0,
+        behavioralRisk: i === 1,
+        riskCount: i === 0 ? 2 : 1,
+        riskLevel: i === 0 ? 'high' : 'moderate',
+      },
+    });
+  }
+
+  const admCandidates = sections.flatMap((s) => s.students.slice(0, 1)).slice(0, 3);
+  for (let i = 0; i < admCandidates.length; i++) {
+    const sp = admCandidates[i];
+    const section = sections.find((s) => s.id === sp.sectionId);
+    if (!section) continue;
+    const term = await termForGrade(section.gradeLevel);
+    const teacher = pick(teachers, i);
+    const anecdote = await prisma.anecdotalRecord.create({
+      data: {
+        observerId: teacher.id,
+        studentId: sp.id,
+        sectionId: section.id,
+        termId: term.id,
+        observationDate: monday,
+        observationTime: time('09:00'),
+        incidentDescription: `ADM recommendation ${i + 1}: learner needs alternative delivery mode support.`,
+        locationSetting: 'Classroom',
+        notesRecommendationsActions: 'Enroll in modular learning; monitor weekly.',
+        classPerformance: 'Needs improvement',
+        attendanceSummary: 'Irregular',
+        confidentialityLevel: 'confidential',
+      },
+    });
+    const referral = await prisma.referral.create({
+      data: {
+        anecdotalRecordId: anecdote.id,
+        referredToRole: 'adm_coordinator',
+        referredBy: teacher.id,
+        reasonForReferral: 'Learner requires alternative delivery mode intervention.',
+        confidentialityLevel: 'confidential',
+      },
+    });
+    await prisma.admLearnerProfile.create({
+      data: {
+        studentId: sp.id,
+        sectionId: section.id,
+        termId: term.id,
+        referralId: referral.id,
+        teacherAdviserId: teacher.id,
+        reasonForAdm: 'Alternative delivery mode needed for learner progress.',
+        admInterventionDescription: 'Modular learning plan with weekly check-ins.',
+        preparedBy: counselor.id,
+        confidentialityLevel: 'confidential',
+        status: 'submitted',
+      },
+    });
+  }
+}
+
 async function main() {
   const users: UserSeed[] = [
     { email: 'principal@zentra.edu', role: 'principal', firstName: 'Amelia', lastName: 'Principal', employeeId: 'EMP-0001' },
@@ -962,6 +1096,7 @@ async function main() {
   await seedGradeComponents(termMap);
   await seedDemoData(sectionsByGrade, termMap);
   await seedOperationalTables();
+  await seedCurrentWeekDemo();
 
   const count = await prisma.user.count();
   console.log(`Seed complete. ${count} user accounts, 6 sections, 24 subjects, 6 terms (3 per grade band).`);

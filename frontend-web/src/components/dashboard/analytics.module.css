@@ -1,0 +1,413 @@
+.panel {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-xs);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panelTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panelTitleIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--brand-primary);
+}
+
+.panelSubtitle {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.syBadge {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  background: #ecfdf5;
+  border: 1px solid #d1fae5;
+  white-space: nowrap;
+}
+
+.charts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.chartCard {
+  background: rgba(249, 250, 251, 0.4);
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chartCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+.chartTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chartTitleIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--brand-primary);
+}
+
+.chartSubtitle {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.link {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.lineChart {
+  width: 100%;
+  height: 144px;
+  overflow: visible;
+  margin-top: 8px;
+}
+
+.lineLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 500;
+  color: #9ca3af;
+  padding: 4px 2px 0;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 10px;
+  color: #6b7280;
+  padding-top: 8px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legendDotSolid {
+  background: var(--brand-primary);
+}
+
+.legendDotLine {
+  width: 10px;
+  height: 2px;
+  border-radius: 0;
+  background: var(--brand-light);
+}
+
+.heatmapCard {
+  align-items: center;
+  text-align: center;
+}
+
+.peakBadge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  background: #ecfdf5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #d1fae5;
+  white-space: nowrap;
+}
+
+.heatmap {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px 0 40px;
+}
+
+.heatmapDays {
+  display: grid;
+  grid-template-rows: repeat(5, auto);
+  gap: 6px;
+  font-size: 9px;
+  font-weight: 500;
+  color: #9ca3af;
+  text-align: right;
+  padding-top: 2px;
+}
+
+.heatmapColumns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.heatmapCol {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.heatmapCells {
+  display: grid;
+  grid-template-rows: repeat(5, auto);
+  gap: 6px;
+}
+
+.heatCell {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.heat1 {
+  background: #d1fae5;
+}
+
+.heat2 {
+  background: #a7f3d0;
+}
+
+.heat3 {
+  background: #86efac;
+}
+
+.heat4 {
+  background: #4ade80;
+}
+
+.heat5 {
+  background: #22c55e;
+}
+
+.heat6 {
+  background: var(--brand-primary);
+}
+
+.heatmapLabel {
+  position: absolute;
+  top: 100%;
+  margin-top: 8px;
+  right: 50%;
+  transform: rotate(-45deg);
+  transform-origin: top right;
+  font-size: 9px;
+  font-weight: 600;
+  color: #4b5563;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.heatmapFooter {
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid rgba(229, 231, 235, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.heatmapScale {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+.heatmapScaleCell {
+  width: 8px;
+  height: 8px;
+}
+
+.barChart {
+  position: relative;
+  height: 144px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid #d1d5db;
+  padding: 0 4px;
+}
+
+.barChart::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 0;
+  background-image:
+    linear-gradient(to bottom, transparent 0%, #f3f4f6 0%, #f3f4f6 1px, transparent 1px),
+    linear-gradient(to bottom, transparent 0%, #f3f4f6 0%, #f3f4f6 1px, transparent 1px),
+    linear-gradient(to bottom, transparent 0%, #f3f4f6 0%, #f3f4f6 1px, transparent 1px);
+  background-size: 100% 33.333%;
+  background-position: 0 0, 0 33.333%, 0 66.666%;
+  pointer-events: none;
+}
+
+.barGroup {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.barTrack {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex: 1;
+  align-items: flex-end;
+}
+
+.bar {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 2px 2px 0 0;
+  transition: background-color 0.3s;
+}
+
+.barStrong {
+  background: var(--brand-primary);
+}
+
+.barSoft {
+  background: rgba(22, 163, 74, 0.8);
+}
+
+.bar:hover {
+  background: #047857;
+}
+
+.barTooltip {
+  opacity: 0;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  background: #111827;
+  color: #ffffff;
+  padding: 0 4px;
+  border-radius: 2px;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.bar:hover .barTooltip {
+  opacity: 1;
+}
+
+.barLabel {
+  position: absolute;
+  top: 100%;
+  margin-top: 8px;
+  right: 50%;
+  transform: rotate(-45deg);
+  transform-origin: top right;
+  font-size: 10px;
+  font-weight: 500;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.barFooter {
+  padding-top: 16px;
+  border-top: 1px solid rgba(229, 231, 235, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.barHint {
+  color: #9ca3af;
+}
+
+.panelFooter {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+@media (min-width: 1280px) {
+  .chartGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

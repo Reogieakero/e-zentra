@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { writeAudit } from './audit.service';
 import { notify, notifyStudentAndParents } from './notification.service';
+import { recomputeRiskAndNotify } from './risk.service';
 import { serializeForOutput } from '../middleware/errorHandler';
 import { parseOffsetPagination } from '../utils/pagination';
 import { assertCanFileCaseRecord, assertCanViewStudentRecords } from '../utils/caseRecords';
@@ -54,6 +55,7 @@ export async function createAnecdotal(actorId: string, actorRole: import('@prism
     message: 'A new anecdotal record was filed that may relate to you.',
     notifyParents: true,
   });
+  await recomputeRiskAndNotify(input.studentId, input.termId, input.sectionId).catch(() => undefined);
   return { data: serializeForOutput(record) };
 }
 
