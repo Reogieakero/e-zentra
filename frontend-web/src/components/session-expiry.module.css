@@ -15,7 +15,7 @@
   width: 100%;
   max-width: 400px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 8px;
   box-shadow: var(--shadow-lg);
   padding: 28px 24px 24px;
   text-align: center;
@@ -59,50 +59,11 @@
 .actions {
   width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stayBtn,
-.logoutBtn {
-  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%;
-  padding: 10px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.stayBtn {
-  background: var(--brand-primary);
-  color: #ffffff;
-  border: 1px solid var(--brand-primary);
-}
-
-.stayBtn:hover:not(:disabled) {
-  background: #15803d;
-}
-
-.stayBtn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.logoutBtn {
-  background: #ffffff;
-  color: var(--danger);
-  border: 1px solid var(--border-strong);
-}
-
-.logoutBtn:hover {
-  background: #fef2f2;
-  border-color: var(--danger);
+  margin-top: 4px;
 }
 
 .btnIcon {
