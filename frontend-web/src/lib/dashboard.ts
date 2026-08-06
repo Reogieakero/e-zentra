@@ -40,9 +40,13 @@ export interface SectionAttendance {
   sectionName: string;
   presentCount: number;
   absentCount: number;
+  lateCount: number;
+  excusedCount: number;
   totalCount: number;
   rate: number;
   absentRate: number;
+  lateRate: number;
+  excusedRate: number;
 }
 
 export interface DailyTrend {
@@ -74,21 +78,22 @@ export interface DashboardOverview {
   schoolYear: string | null;
 }
 
-export async function fetchDashboardOverview(): Promise<DashboardOverview> {
+export async function fetchDashboardOverview(month?: string): Promise<DashboardOverview> {
   const token = getTokens()?.accessToken;
-  const { data } = await api<{ data: DashboardOverview }>("/dashboard/overview", { token });
+  const query = month ? `?month=${month}` : "";
+  const { data } = await api<{ data: DashboardOverview }>(`/dashboard/overview${query}`, { token });
   return data;
 }
 
 const REFRESH_INTERVAL_MS = 60_000;
 
-export function useDashboardOverview() {
+export function useDashboardOverview(month?: string) {
   const userId = getUser()?.id ?? "anon";
-  const key = userId === "anon" ? null : ["/dashboard/overview", userId];
+  const key = userId === "anon" ? null : ["/dashboard/overview", userId, month ?? "all"];
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<DashboardOverview>(
     key,
-    fetchDashboardOverview,
+    () => fetchDashboardOverview(month),
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,

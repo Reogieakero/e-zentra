@@ -114,6 +114,28 @@
   text-decoration: underline;
 }
 
+.chartControls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.viewSelect,
+.monthPicker {
+  width: 148px;
+  min-width: 0;
+}
+
+.viewSelect {
+  flex-shrink: 1;
+}
+
+.monthPicker {
+  flex-shrink: 0;
+}
+
 .chartBody,
 .chartBodyBars {
   width: 100%;
@@ -196,6 +218,14 @@
 
 .legendDotRed {
   background: #ef4444;
+}
+
+.legendDotAmber {
+  background: #f59e0b;
+}
+
+.legendDotViolet {
+  background: #8b5cf6;
 }
 
 .legendDotLine {

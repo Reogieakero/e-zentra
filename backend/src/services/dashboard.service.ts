@@ -1,34 +1,46 @@
 import { AttendanceStatus, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { cacheKey, getCached, invalidateKeys } from './cache.service';
+import { cacheKey, getCached, invalidateByPattern } from './cache.service';
 
 const AT_RISK_LIMIT = 3;
 const ADM_APPROVAL_LIMIT = 3;
 const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const DASHBOARD_CACHE_TTL = 30;
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 function shortDate(d: Date): string {
   return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
 }
 
-export function dashboardCacheKey(): string {
-  return cacheKey('dashboard');
+function parseMonthFilter(month?: string): { start: Date; end: Date } | null {
+  if (!month || !MONTH_RE.test(month)) return null;
+  const [y, m] = month.split('-').map(Number);
+  const start = new Date(y, m - 1, 1);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(y, m, 1);
+  end.setHours(0, 0, 0, 0);
+  return { start, end };
+}
+
+export function dashboardCacheKey(month?: string): string {
+  return cacheKey('dashboard', month ?? undefined);
 }
 
 export async function invalidateDashboardCache(): Promise<void> {
-  await invalidateKeys(dashboardCacheKey());
+  await invalidateByPattern('dashboard');
 }
 
-export async function getDashboardOverview() {
-  const key = dashboardCacheKey();
-  return getCached<{ data: unknown }>(key, DASHBOARD_CACHE_TTL, async () => loadDashboardOverview());
+export async function getDashboardOverview(month?: string) {
+  const key = dashboardCacheKey(month);
+  return getCached<{ data: unknown }>(key, DASHBOARD_CACHE_TTL, () => loadDashboardOverview(month));
 }
 
-async function loadDashboardOverview() {
+async function loadDashboardOverview(month?: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthFilter = parseMonthFilter(month);
 
   const activeYear = await prisma.schoolYear.findFirst({
     where: { status: 'active' },
@@ -71,7 +83,7 @@ async function loadDashboardOverview() {
     getAtRiskStudents(activeYear?.id ?? null),
     countAtRiskStudents(activeYear?.id ?? null),
     getAdmForApproval(),
-    getSectionAttendance(),
+    getSectionAttendance(monthFilter),
     getDailyTrend(today),
     getSectionHeatmap(),
   ]);
@@ -209,7 +221,7 @@ async function getAdmForApproval() {
   }));
 }
 
-async function getSectionAttendance() {
+async function getSectionAttendance(monthFilter?: { start: Date; end: Date } | null) {
   const [sections, attendanceByStatus] = await Promise.all([
     prisma.section.findMany({
       where: { status: 'active' },
@@ -218,6 +230,7 @@ async function getSectionAttendance() {
     }),
     prisma.attendanceRecord.groupBy({
       by: ['sectionId', 'status'],
+      where: monthFilter ? { attendanceDate: { gte: monthFilter.start, lt: monthFilter.end } } : undefined,
       _count: { _all: true },
     }),
   ]);
@@ -232,15 +245,22 @@ async function getSectionAttendance() {
     const counts = bySection.get(s.id);
     const present = counts?.get(AttendanceStatus.present) ?? 0;
     const absent = counts?.get(AttendanceStatus.absent) ?? 0;
+    const late = counts?.get(AttendanceStatus.late) ?? 0;
+    const excused = counts?.get(AttendanceStatus.excused) ?? 0;
     const total = counts ? Array.from(counts.values()).reduce((sum, n) => sum + n, 0) : 0;
+    const rateOf = (n: number) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
     return {
       sectionId: s.id,
       sectionName: s.sectionName,
       presentCount: present,
       absentCount: absent,
+      lateCount: late,
+      excusedCount: excused,
       totalCount: total,
-      rate: total > 0 ? Math.round((present / total) * 1000) / 10 : 0,
-      absentRate: total > 0 ? Math.round((absent / total) * 1000) / 10 : 0,
+      rate: rateOf(present),
+      absentRate: rateOf(absent),
+      lateRate: rateOf(late),
+      excusedRate: rateOf(excused),
     };
   });
 }

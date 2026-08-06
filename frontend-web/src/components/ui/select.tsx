@@ -18,9 +18,10 @@ interface SelectProps {
   placeholder?: string;
   onChange: (value: string) => void;
   className?: string;
+  size?: "default" | "sm";
 }
 
-export function CustomSelect({ id, label, value, options, placeholder = "Select…", onChange, className }: SelectProps) {
+export function CustomSelect({ id, label, value, options, placeholder = "Select…", onChange, className, size = "default" }: SelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
@@ -36,7 +37,7 @@ export function CustomSelect({ id, label, value, options, placeholder = "Select�
       ) : null}
       <button
         type="button"
-        className={`${styles.trigger} ${open ? styles.triggerOpen : ""}`}
+        className={`${styles.trigger} ${size === "sm" ? styles.triggerSm : ""} ${open ? styles.triggerOpen : ""}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-labelledby={id ? `${id}-label` : undefined}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -78,7 +79,8 @@ function kpiCards(stats: DashboardOverview["stats"]) {
 }
 
 export default function DashboardPage() {
-  const { data, error, refresh } = useDashboardOverview();
+  const [month, setMonth] = useState("");
+  const { data, error, refresh } = useDashboardOverview(month || undefined);
 
   const loading = !data && !error;
 
@@ -196,7 +198,7 @@ export default function DashboardPage() {
           <ul className={styles.modalList}>
             <li><strong>Daily Attendance Trend</strong> — the school week (Mon–Fri). Each dot is that day&apos;s Present-to-logged rate; days with no logs yet show &quot;No data yet&quot;. The dashed line is the 95% target.</li>
             <li><strong>Section Attendance Heatmap</strong> — colour intensity shows each section&apos;s attendance per weekday of the current week.</li>
-            <li><strong>Section Performance Breakdown</strong> — for each section, the green (Present) and red (Absent) bars show those statuses as % of all attendance it has logged.</li>
+            <li><strong>Section Performance Breakdown</strong> — for each section, the bars show statuses as % of all attendance it logged. Switch between Present/Absent and Late/Excused with the tabs, and filter to a specific month with the month picker (blank = all time).</li>
           </ul>
         </InfoDialog>
       </div>
@@ -311,9 +313,13 @@ export default function DashboardPage() {
             sectionName: s.sectionName,
             rate: s.rate,
             absentRate: s.absentRate,
+            lateRate: s.lateRate,
+            excusedRate: s.excusedRate,
           }))}
           heatmap={data.heatmap}
           schoolYear={data.schoolYear}
+          month={month}
+          onMonthChange={setMonth}
         />
       </div>
     </>

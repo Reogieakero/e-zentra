@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { BarChart2, Calendar, TrendingUp } from "lucide-react";
 import {
   Area,
@@ -14,6 +15,8 @@ import {
   YAxis,
 } from "recharts";
 import type { SectionHeatmap } from "@/lib/dashboard";
+import { CustomSelect } from "@/components/ui/select";
+import { MonthPicker } from "@/components/ui/month-picker";
 import styles from "./analytics.module.css";
 
 interface TrendPoint {
@@ -25,6 +28,8 @@ interface SectionRate {
   sectionName: string;
   rate: number;
   absentRate: number;
+  lateRate: number;
+  excusedRate: number;
 }
 
 interface AnalyticsProps {
@@ -32,6 +37,8 @@ interface AnalyticsProps {
   sections: SectionRate[];
   heatmap: SectionHeatmap[];
   schoolYear: string | null;
+  month: string;
+  onMonthChange: (month: string) => void;
 }
 
 interface ChartTooltipEntry {
@@ -67,14 +74,24 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
 const heatLevels = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
 const TOOLTIP_CURSOR = { stroke: "#d1d5db" };
 
-export default function Analytics({ trend, sections, heatmap, schoolYear }: AnalyticsProps) {
+type AttendanceView = "presentAbsent" | "lateExcused";
+
+export default function Analytics({ trend, sections, heatmap, schoolYear, month, onMonthChange }: AnalyticsProps) {
+  const [view, setView] = useState<AttendanceView>("presentAbsent");
+
   const peakRate = heatmap.reduce(
     (max, col) => Math.max(max, ...col.days.map((d) => d.rate)),
     0
   );
 
   const trendData = trend.map((t) => ({ day: t.label, rate: t.rate }));
-  const sectionData = sections.map((s) => ({ name: s.sectionName, present: s.rate, absent: s.absentRate }));
+  const sectionData = sections.map((s) => ({
+    name: s.sectionName,
+    present: s.rate,
+    absent: s.absentRate,
+    late: s.lateRate,
+    excused: s.excusedRate,
+  }));
 
   return (
     <div className={styles.panel}>
@@ -209,9 +226,32 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
                 <BarChart2 className={styles.chartTitleIcon} />
                 Section Performance Breakdown
               </h4>
-              <p className={styles.chartSubtitle}>Present vs absent rate by section, with angled X-axis section labels</p>
+              <p className={styles.chartSubtitle}>
+                {view === "presentAbsent" ? "Present vs absent rate" : "Late vs excused rate"} by section
+                {month ? ` · ${month}` : " · all time"}
+              </p>
             </div>
-            <span className={styles.link}>View All</span>
+
+            <div className={styles.chartControls}>
+              <CustomSelect
+                id="section-view"
+                value={view}
+                options={[
+                  { value: "presentAbsent", label: "Present / Absent" },
+                  { value: "lateExcused", label: "Late / Excused" },
+                ]}
+                onChange={(v) => setView(v as AttendanceView)}
+                className={styles.viewSelect}
+                size="sm"
+              />
+              <MonthPicker
+                id="section-month"
+                value={month}
+                onChange={onMonthChange}
+                className={styles.monthPicker}
+                size="sm"
+              />
+            </div>
           </div>
 
           <div className={styles.chartBodyBars}>
@@ -230,22 +270,46 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
                 />
                 <YAxis hide domain={[0, 100]} />
                 <Tooltip cursor={TOOLTIP_CURSOR} content={<ChartTooltip />} />
-                <Bar dataKey="present" name="Present" fill="#16a34a" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                {view === "presentAbsent" ? (
+                  <>
+                    <Bar dataKey="present" name="Present" fill="#16a34a" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                  </>
+                ) : (
+                  <>
+                    <Bar dataKey="late" name="Late" fill="#f59e0b" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="excused" name="Excused" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+                  </>
+                )}
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className={styles.barFooter}>
             <div className={styles.barLegend}>
-              <span className={styles.legendItem}>
-                <span className={`${styles.legendDot} ${styles.legendDotSolid}`} />
-                Present
-              </span>
-              <span className={styles.legendItem}>
-                <span className={`${styles.legendDot} ${styles.legendDotRed}`} />
-                Absent
-              </span>
+              {view === "presentAbsent" ? (
+                <>
+                  <span className={styles.legendItem}>
+                    <span className={`${styles.legendDot} ${styles.legendDotSolid}`} />
+                    Present
+                  </span>
+                  <span className={styles.legendItem}>
+                    <span className={`${styles.legendDot} ${styles.legendDotRed}`} />
+                    Absent
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={styles.legendItem}>
+                    <span className={`${styles.legendDot} ${styles.legendDotAmber}`} />
+                    Late
+                  </span>
+                  <span className={styles.legendItem}>
+                    <span className={`${styles.legendDot} ${styles.legendDotViolet}`} />
+                    Excused
+                  </span>
+                </>
+              )}
             </div>
             <span className={styles.barHint}>Hover bars to view exact percentages</span>
           </div>
@@ -253,9 +317,9 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
       </div>
 
       <div className={styles.panelFooter}>
-        Data is aggregated from daily attendance logs across all sections for School Year 2025-2026. Figures update
-        automatically at the end of each school day and are used to flag at-risk students and sections falling below the
-        95% target.
+        Daily trend and heatmap cover the current school week (Mon – Fri). Section breakdown shows statuses as % of all
+        logged attendance in the selected month, or all time when no month is chosen. Figures update automatically at the
+        end of each school day and are used to flag at-risk students and sections falling below the 95% target.
       </div>
     </div>
   );
