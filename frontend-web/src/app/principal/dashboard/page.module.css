@@ -62,13 +62,14 @@
 .kpiStat {
   padding: 10px;
   border-radius: 8px;
-  background: rgba(236, 253, 245, 0.4);
-  border: 1px solid rgba(209, 250, 229, 0.6);
-  transition: border-color 0.2s;
+  background: #a7f3d0;
+  border: 1px solid #34d399;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .kpiStat:hover {
-  border-color: #a7f3d0;
+  border-color: #10b981;
+  background: #6ee7b7;
 }
 
 .kpiStatHeader {

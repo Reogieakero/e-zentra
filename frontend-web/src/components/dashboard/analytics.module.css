@@ -114,20 +114,40 @@
   text-decoration: underline;
 }
 
-.lineChart {
+.chartBody,
+.chartBodyBars {
   width: 100%;
-  height: 144px;
-  overflow: visible;
   margin-top: 8px;
 }
 
-.lineLabels {
+.chartBody {
+  height: 160px;
+}
+
+.chartBodyBars {
+  height: 200px;
+}
+
+.chartTooltip {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.chartTooltipLabel {
   font-size: 10px;
   font-weight: 500;
   color: #9ca3af;
-  padding: 4px 2px 0;
+}
+
+.chartTooltipValue {
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .legend {
@@ -285,103 +305,6 @@
 .heatmapScaleCell {
   width: 8px;
   height: 8px;
-}
-
-.barChart {
-  position: relative;
-  height: 144px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px;
-  border-bottom: 1px solid #d1d5db;
-  padding: 0 4px;
-}
-
-.barChart::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 0 0;
-  background-image:
-    linear-gradient(to bottom, transparent 0%, #f3f4f6 0%, #f3f4f6 1px, transparent 1px),
-    linear-gradient(to bottom, transparent 0%, #f3f4f6 0%, #f3f4f6 1px, transparent 1px),
-    linear-gradient(to bottom, transparent 0%, #f3f4f6 0%, #f3f4f6 1px, transparent 1px);
-  background-size: 100% 33.333%;
-  background-position: 0 0, 0 33.333%, 0 66.666%;
-  pointer-events: none;
-}
-
-.barGroup {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  justify-content: flex-end;
-}
-
-.barTrack {
-  position: relative;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  flex: 1;
-  align-items: flex-end;
-}
-
-.bar {
-  width: 100%;
-  max-width: 28px;
-  border-radius: 2px 2px 0 0;
-  transition: background-color 0.3s;
-}
-
-.barStrong {
-  background: var(--brand-primary);
-}
-
-.barSoft {
-  background: rgba(22, 163, 74, 0.8);
-}
-
-.bar:hover {
-  background: #047857;
-}
-
-.barTooltip {
-  opacity: 0;
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  background: #111827;
-  color: #ffffff;
-  padding: 0 4px;
-  border-radius: 2px;
-  pointer-events: none;
-  white-space: nowrap;
-  transition: opacity 0.2s;
-}
-
-.bar:hover .barTooltip {
-  opacity: 1;
-}
-
-.barLabel {
-  position: absolute;
-  top: 100%;
-  margin-top: 8px;
-  right: 50%;
-  transform: rotate(-45deg);
-  transform-origin: top right;
-  font-size: 10px;
-  font-weight: 500;
-  color: #4b5563;
-  white-space: nowrap;
 }
 
 .barFooter {
