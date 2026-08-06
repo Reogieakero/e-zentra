@@ -1,0 +1,146 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 28px 24px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: cardIn 0.2s ease;
+}
+
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: #fef3c7;
+  color: #d97706;
+  margin-bottom: 8px;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.message {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stayBtn,
+.logoutBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stayBtn {
+  background: var(--brand-primary);
+  color: #ffffff;
+  border: 1px solid var(--brand-primary);
+}
+
+.stayBtn:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.stayBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.logoutBtn {
+  background: #ffffff;
+  color: var(--danger);
+  border: 1px solid var(--border-strong);
+}
+
+.logoutBtn:hover {
+  background: #fef2f2;
+  border-color: var(--danger);
+}
+
+.btnIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-top-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

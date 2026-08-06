@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sileo";
+import { SessionExpiry } from "@/components/session-expiry";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={inter.variable}>
       <body>
         <Toaster position="top-right" theme="dark" />
+        <SessionExpiry />
         {children}
       </body>
     </html>
