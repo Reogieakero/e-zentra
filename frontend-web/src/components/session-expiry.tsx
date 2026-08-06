@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Clock, LogOut, UserCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { clearSession, getTokens, getUser, setTokens, type AuthTokens } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 import styles from "./session-expiry.module.css";
 
 const IDLE_WARN_MS = 5 * 60 * 1000;
 const EXPIRY_WARN_MS = 60_000;
+const AUTO_LOGOUT_MS = 60_000;
 const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"] as const;
 
 type Reason = "idle" | "expiry";
@@ -49,23 +51,54 @@ export function SessionExpiry() {
   const [show, setShow] = useState(false);
   const [reason, setReason] = useState<Reason>("expiry");
   const [extending, setExtending] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(AUTO_LOGOUT_MS / 1000);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoLogoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef(0);
   const showRef = useRef(false);
 
-  const openOverlay = useCallback((next: Reason) => {
-    if (showRef.current) return;
-    showRef.current = true;
-    setReason(next);
-    setShow(true);
+  const clearAutoLogout = useCallback(() => {
+    if (autoLogoutRef.current) {
+      clearTimeout(autoLogoutRef.current);
+      autoLogoutRef.current = null;
+    }
   }, []);
+
+  const handleLogout = useCallback(() => {
+    const tokens = getTokens();
+    if (tokens?.refreshToken) {
+      void api("/auth/logout", { method: "POST", body: { refreshToken: tokens.refreshToken } }).catch(() => undefined);
+    }
+    clearSession();
+    router.replace(loginRedirect(getUser()?.role));
+  }, [router]);
+
+  const startAutoLogout = useCallback(() => {
+    clearAutoLogout();
+    setSecondsLeft(AUTO_LOGOUT_MS / 1000);
+    autoLogoutRef.current = setTimeout(() => {
+      handleLogout();
+    }, AUTO_LOGOUT_MS);
+  }, [clearAutoLogout, handleLogout]);
+
+  const openOverlay = useCallback(
+    (next: Reason) => {
+      if (showRef.current) return;
+      showRef.current = true;
+      setReason(next);
+      setShow(true);
+      startAutoLogout();
+    },
+    [startAutoLogout]
+  );
 
   const closeOverlay = useCallback(() => {
     showRef.current = false;
     setShow(false);
     lastActivityRef.current = Date.now();
-  }, []);
+    clearAutoLogout();
+  }, [clearAutoLogout]);
 
   const schedule = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -94,9 +127,18 @@ export function SessionExpiry() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (autoLogoutRef.current) clearTimeout(autoLogoutRef.current);
       ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, onActivity));
     };
   }, [schedule, openOverlay]);
+
+  useEffect(() => {
+    if (!show) return;
+    const tick = setInterval(() => {
+      setSecondsLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [show]);
 
   async function handleStay() {
     setExtending(true);
@@ -117,15 +159,6 @@ export function SessionExpiry() {
     }
   }
 
-  function handleLogout() {
-    const tokens = getTokens();
-    if (tokens?.refreshToken) {
-      void api("/auth/logout", { method: "POST", body: { refreshToken: tokens.refreshToken } }).catch(() => undefined);
-    }
-    clearSession();
-    router.replace(loginRedirect(getUser()?.role));
-  }
-
   if (!show) return null;
 
   const isIdle = reason === "idle";
@@ -140,17 +173,18 @@ export function SessionExpiry() {
         <p className={styles.message}>
           {isIdle
             ? "You've been idle for a while. Select \"I'm still here\" to keep your session active, or sign out now."
-            : "For security, you'll be signed out shortly. Select \"I'm still here\" to stay signed in, or sign out now."}
+            : "For security, you'll be signed out shortly. Select \"I'm still here\" to stay signed in, or sign out now."}{" "}
+          {secondsLeft > 0 && `You'll be signed out automatically in ${secondsLeft}s if you don't respond.`}
         </p>
         <div className={styles.actions}>
-          <button type="button" className={styles.stayBtn} onClick={handleStay} disabled={extending}>
+          <Button variant="primary" size="md" onClick={handleStay} disabled={extending}>
             {extending ? <span className={styles.spinner} /> : <UserCheck className={styles.btnIcon} />}
             {extending ? "Extending…" : "I'm still here"}
-          </button>
-          <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
+          </Button>
+          <Button variant="secondary" size="md" onClick={handleLogout}>
             <LogOut className={styles.btnIcon} />
             Sign out
-          </button>
+          </Button>
         </div>
       </div>
     </div>
