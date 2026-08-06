@@ -1,4 +1,19 @@
+"use client";
+
 import { BarChart2, Calendar, TrendingUp } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { SectionHeatmap } from "@/lib/dashboard";
 import styles from "./analytics.module.css";
 
@@ -19,31 +34,34 @@ interface AnalyticsProps {
   schoolYear: string | null;
 }
 
-const WIDTH = 340;
-const BASELINE = 85;
-const RANGE = 70;
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value?: number | string }>;
+  label?: string | number;
+}
+
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className={styles.chartTooltip}>
+      <span className={styles.chartTooltipLabel}>{label}</span>
+      <span className={styles.chartTooltipValue}>{payload[0].value}%</span>
+    </div>
+  );
+}
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const heatLevels = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
-
-function toY(rate: number): number {
-  return BASELINE - (rate / 100) * RANGE;
-}
-
-function buildLine(pts: TrendPoint[]): string {
-  if (pts.length === 0) return "";
-  if (pts.length === 1) return `M${WIDTH / 2},${toY(pts[0].rate)}`;
-  return pts
-    .map((p, i) => `${i === 0 ? "M" : "L"}${(WIDTH / (pts.length - 1)) * i},${toY(p.rate)}`)
-    .join(" ");
-}
+const TOOLTIP_CURSOR = { stroke: "#d1d5db" };
 
 export default function Analytics({ trend, sections, heatmap, schoolYear }: AnalyticsProps) {
-  const linePoints = buildLine(trend);
   const peakRate = heatmap.reduce(
     (max, col) => Math.max(max, ...col.days.map((d) => d.rate)),
     0
   );
+
+  const trendData = trend.map((t) => ({ day: t.label, rate: t.rate }));
+  const sectionData = sections.map((s) => ({ name: s.sectionName, rate: s.rate }));
 
   return (
     <div className={styles.panel}>
@@ -72,28 +90,36 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
               <span className={styles.link}>Report</span>
             </div>
 
-            <svg className={styles.lineChart} viewBox="0 0 340 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <line x1="0" y1="10" x2="340" y2="10" stroke="#e5e7eb" strokeDasharray="3 3" />
-              <line x1="0" y1="35" x2="340" y2="35" stroke="#e5e7eb" strokeDasharray="3 3" />
-              <line x1="0" y1="60" x2="340" y2="60" stroke="#e5e7eb" strokeDasharray="3 3" />
-              <line x1="0" y1="85" x2="340" y2="85" stroke="#d1d5db" />
-              <line x1="0" y1={toY(95)} x2="340" y2={toY(95)} stroke="#86efac" strokeWidth="1.5" strokeDasharray="4 2" />
-              <path d={`${linePoints} L340,85 L0,85 Z`} fill="url(#chartGradient)" />
-              <path d={linePoints} fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              {trend.length === 1 && (
-                <circle cx={WIDTH / 2} cy={toY(trend[0].rate)} r={3.5} fill="#ffffff" stroke="#16a34a" strokeWidth="2" />
-              )}
-            </svg>
-            <div className={styles.lineLabels}>
-              {trend.map((t) => (
-                <span key={t.label}>{t.label}</span>
-              ))}
+            <div className={styles.chartBody}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 10, fill: "#9ca3af" }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                  />
+                  <YAxis hide domain={[0, 100]} />
+                  <Tooltip cursor={TOOLTIP_CURSOR} content={<ChartTooltip />} />
+                  <ReferenceLine y={95} stroke="#86efac" strokeDasharray="4 2" />
+                  <Area
+                    type="monotone"
+                    dataKey="rate"
+                    stroke="#16a34a"
+                    strokeWidth={2.5}
+                    fill="url(#trendGradient)"
+                    dot={trendData.length <= 1 ? { r: 3.5, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2 } : false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
 
             <div className={styles.legend}>
@@ -173,17 +199,32 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
             <span className={styles.link}>View All</span>
           </div>
 
-          <div className={styles.barChart}>
-            {sections.map((s) => (
-              <div key={s.sectionName} className={styles.barGroup}>
-                <div className={styles.barTrack}>
-                  <div className={`${styles.bar} ${s.rate >= 95 ? styles.barStrong : styles.barSoft}`} style={{ height: `${s.rate}%` }}>
-                    <span className={styles.barTooltip}>{s.rate}%</span>
-                  </div>
-                </div>
-                <span className={styles.barLabel}>{s.sectionName}</span>
-              </div>
-            ))}
+          <div className={styles.chartBodyBars}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sectionData} margin={{ top: 8, right: 8, left: 8, bottom: 4 }}>
+                <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={44}
+                  tick={{ fontSize: 10, fill: "#4b5563" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis hide domain={[0, 100]} />
+                <Tooltip cursor={TOOLTIP_CURSOR} content={<ChartTooltip />} />
+                <Bar dataKey="rate" radius={[2, 2, 0, 0]}>
+                  {sectionData.map((s) => (
+                    <Cell
+                      key={s.name}
+                      fill={s.rate >= 95 ? "var(--brand-primary)" : "rgba(22, 163, 74, 0.85)"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
 
           <div className={styles.barFooter}>
