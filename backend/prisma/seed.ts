@@ -906,22 +906,22 @@ async function seedOperationalTables() {
 }
 
 async function seedCurrentWeekDemo() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-
-  const existing = await prisma.attendanceRecord.findFirst({ where: { attendanceDate: monday } });
-  if (existing) {
-    console.log('Current-week dashboard demo already seeded; skipping.');
-    return;
-  }
-
   const activeYear = await prisma.schoolYear.findFirst({ where: { status: 'active' } });
   if (!activeYear) {
     console.log('No active school year; skipping current-week dashboard demo.');
     return;
   }
+
+  const riskExists = await prisma.studentRiskAssessment.findFirst({ where: { term: { schoolYearId: activeYear.id } } });
+  if (riskExists) {
+    console.log('Dashboard-week demo (risk/ADM) already seeded; skipping.');
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
 
   const pick = <T,>(arr: readonly T[], i: number): T => arr[i % arr.length];
 
@@ -937,36 +937,6 @@ async function seedCurrentWeekDemo() {
     where: { status: 'active', schoolYearId: activeYear.id },
     include: { students: { where: { user: { accountStatus: 'active' } } } },
   });
-
-  const statuses = ['present', 'present', 'present', 'absent', 'present', 'late', 'present', 'present', 'excused', 'absent'] as const;
-  const attendanceRows: Array<{
-    studentId: string;
-    sectionId: string;
-    termId: string;
-    attendanceDate: Date;
-    session: 'morning' | 'afternoon';
-    status: (typeof statuses)[number];
-    recordedBy: string;
-  }> = [];
-  for (const section of sections) {
-    const term = await termForGrade(section.gradeLevel);
-    section.students.slice(0, 4).forEach((sp, si) => {
-      for (let d = 0; d < 5; d++) {
-        const day = new Date(monday);
-        day.setDate(monday.getDate() + d);
-        attendanceRows.push({
-          studentId: sp.id,
-          sectionId: section.id,
-          termId: term.id,
-          attendanceDate: day,
-          session: d % 2 === 0 ? 'morning' : 'afternoon',
-          status: pick(statuses, d + si * 3),
-          recordedBy: pick(teachers, si).id,
-        });
-      }
-    });
-  }
-  await prisma.attendanceRecord.createMany({ data: attendanceRows });
 
   const riskCandidates = sections.flatMap((s) => s.students.slice(0, 1));
   for (let i = 0; i < Math.min(3, riskCandidates.length); i++) {
@@ -1039,6 +1009,86 @@ async function seedCurrentWeekDemo() {
   }
 }
 
+async function seedAttendanceHistory() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const activeYear = await prisma.schoolYear.findFirst({ where: { status: 'active' } });
+  if (!activeYear) {
+    console.log('No active school year; skipping attendance history demo.');
+    return;
+  }
+
+  const start = new Date(today);
+  start.setDate(today.getDate() - 27);
+
+  const dateKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const existing = await prisma.attendanceRecord.findMany({
+    where: { attendanceDate: { gte: start, lte: today } },
+    select: { attendanceDate: true },
+  });
+  const existingKeys = new Set(existing.map((r) => dateKey(r.attendanceDate)));
+
+  const pick = <T,>(arr: readonly T[], i: number): T => arr[i % arr.length];
+  const statuses = ['present', 'present', 'present', 'absent', 'present', 'late', 'present', 'present', 'excused', 'absent'] as const;
+
+  const termForGrade = async (grade: GradeLevel) =>
+    prisma.term.findFirstOrThrow({
+      where: { schoolYearId: activeYear.id, gradeBand: grade === 'grade_11' || grade === 'grade_12' ? 'senior_high' : 'junior_high', termNumber: 'term_1' },
+    });
+
+  const teachers = await prisma.user.findMany({ where: { role: 'teacher', accountStatus: 'active' } });
+  const sections = await prisma.section.findMany({
+    where: { status: 'active', schoolYearId: activeYear.id },
+    include: { students: { where: { user: { accountStatus: 'active' } } } },
+  });
+
+  const days: Date[] = [];
+  for (let i = 0; i <= 27; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    days.push(d);
+  }
+
+  let created = 0;
+  for (const day of days) {
+    if (existingKeys.has(dateKey(day))) continue;
+    const rows: Array<{
+      studentId: string;
+      sectionId: string;
+      termId: string;
+      attendanceDate: Date;
+      session: 'morning' | 'afternoon';
+      status: (typeof statuses)[number];
+      recordedBy: string;
+    }> = [];
+    for (const section of sections) {
+      const term = await termForGrade(section.gradeLevel);
+      section.students.slice(0, 4).forEach((sp, si) => {
+        rows.push({
+          studentId: sp.id,
+          sectionId: section.id,
+          termId: term.id,
+          attendanceDate: day,
+          session: day.getDate() % 2 === 0 ? 'morning' : 'afternoon',
+          status: pick(statuses, day.getDate() + si * 3),
+          recordedBy: pick(teachers, si).id,
+        });
+      });
+    }
+    if (rows.length > 0) {
+      await prisma.attendanceRecord.createMany({ data: rows });
+      created += rows.length;
+    }
+  }
+
+  console.log(`Attendance history demo: seeded ${created} records over the past 28 days (incl. today).`);
+}
+
 async function main() {
   const users: UserSeed[] = [
     { email: 'principal@zentra.edu', role: 'principal', firstName: 'Amelia', lastName: 'Principal', employeeId: 'EMP-0001' },
@@ -1097,6 +1147,7 @@ async function main() {
   await seedDemoData(sectionsByGrade, termMap);
   await seedOperationalTables();
   await seedCurrentWeekDemo();
+  await seedAttendanceHistory();
 
   const count = await prisma.user.count();
   console.log(`Seed complete. ${count} user accounts, 6 sections, 24 subjects, 6 terms (3 per grade band).`);
