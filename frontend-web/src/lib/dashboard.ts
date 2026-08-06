@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
-import { getTokens } from "@/lib/auth";
+import { getTokens, getUser } from "@/lib/auth";
+import useSWR from "swr";
 
 export interface DashboardStats {
   totalStudents: number;
@@ -77,4 +78,30 @@ export async function fetchDashboardOverview(): Promise<DashboardOverview> {
   const token = getTokens()?.accessToken;
   const { data } = await api<{ data: DashboardOverview }>("/dashboard/overview", { token });
   return data;
+}
+
+const REFRESH_INTERVAL_MS = 60_000;
+
+export function useDashboardOverview() {
+  const userId = getUser()?.id ?? "anon";
+  const key = userId === "anon" ? null : ["/dashboard/overview", userId];
+
+  const { data, error, isLoading, isValidating, mutate } = useSWR<DashboardOverview>(
+    key,
+    fetchDashboardOverview,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: REFRESH_INTERVAL_MS,
+      keepPreviousData: true,
+    }
+  );
+
+  return {
+    data,
+    error: error ?? null,
+    isLoading,
+    isValidating,
+    refresh: () => mutate(),
+  };
 }
