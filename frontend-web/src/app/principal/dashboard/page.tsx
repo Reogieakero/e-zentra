@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -24,7 +23,7 @@ import {
 import Analytics from "@/components/dashboard/analytics";
 import { InfoDialog } from "@/components/ui/info-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
-import { fetchDashboardOverview, type DashboardOverview } from "@/lib/dashboard";
+import { useDashboardOverview, type DashboardOverview } from "@/lib/dashboard";
 import { ApiClientError } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -79,35 +78,9 @@ function kpiCards(stats: DashboardOverview["stats"]) {
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refresh, setRefresh] = useState(0);
+  const { data, error, isLoading, refresh } = useDashboardOverview();
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchDashboardOverview()
-      .then((result) => {
-        if (cancelled) return;
-        setData(result);
-        setError(null);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err instanceof ApiClientError ? err.message : "Could not load the dashboard. Please try again.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [refresh]);
-
-  const retry = () => {
-    setLoading(true);
-    setRefresh((r) => r + 1);
-  };
+  const loading = isLoading && !data;
 
   if (loading && !data) {
     return (
@@ -165,11 +138,13 @@ export default function DashboardPage() {
   }
 
   if (error || !data) {
+    const message =
+      error instanceof ApiClientError ? error.message : "Could not load the dashboard. Please try again.";
     return (
       <div className={styles.errorCard}>
         <AlertTriangle className={styles.errorIcon} />
-        <p className={styles.errorText}>{error ?? "No dashboard data yet."}</p>
-        <button className={styles.retryButton} onClick={retry}>
+        <p className={styles.errorText}>{message}</p>
+        <button className={styles.retryButton} onClick={() => refresh()}>
           <RefreshCw className={styles.retryIcon} />
           Retry
         </button>
