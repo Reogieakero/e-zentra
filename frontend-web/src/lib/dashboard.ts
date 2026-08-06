@@ -38,8 +38,10 @@ export interface SectionAttendance {
   sectionId: string;
   sectionName: string;
   presentCount: number;
+  absentCount: number;
   totalCount: number;
   rate: number;
+  absentRate: number;
 }
 
 export interface DailyTrend {

@@ -211,13 +211,16 @@ async function getSectionAttendance() {
   return sections.map((s) => {
     const counts = bySection.get(s.id);
     const present = counts?.get(AttendanceStatus.present) ?? 0;
+    const absent = counts?.get(AttendanceStatus.absent) ?? 0;
     const total = counts ? Array.from(counts.values()).reduce((sum, n) => sum + n, 0) : 0;
     return {
       sectionId: s.id,
       sectionName: s.sectionName,
       presentCount: present,
+      absentCount: absent,
       totalCount: total,
       rate: total > 0 ? Math.round((present / total) * 1000) / 10 : 0,
+      absentRate: total > 0 ? Math.round((absent / total) * 1000) / 10 : 0,
     };
   });
 }
