@@ -11,6 +11,7 @@ import notificationRoutes from './notification.routes';
 import parentLinkRoutes from './parentLink.routes';
 import uploadRoutes from './upload.routes';
 import ocrRoutes from './ocr.routes';
+import dashboardRoutes from './dashboard.routes';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/', oversightRoutes);
 router.use('/', notificationRoutes);
 router.use('/', uploadRoutes);
 router.use('/', ocrRoutes);
+router.use('/', dashboardRoutes);
 
 export default router;

@@ -1,65 +1,50 @@
 import { BarChart2, Calendar, TrendingUp } from "lucide-react";
+import type { SectionHeatmap } from "@/lib/dashboard";
 import styles from "./analytics.module.css";
 
-const linePoints = "M0,65 L37,50 L75,38 L113,25 L151,15 L189,22 L227,32 L265,18 L303,12 L340,20";
-const lineMonths = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-
-interface LineCirclePoint {
-  cx: number;
-  cy: number;
-  big?: boolean;
+interface TrendPoint {
+  label: string;
+  rate: number;
 }
 
-const lineCirclePoints: LineCirclePoint[] = [
-  { cx: 0, cy: 65 },
-  { cx: 37, cy: 50 },
-  { cx: 75, cy: 38 },
-  { cx: 113, cy: 25 },
-  { cx: 151, cy: 15, big: true },
-  { cx: 189, cy: 22 },
-  { cx: 227, cy: 32 },
-  { cx: 265, cy: 18 },
-  { cx: 303, cy: 12, big: true },
-  { cx: 340, cy: 20 },
-];
-
-interface HeatmapColumn {
-  section: string;
-  levels: number[];
-  titles?: string[];
+interface SectionRate {
+  sectionName: string;
+  rate: number;
 }
 
-const heatmap: HeatmapColumn[] = [
-  { section: "7-Rizal", levels: [2, 4, 6, 5, 3], titles: ["Mon: 93%", "Tue: 95%", "Wed: 98%", "Thu: 97%", "Fri: 94%"] },
-  { section: "7-Bonifacio", levels: [1, 3, 4, 6, 2], titles: ["Mon: 90%", "Tue: 93%", "Wed: 95%", "Thu: 98%", "Fri: 92%"] },
-  { section: "8-Luna", levels: [4, 6, 5, 3, 4] },
-  { section: "8-Mabini", levels: [2, 3, 2, 4, 1] },
-  { section: "9-DelPilar", levels: [6, 5, 6, 4, 6] },
-  { section: "9-Aquino", levels: [3, 4, 5, 3, 2] },
-  { section: "10-Silang", levels: [4, 6, 6, 5, 6] },
-  { section: "10-Quezon", levels: [2, 3, 4, 3, 2] },
-  { section: "11-STEM A", levels: [3, 6, 4, 6, 5] },
-  { section: "12-HUMSS B", levels: [4, 5, 6, 4, 3] },
-];
+interface AnalyticsProps {
+  trend: TrendPoint[];
+  sections: SectionRate[];
+  heatmap: SectionHeatmap[];
+  schoolYear: string | null;
+}
+
+const WIDTH = 340;
+const BASELINE = 85;
+const RANGE = 70;
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-
 const heatLevels = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
 
-const sections = [
-  { name: "7-Rizal", pct: 96 },
-  { name: "7-Bonifacio", pct: 92 },
-  { name: "8-Luna", pct: 95 },
-  { name: "8-Mabini", pct: 89 },
-  { name: "9-DelPilar", pct: 97 },
-  { name: "9-Aquino", pct: 94 },
-  { name: "10-Silang", pct: 98 },
-  { name: "10-Quezon", pct: 93 },
-  { name: "11-STEM A", pct: 95 },
-  { name: "12-HUMSS B", pct: 96 },
-];
+function toY(rate: number): number {
+  return BASELINE - (rate / 100) * RANGE;
+}
 
-export default function Analytics() {
+function buildLine(pts: TrendPoint[]): string {
+  if (pts.length === 0) return "";
+  if (pts.length === 1) return `M${WIDTH / 2},${toY(pts[0].rate)}`;
+  return pts
+    .map((p, i) => `${i === 0 ? "M" : "L"}${(WIDTH / (pts.length - 1)) * i},${toY(p.rate)}`)
+    .join(" ");
+}
+
+export default function Analytics({ trend, sections, heatmap, schoolYear }: AnalyticsProps) {
+  const linePoints = buildLine(trend);
+  const peakRate = heatmap.reduce(
+    (max, col) => Math.max(max, ...col.days.map((d) => d.rate)),
+    0
+  );
+
   return (
     <div className={styles.panel}>
       <div className={styles.panelHeader}>
@@ -70,7 +55,7 @@ export default function Analytics() {
           </h3>
           <p className={styles.panelSubtitle}>Comprehensive view of attendance trends, activity heatmap, and section breakdowns</p>
         </div>
-        <span className={styles.syBadge}>SY 2025-2026</span>
+        <span className={styles.syBadge}>{schoolYear ? `SY ${schoolYear}` : "SY —"}</span>
       </div>
 
       <div className={styles.charts}>
@@ -80,9 +65,9 @@ export default function Analytics() {
               <div>
                 <h4 className={styles.chartTitle}>
                   <TrendingUp className={styles.chartTitleIcon} />
-                  Monthly Attendance Trend
+                  Daily Attendance Trend
                 </h4>
-                <p className={styles.chartSubtitle}>Average Rate: 94.8% (10 Months)</p>
+                <p className={styles.chartSubtitle}>Monday – Friday · current week</p>
               </div>
               <span className={styles.link}>Report</span>
             </div>
@@ -98,31 +83,23 @@ export default function Analytics() {
               <line x1="0" y1="35" x2="340" y2="35" stroke="#e5e7eb" strokeDasharray="3 3" />
               <line x1="0" y1="60" x2="340" y2="60" stroke="#e5e7eb" strokeDasharray="3 3" />
               <line x1="0" y1="85" x2="340" y2="85" stroke="#d1d5db" />
-              <line x1="0" y1="25" x2="340" y2="25" stroke="#86efac" strokeWidth="1.5" strokeDasharray="4 2" />
+              <line x1="0" y1={toY(95)} x2="340" y2={toY(95)} stroke="#86efac" strokeWidth="1.5" strokeDasharray="4 2" />
               <path d={`${linePoints} L340,85 L0,85 Z`} fill="url(#chartGradient)" />
               <path d={linePoints} fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              {lineCirclePoints.map((p, i) => (
-                <circle
-                  key={i}
-                  cx={p.cx}
-                  cy={p.cy}
-                  r={p.big ? 3.5 : 3}
-                  fill="#ffffff"
-                  stroke="#16a34a"
-                  strokeWidth="2"
-                />
-              ))}
+              {trend.length === 1 && (
+                <circle cx={WIDTH / 2} cy={toY(trend[0].rate)} r={3.5} fill="#ffffff" stroke="#16a34a" strokeWidth="2" />
+              )}
             </svg>
             <div className={styles.lineLabels}>
-              {lineMonths.map((m) => (
-                <span key={m}>{m}</span>
+              {trend.map((t) => (
+                <span key={t.label}>{t.label}</span>
               ))}
             </div>
 
             <div className={styles.legend}>
               <span className={styles.legendItem}>
                 <span className={`${styles.legendDot} ${styles.legendDotSolid}`} />
-                Monthly Rate
+                Daily Rate
               </span>
               <span className={styles.legendItem}>
                 <span className={`${styles.legendDot} ${styles.legendDotLine}`} />
@@ -140,7 +117,7 @@ export default function Analytics() {
                 </h4>
                 <p className={styles.chartSubtitle}>Weekly daily log intensity by section (Mon – Fri)</p>
               </div>
-              <span className={styles.peakBadge}>98.2% peak</span>
+              <span className={styles.peakBadge}>{peakRate}% peak</span>
             </div>
 
             <div className={styles.heatmap}>
@@ -151,17 +128,21 @@ export default function Analytics() {
               </div>
               <div className={styles.heatmapColumns}>
                 {heatmap.map((col) => (
-                  <div key={col.section} className={styles.heatmapCol}>
+                  <div key={col.sectionId} className={styles.heatmapCol}>
                     <div className={styles.heatmapCells}>
-                      {col.levels.map((level, i) => (
+                      {col.days.map((cell) => (
                         <span
-                          key={i}
-                          className={`${styles.heatCell} ${styles[heatLevels[level - 1]]}`}
-                          title={col.titles?.[i]}
+                          key={cell.day}
+                          className={
+                            cell.level > 0
+                              ? `${styles.heatCell} ${styles[heatLevels[cell.level - 1]]}`
+                              : styles.heatCell
+                          }
+                          title={`${cell.day}: ${cell.rate}%`}
                         />
                       ))}
                     </div>
-                    <span className={styles.heatmapLabel}>{col.section}</span>
+                    <span className={styles.heatmapLabel}>{col.sectionName}</span>
                   </div>
                 ))}
               </div>
@@ -194,13 +175,13 @@ export default function Analytics() {
 
           <div className={styles.barChart}>
             {sections.map((s) => (
-              <div key={s.name} className={styles.barGroup}>
+              <div key={s.sectionName} className={styles.barGroup}>
                 <div className={styles.barTrack}>
-                  <div className={`${styles.bar} ${s.pct >= 95 ? styles.barStrong : styles.barSoft}`} style={{ height: `${s.pct}%` }}>
-                    <span className={styles.barTooltip}>{s.pct}%</span>
+                  <div className={`${styles.bar} ${s.rate >= 95 ? styles.barStrong : styles.barSoft}`} style={{ height: `${s.rate}%` }}>
+                    <span className={styles.barTooltip}>{s.rate}%</span>
                   </div>
                 </div>
-                <span className={styles.barLabel}>{s.name}</span>
+                <span className={styles.barLabel}>{s.sectionName}</span>
               </div>
             ))}
           </div>

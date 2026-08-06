@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -10,6 +13,7 @@ import {
   FileText,
   FolderOpen,
   QrCode,
+  RefreshCw,
   TrendingDown,
   TrendingUp,
   UserCheck,
@@ -18,48 +22,9 @@ import {
   UserX,
 } from "lucide-react";
 import Analytics from "@/components/dashboard/analytics";
+import { fetchDashboardOverview, type DashboardOverview } from "@/lib/dashboard";
+import { ApiClientError } from "@/lib/api";
 import styles from "./page.module.css";
-
-const kpiCards = [
-  {
-    title: "Enrollment Stats",
-    icon: Users,
-    stats: [
-      { label: "Total", value: "1,248", icon: Users, note: { icon: TrendingUp, text: "+3.2%", strong: true } },
-      { label: "Present", value: "1,180", icon: UserCheck, note: { text: "94.5% rate" } },
-    ],
-  },
-  {
-    title: "Attendance & ADM",
-    icon: CalendarX,
-    stats: [
-      { label: "Absent", value: "68", icon: UserX, note: { icon: TrendingDown, text: "5.5% today", strong: true } },
-      { label: "ADM", value: "42", icon: BookOpen, note: { text: "Alternative" } },
-    ],
-  },
-  {
-    title: "Action Items",
-    icon: AlertCircle,
-    stats: [
-      { label: "Pending", value: "15", icon: Clock, note: { text: "Needs review" } },
-      { label: "At Risk", value: "8", icon: AlertTriangle, note: { text: "Follow-up" } },
-    ],
-  },
-  {
-    title: "Documentation",
-    icon: FileCheck2,
-    stats: [
-      { label: "Anecdotal", value: "29", icon: FileText, note: { text: "This month" } },
-      { label: "SF10", value: "312", icon: FolderOpen, note: { icon: TrendingUp, text: "Up to date", strong: true } },
-    ],
-  },
-];
-
-const atRiskStudents = [
-  { initials: "JD", name: "Juan Dela Cruz", meta: "7-Bonifacio · 79% attendance" },
-  { initials: "MS", name: "Maria Santos", meta: "8-Mabini · 82% attendance" },
-  { initials: "RT", name: "Ramon Tolentino", meta: "10-Quezon · 84% attendance" },
-];
 
 const quickActions = [
   { label: "Add Student", hint: "New profile", icon: UserPlus },
@@ -70,13 +35,109 @@ const quickActions = [
   { label: "Export Reports", hint: "PDF / CSV", icon: Download },
 ];
 
-const admApprovals = [
-  { title: "Module Batch 4", meta: "7-Rizal · Submitted by T. Reyes" },
-  { title: "Module Batch 5", meta: "8-Mabini · Submitted by L. Cruz" },
-  { title: "Learning Packet 2", meta: "10-Quezon · Submitted by J. Ramos" },
-];
+function initials(firstName: string, lastName: string): string {
+  return `${(firstName[0] ?? "").toUpperCase()}${(lastName[0] ?? "").toUpperCase()}` || "?";
+}
+
+function kpiCards(stats: DashboardOverview["stats"]) {
+  return [
+    {
+      title: "Enrollment Stats",
+      icon: Users,
+      stats: [
+        { label: "Total", value: stats.totalStudents.toLocaleString(), icon: Users, note: { icon: TrendingUp, text: "Enrolled learners", strong: true } },
+        { label: "Present", value: stats.presentToday.toLocaleString(), icon: UserCheck, note: { text: `${stats.presentRate}% rate today` } },
+      ],
+    },
+    {
+      title: "Attendance & ADM",
+      icon: CalendarX,
+      stats: [
+        { label: "Absent", value: stats.absentToday.toLocaleString(), icon: UserX, note: { icon: TrendingDown, text: "Today", strong: true } },
+        { label: "ADM", value: stats.admActive.toLocaleString(), icon: BookOpen, note: { text: "Active profiles" } },
+      ],
+    },
+    {
+      title: "Action Items",
+      icon: AlertCircle,
+      stats: [
+        { label: "Pending", value: stats.pendingActions.toLocaleString(), icon: Clock, note: { text: "Needs review" } },
+        { label: "At Risk", value: stats.atRiskCount.toLocaleString(), icon: AlertTriangle, note: { text: "Follow-up" } },
+      ],
+    },
+    {
+      title: "Documentation",
+      icon: FileCheck2,
+      stats: [
+        { label: "Anecdotal", value: stats.anecdotalThisMonth.toLocaleString(), icon: FileText, note: { text: "This month" } },
+        { label: "SF10", value: stats.sf10Count.toLocaleString(), icon: FolderOpen, note: { icon: TrendingUp, text: "Ready / released", strong: true } },
+      ],
+    },
+  ];
+}
 
 export default function DashboardPage() {
+  const [data, setData] = useState<DashboardOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDashboardOverview()
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof ApiClientError ? err.message : "Could not load the dashboard. Please try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh]);
+
+  const retry = () => {
+    setLoading(true);
+    setRefresh((r) => r + 1);
+  };
+
+  if (loading && !data) {
+    return (
+      <div className={styles.pageHeading}>
+        <h1 className={styles.pageTitle}>Dashboard</h1>
+        <p className={styles.pageSubtitle}>Loading the latest aggregates from the school records…</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className={styles.errorCard}>
+        <AlertTriangle className={styles.errorIcon} />
+        <p className={styles.errorText}>{error ?? "No dashboard data yet."}</p>
+        <button className={styles.retryButton} onClick={retry}>
+          <RefreshCw className={styles.retryIcon} />
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const cards = kpiCards(data.stats);
+  const atRisk = data.atRiskStudents.map((student) => ({
+    initials: initials(student.firstName, student.lastName),
+    name: `${student.firstName} ${student.lastName}`.trim(),
+    meta: `${student.sectionName ?? "No section"} · ${student.attendanceRate ?? 0}% attendance`,
+    risk: student.riskLevel,
+  }));
+  const admBadgeCount = data.admForApproval.length;
+
   return (
     <>
       <div className={styles.pageHeading}>
@@ -85,7 +146,7 @@ export default function DashboardPage() {
       </div>
 
       <div className={styles.kpiGrid}>
-        {kpiCards.map((card) => (
+        {cards.map((card) => (
           <div key={card.title} className={styles.kpiCard}>
             <div className={styles.kpiCardHeader}>
               <span>{card.title}</span>
@@ -115,19 +176,23 @@ export default function DashboardPage() {
           <div className={styles.atRiskCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>At Risk Students</h3>
-              <span className={`${styles.badge} ${styles.badgeDanger}`}>8 Students</span>
+              <span className={`${styles.badge} ${styles.badgeDanger}`}>{data.stats.atRiskCount} Students</span>
             </div>
             <div className={styles.atRiskList}>
-              {atRiskStudents.map((student) => (
-                <div key={student.name} className={styles.atRiskItem}>
-                  <div className={`${styles.avatar} ${styles.avatarDanger}`}>{student.initials}</div>
-                  <div className={styles.atRiskInfo}>
-                    <span className={styles.atRiskName}>{student.name}</span>
-                    <span className={styles.atRiskMeta}>{student.meta}</span>
+              {atRisk.length === 0 ? (
+                <span className={styles.emptyText}>No at-risk students detected.</span>
+              ) : (
+                atRisk.map((student) => (
+                  <div key={student.name} className={styles.atRiskItem}>
+                    <div className={`${styles.avatar} ${styles.avatarDanger}`}>{student.initials}</div>
+                    <div className={styles.atRiskInfo}>
+                      <span className={styles.atRiskName}>{student.name}</span>
+                      <span className={styles.atRiskMeta}>{student.meta}</span>
+                    </div>
+                    <AlertTriangle className={styles.atRiskIcon} />
                   </div>
-                  <AlertTriangle className={styles.atRiskIcon} />
-                </div>
-              ))}
+                ))
+              )}
             </div>
             <div className={styles.cardFooter}>
               <span>Threshold: &lt;85%</span>
@@ -155,21 +220,25 @@ export default function DashboardPage() {
           <div className={styles.admCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>ADM for Approval</h3>
-              <span className={`${styles.badge} ${styles.badgeWarning}`}>5 Pending</span>
+              <span className={`${styles.badge} ${styles.badgeWarning}`}>{admBadgeCount} Pending</span>
             </div>
             <div className={styles.admList}>
-              {admApprovals.map((item) => (
-                <div key={item.title} className={styles.admItem}>
-                  <div className={styles.admIcon}>
-                    <FileText className={styles.admIconGlyph} />
+              {data.admForApproval.length === 0 ? (
+                <div className={styles.emptyText}>No modules awaiting approval.</div>
+              ) : (
+                data.admForApproval.map((item) => (
+                  <div key={item.id} className={styles.admItem}>
+                    <div className={styles.admIcon}>
+                      <FileText className={styles.admIconGlyph} />
+                    </div>
+                    <div className={styles.admInfo}>
+                      <span className={styles.admTitle}>{item.studentName}</span>
+                      <span className={styles.admMeta}>{item.sectionName} · Submitted by {item.preparedBy}</span>
+                    </div>
+                    <span className={styles.admStatus}>{item.status}</span>
                   </div>
-                  <div className={styles.admInfo}>
-                    <span className={styles.admTitle}>{item.title}</span>
-                    <span className={styles.admMeta}>{item.meta}</span>
-                  </div>
-                  <span className={styles.admStatus}>Pending</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
             <div className={styles.cardFooter}>
               <span>Awaiting principal&apos;s signature</span>
@@ -178,7 +247,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <Analytics />
+        <Analytics
+          trend={data.dailyTrend.map((t) => ({ label: t.label, rate: t.rate }))}
+          sections={data.sectionAttendance.map((s) => ({ sectionName: s.sectionName, rate: s.rate }))}
+          heatmap={data.heatmap}
+          schoolYear={data.schoolYear}
+        />
       </div>
     </>
   );
