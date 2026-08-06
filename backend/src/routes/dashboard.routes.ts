@@ -10,8 +10,9 @@ router.use(authenticate);
 router.get(
   '/dashboard/overview',
   requireRole(...STAFF_VIEW_ROLES),
-  asyncHandler(async (_req, res) => {
-    const result = await getDashboardOverview();
+  asyncHandler(async (req, res) => {
+    const month = typeof req.query.month === 'string' ? req.query.month : undefined;
+    const result = await getDashboardOverview(month);
     res.json(result);
   })
 );
