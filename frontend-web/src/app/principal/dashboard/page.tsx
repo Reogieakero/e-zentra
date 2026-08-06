@@ -174,89 +174,89 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className={styles.cardGrid}>
-        <div className={styles.atRiskCard}>
-          <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>At Risk Students</h3>
-            <span className={`${styles.badge} ${styles.badgeDanger}`}>{data.stats.atRiskCount} Students</span>
-          </div>
-          <div className={styles.atRiskList}>
-            {atRisk.length === 0 ? (
-              <span className={styles.emptyText}>No at-risk students detected.</span>
-            ) : (
-              atRisk.map((student) => (
-                <div key={student.name} className={styles.atRiskItem}>
-                  <div className={`${styles.avatar} ${styles.avatarDanger}`}>{student.initials}</div>
-                  <div className={styles.atRiskInfo}>
-                    <span className={styles.atRiskName}>{student.name}</span>
-                    <span className={styles.atRiskMeta}>{student.meta}</span>
+      <div className={styles.dashboardGrid}>
+        <div className={styles.leftRail}>
+          <div className={styles.atRiskCard}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>At Risk Students</h3>
+              <span className={`${styles.badge} ${styles.badgeDanger}`}>{data.stats.atRiskCount} Students</span>
+            </div>
+            <div className={styles.atRiskList}>
+              {atRisk.length === 0 ? (
+                <span className={styles.emptyText}>No at-risk students detected.</span>
+              ) : (
+                atRisk.map((student) => (
+                  <div key={student.name} className={styles.atRiskItem}>
+                    <div className={`${styles.avatar} ${styles.avatarDanger}`}>{student.initials}</div>
+                    <div className={styles.atRiskInfo}>
+                      <span className={styles.atRiskName}>{student.name}</span>
+                      <span className={styles.atRiskMeta}>{student.meta}</span>
+                    </div>
+                    <AlertTriangle className={styles.atRiskIcon} />
                   </div>
-                  <AlertTriangle className={styles.atRiskIcon} />
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
+            <div className={styles.cardFooter}>
+              <span>Threshold: &lt;85%</span>
+              <span className={styles.cardLink}>View all</span>
+            </div>
           </div>
-          <div className={styles.cardFooter}>
-            <span>Threshold: &lt;85%</span>
-            <span className={styles.cardLink}>View all</span>
-          </div>
-        </div>
 
-        <div className={styles.quickActions}>
-          <div className={styles.cardHeader}>
+          <div className={styles.quickActions}>
             <h3 className={styles.cardTitle}>Quick Actions</h3>
+            <div className={styles.quickGrid}>
+              {quickActions.map((action) => (
+                <a key={action.label} href="#" className={styles.quickItem}>
+                  <div className={styles.quickIcon}>
+                    <action.icon className={styles.quickIconGlyph} />
+                  </div>
+                  <div className={styles.quickInfo}>
+                    <span className={styles.quickLabel}>{action.label}</span>
+                    <span className={styles.quickHint}>{action.hint}</span>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
-          <div className={styles.quickGrid}>
-            {quickActions.map((action) => (
-              <a key={action.label} href="#" className={styles.quickItem}>
-                <div className={styles.quickIcon}>
-                  <action.icon className={styles.quickIconGlyph} />
-                </div>
-                <div className={styles.quickInfo}>
-                  <span className={styles.quickLabel}>{action.label}</span>
-                  <span className={styles.quickHint}>{action.hint}</span>
-                </div>
-              </a>
-            ))}
+
+          <div className={styles.admCard}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>ADM for Approval</h3>
+              <span className={`${styles.badge} ${styles.badgeWarning}`}>{admBadgeCount} Pending</span>
+            </div>
+            <div className={styles.admList}>
+              {data.admForApproval.length === 0 ? (
+                <div className={styles.emptyText}>No modules awaiting approval.</div>
+              ) : (
+                data.admForApproval.map((item) => (
+                  <div key={item.id} className={styles.admItem}>
+                    <div className={styles.admIcon}>
+                      <FileText className={styles.admIconGlyph} />
+                    </div>
+                    <div className={styles.admInfo}>
+                      <span className={styles.admTitle}>{item.studentName}</span>
+                      <span className={styles.admMeta}>{item.sectionName} · Submitted by {item.preparedBy}</span>
+                    </div>
+                    <span className={styles.admStatus}>{item.status}</span>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className={styles.cardFooter}>
+              <span>Awaiting principal&apos;s signature</span>
+              <span className={styles.cardLink}>Review all</span>
+            </div>
           </div>
         </div>
 
-        <div className={styles.admCard}>
-          <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>ADM for Approval</h3>
-            <span className={`${styles.badge} ${styles.badgeWarning}`}>{admBadgeCount} Pending</span>
-          </div>
-          <div className={styles.admList}>
-            {data.admForApproval.length === 0 ? (
-              <div className={styles.emptyText}>No modules awaiting approval.</div>
-            ) : (
-              data.admForApproval.map((item) => (
-                <div key={item.id} className={styles.admItem}>
-                  <div className={styles.admIcon}>
-                    <FileText className={styles.admIconGlyph} />
-                  </div>
-                  <div className={styles.admInfo}>
-                    <span className={styles.admTitle}>{item.studentName}</span>
-                    <span className={styles.admMeta}>{item.sectionName} · Submitted by {item.preparedBy}</span>
-                  </div>
-                  <span className={styles.admStatus}>{item.status}</span>
-                </div>
-              ))
-            )}
-          </div>
-          <div className={styles.cardFooter}>
-            <span>Awaiting principal&apos;s signature</span>
-            <span className={styles.cardLink}>Review all</span>
-          </div>
-        </div>
+        <Analytics
+          trend={data.dailyTrend.map((t) => ({ label: t.label, rate: t.rate }))}
+          sections={data.sectionAttendance.map((s) => ({ sectionName: s.sectionName, rate: s.rate }))}
+          heatmap={data.heatmap}
+          schoolYear={data.schoolYear}
+        />
       </div>
-
-      <Analytics
-        trend={data.dailyTrend.map((t) => ({ label: t.label, rate: t.rate }))}
-        sections={data.sectionAttendance.map((s) => ({ sectionName: s.sectionName, rate: s.rate }))}
-        heatmap={data.heatmap}
-        schoolYear={data.schoolYear}
-      />
     </>
   );
 }
