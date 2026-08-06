@@ -2,6 +2,7 @@ import request from 'supertest';
 import { prisma } from '../../src/lib/prisma';
 import { app, auth, loginAs, truncateAll, createUser } from '../helpers';
 import { seedSchoolYear, seedSection, seedTerm } from '../fixtures';
+import { invalidateDashboardCache } from '../../src/services/dashboard.service';
 
 function mostRecentMonday(): Date {
   const d = new Date();
@@ -21,6 +22,7 @@ describe('Dashboard overview', () => {
 
   beforeEach(async () => {
     await truncateAll();
+    await invalidateDashboardCache();
     principal = await loginAs('principal');
     rk = await loginAs('record_keeper');
     teacher = await loginAs('teacher');

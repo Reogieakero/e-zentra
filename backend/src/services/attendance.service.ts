@@ -5,6 +5,7 @@ import { buildCursorResult, parseCursorPagination, parseOffsetPagination } from 
 import { writeAudit } from './audit.service';
 import { notifyParentsOfStudent } from './notification.service';
 import { recomputeRiskAndNotify } from './risk.service';
+import { invalidateDashboardCache } from './dashboard.service';
 import { serializeForOutput } from '../middleware/errorHandler';
 
 export interface AttendanceRowInput {
@@ -69,6 +70,8 @@ export async function markAttendance(actorId: string, input: MarkAttendanceInput
     }, tx);
     return created;
   });
+
+  await invalidateDashboardCache();
 
   for (const row of input.records) {
     if (row.status === 'absent' || row.status === 'late') {
@@ -175,5 +178,6 @@ export async function updateAttendance(actorId: string, id: string, input: { sta
     oldValue: { status: existing.status } as unknown as Prisma.InputJsonValue,
     newValue: { status: updated.status } as unknown as Prisma.InputJsonValue,
   });
+  await invalidateDashboardCache();
   return { data: serializeForOutput(updated) };
 }

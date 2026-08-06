@@ -1,16 +1,31 @@
 import { AttendanceStatus, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { cacheKey, getCached, invalidateKeys } from './cache.service';
 
 const AT_RISK_LIMIT = 3;
 const ADM_APPROVAL_LIMIT = 3;
 const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const DASHBOARD_CACHE_TTL = 30;
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function shortDate(d: Date): string {
   return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
 }
 
+export function dashboardCacheKey(): string {
+  return cacheKey('dashboard');
+}
+
+export async function invalidateDashboardCache(): Promise<void> {
+  await invalidateKeys(dashboardCacheKey());
+}
+
 export async function getDashboardOverview() {
+  const key = dashboardCacheKey();
+  return getCached<{ data: unknown }>(key, DASHBOARD_CACHE_TTL, async () => loadDashboardOverview());
+}
+
+async function loadDashboardOverview() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
