@@ -6,8 +6,7 @@ import { seedSchoolYear, seedSection, seedTerm } from '../fixtures';
 function mostRecentMonday(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
-  const diff = (d.getUTCDay() + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - diff);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return d;
 }
 

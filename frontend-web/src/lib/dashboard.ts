@@ -45,7 +45,7 @@ export interface SectionAttendance {
 export interface DailyTrend {
   day: string;
   label: string;
-  rate: number;
+  rate: number | null;
 }
 
 export interface HeatmapDay {

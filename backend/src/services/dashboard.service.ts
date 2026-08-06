@@ -9,8 +9,6 @@ export async function getDashboardOverview() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - 6);
 
   const activeYear = await prisma.schoolYear.findFirst({
     where: { status: 'active' },
@@ -55,7 +53,7 @@ export async function getDashboardOverview() {
     getAdmForApproval(),
     getSectionAttendance(),
     getDailyTrend(today),
-    getSectionHeatmap(weekStart),
+    getSectionHeatmap(),
   ]);
 
   return {
@@ -233,7 +231,20 @@ function heatmapLevel(rate: number): number {
   return 1;
 }
 
-async function getSectionHeatmap(weekStart: Date) {
+async function getSectionHeatmap() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+
+  const weekKeys: string[] = [];
+  for (let i = 0; i < HEATMAP_DAYS.length; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    weekKeys.push(d.toISOString().slice(0, 10));
+  }
+
   const [sections, records] = await Promise.all([
     prisma.section.findMany({
       where: { status: 'active' },
@@ -241,29 +252,29 @@ async function getSectionHeatmap(weekStart: Date) {
       orderBy: { sectionName: 'asc' },
     }),
     prisma.attendanceRecord.findMany({
-      where: { attendanceDate: { gte: weekStart } },
+      where: { attendanceDate: { gte: monday } },
       select: { sectionId: true, attendanceDate: true, status: true },
     }),
   ]);
 
   const sectionNames = new Map(sections.map((s) => [s.id, s.sectionName]));
-  const bySectionDay = new Map<string, Map<number, { present: number; total: number }>>();
+  const bySectionDay = new Map<string, Map<string, { present: number; total: number }>>();
   for (const r of records) {
     if (!sectionNames.has(r.sectionId)) continue;
-    const dow = r.attendanceDate.getUTCDay();
-    if (dow === 0 || dow === 6) continue;
+    const key = r.attendanceDate.toISOString().slice(0, 10);
+    if (!weekKeys.includes(key)) continue;
     const dayMap = bySectionDay.get(r.sectionId) ?? new Map();
-    const bucket = dayMap.get(dow) ?? { present: 0, total: 0 };
+    const bucket = dayMap.get(key) ?? { present: 0, total: 0 };
     bucket.total += 1;
     if (r.status === AttendanceStatus.present) bucket.present += 1;
-    dayMap.set(dow, bucket);
+    dayMap.set(key, bucket);
     bySectionDay.set(r.sectionId, dayMap);
   }
 
   return sections.map((s) => {
     const dayMap = bySectionDay.get(s.id);
     const days = HEATMAP_DAYS.map((day, i) => {
-      const bucket = dayMap?.get(i + 1);
+      const bucket = dayMap?.get(weekKeys[i]);
       if (!bucket || bucket.total === 0) return { day, rate: 0, level: 0 };
       const rate = Math.round((bucket.present / bucket.total) * 1000) / 10;
       return { day, rate, level: heatmapLevel(rate) };
@@ -277,38 +288,35 @@ async function getDailyTrend(today: Date) {
   const monday = new Date(today);
   monday.setDate(today.getDate() - ((dow + 6) % 7));
   monday.setHours(0, 0, 0, 0);
-  const maxDow = dow === 0 ? 5 : dow;
-  const dayCount = Math.max(1, Math.min(5, maxDow));
 
   const days: Date[] = [];
-  for (let i = 0; i < dayCount; i++) {
+  for (let i = 0; i < HEATMAP_DAYS.length; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     days.push(d);
   }
 
   const records = await prisma.attendanceRecord.findMany({
-    where: { attendanceDate: { gte: days[0], lte: days[days.length - 1] } },
+    where: { attendanceDate: { gte: days[0], lte: days[HEATMAP_DAYS.length - 1] } },
     select: { attendanceDate: true, status: true },
   });
 
   const byDate = new Map<string, { present: number; total: number }>();
   for (const r of records) {
-    const key = `${r.attendanceDate.getFullYear()}-${String(r.attendanceDate.getMonth() + 1).padStart(2, '0')}-${String(r.attendanceDate.getDate()).padStart(2, '0')}`;
+    const key = r.attendanceDate.toISOString().slice(0, 10);
     const bucket = byDate.get(key) ?? { present: 0, total: 0 };
     bucket.total += 1;
     if (r.status === AttendanceStatus.present) bucket.present += 1;
     byDate.set(key, bucket);
   }
 
-  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   return days.map((d, i) => {
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const key = d.toISOString().slice(0, 10);
     const bucket = byDate.get(key);
     return {
-      day: dayLabels[i],
-      label: dayLabels[i],
-      rate: bucket && bucket.total > 0 ? Math.round((bucket.present / bucket.total) * 1000) / 10 : 0,
+      day: HEATMAP_DAYS[i],
+      label: HEATMAP_DAYS[i],
+      rate: bucket && bucket.total > 0 ? Math.round((bucket.present / bucket.total) * 1000) / 10 : null,
     };
   });
 }

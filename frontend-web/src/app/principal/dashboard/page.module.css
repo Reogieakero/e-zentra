@@ -120,24 +120,31 @@
   color: var(--brand-primary);
 }
 
-.dashboardGrid {
+.cardGrid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
 }
 
-.leftRail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .atRiskCard,
-.admCard {
+.admCard,
+.quickActions {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.2s;
+}
+
+.atRiskCard:hover,
+.admCard:hover,
+.quickActions:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.atRiskCard,
+.admCard {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -293,7 +300,6 @@
 }
 
 .quickActions {
-  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -440,23 +446,15 @@
 }
 
 @media (min-width: 640px) {
-  .kpiGrid {
+  .kpiGrid,
+  .cardGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
-  .kpiGrid {
+  .kpiGrid,
+  .cardGrid {
     grid-template-columns: repeat(4, 1fr);
-  }
-
-  .dashboardGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 1024px) {
-  .dashboardGrid {
-    grid-template-columns: 3fr 9fr;
   }
 }
