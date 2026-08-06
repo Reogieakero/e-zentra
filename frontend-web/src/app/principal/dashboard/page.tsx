@@ -22,6 +22,7 @@ import {
   UserX,
 } from "lucide-react";
 import Analytics from "@/components/dashboard/analytics";
+import { Tooltip } from "@/components/ui/tooltip";
 import { fetchDashboardOverview, type DashboardOverview } from "@/lib/dashboard";
 import { ApiClientError } from "@/lib/api";
 import styles from "./page.module.css";
@@ -45,32 +46,32 @@ function kpiCards(stats: DashboardOverview["stats"]) {
       title: "Enrollment Stats",
       icon: Users,
       stats: [
-        { label: "Total", value: stats.totalStudents.toLocaleString(), icon: Users, note: { icon: TrendingUp, text: "Enrolled learners", strong: true } },
-        { label: "Present", value: stats.presentToday.toLocaleString(), icon: UserCheck, note: { text: `${stats.presentRate}% rate today` } },
+        { label: "Total", value: stats.totalStudents.toLocaleString(), icon: Users, note: { icon: TrendingUp, text: "Enrolled learners", strong: true }, desc: "Learners on the active school-year roster (assigned to an active section)." },
+        { label: "ADM", value: stats.admActive.toLocaleString(), icon: BookOpen, note: { text: "Active profiles" }, desc: "ADM learner profiles currently in approved status." },
       ],
     },
     {
       title: "Attendance & ADM",
       icon: CalendarX,
       stats: [
-        { label: "Absent", value: stats.absentToday.toLocaleString(), icon: UserX, note: { icon: TrendingDown, text: "Today", strong: true } },
-        { label: "ADM", value: stats.admActive.toLocaleString(), icon: BookOpen, note: { text: "Active profiles" } },
+        { label: "Absent", value: stats.absentToday.toLocaleString(), icon: UserX, note: { icon: TrendingDown, text: "Today", strong: true }, desc: "Learners marked absent in today's attendance logs." },
+        { label: "Present", value: stats.presentToday.toLocaleString(), icon: UserCheck, note: { text: `${stats.presentRate}% rate today` }, desc: "Learners marked present today; the % is present out of everyone logged today." },
       ],
     },
     {
       title: "Action Items",
       icon: AlertCircle,
       stats: [
-        { label: "Pending", value: stats.pendingActions.toLocaleString(), icon: Clock, note: { text: "Needs review" } },
-        { label: "At Risk", value: stats.atRiskCount.toLocaleString(), icon: AlertTriangle, note: { text: "Follow-up" } },
+        { label: "Pending", value: stats.pendingActions.toLocaleString(), icon: Clock, note: { text: "Needs review" }, desc: "Open record flags + submitted ADM awaiting approval + pending accounts." },
+        { label: "At Risk", value: stats.atRiskCount.toLocaleString(), icon: AlertTriangle, note: { text: "Follow-up" }, desc: "Unique learners with a moderate/high risk assessment in the active year." },
       ],
     },
     {
       title: "Documentation",
       icon: FileCheck2,
       stats: [
-        { label: "Anecdotal", value: stats.anecdotalThisMonth.toLocaleString(), icon: FileText, note: { text: "This month" } },
-        { label: "SF10", value: stats.sf10Count.toLocaleString(), icon: FolderOpen, note: { icon: TrendingUp, text: "Ready / released", strong: true } },
+        { label: "Anecdotal", value: stats.anecdotalThisMonth.toLocaleString(), icon: FileText, note: { text: "This month" }, desc: "Anecdotal/behavior records created this month." },
+        { label: "SF10", value: stats.sf10Count.toLocaleString(), icon: FolderOpen, note: { icon: TrendingUp, text: "Ready / released", strong: true }, desc: "SF10 (Form 137) records marked ready or released." },
       ],
     },
   ];
@@ -154,17 +155,19 @@ export default function DashboardPage() {
             </div>
             <div className={styles.kpiStats}>
               {card.stats.map((stat) => (
-                <div key={stat.label} className={styles.kpiStat}>
-                  <div className={styles.kpiStatHeader}>
-                    <span>{stat.label}</span>
-                    <stat.icon className={styles.kpiStatIcon} />
+                <Tooltip key={stat.label} label={stat.desc}>
+                  <div className={styles.kpiStat}>
+                    <div className={styles.kpiStatHeader}>
+                      <span>{stat.label}</span>
+                      <stat.icon className={styles.kpiStatIcon} />
+                    </div>
+                    <div className={styles.kpiValue}>{stat.value}</div>
+                    <div className={`${styles.kpiNote} ${stat.note.strong ? styles.kpiNoteStrong : ""}`}>
+                      {stat.note.icon && <stat.note.icon className={styles.kpiNoteIcon} />}
+                      <span>{stat.note.text}</span>
+                    </div>
                   </div>
-                  <div className={styles.kpiValue}>{stat.value}</div>
-                  <div className={`${styles.kpiNote} ${stat.note.strong ? styles.kpiNoteStrong : ""}`}>
-                    {stat.note.icon && <stat.note.icon className={styles.kpiNoteIcon} />}
-                    <span>{stat.note.text}</span>
-                  </div>
-                </div>
+                </Tooltip>
               ))}
             </div>
           </div>
