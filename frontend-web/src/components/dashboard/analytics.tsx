@@ -19,7 +19,7 @@ import styles from "./analytics.module.css";
 
 interface TrendPoint {
   label: string;
-  rate: number;
+  rate: number | null;
 }
 
 interface SectionRate {
@@ -45,7 +45,9 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   return (
     <div className={styles.chartTooltip}>
       <span className={styles.chartTooltipLabel}>{label}</span>
-      <span className={styles.chartTooltipValue}>{payload[0].value}%</span>
+      <span className={styles.chartTooltipValue}>
+        {payload[0].value == null ? "No data yet" : `${payload[0].value}%`}
+      </span>
     </div>
   );
 }
@@ -116,7 +118,8 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
                     stroke="#16a34a"
                     strokeWidth={2.5}
                     fill="url(#trendGradient)"
-                    dot={trendData.length <= 1 ? { r: 3.5, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2 } : false}
+                    dot={{ r: 3.5, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2.5 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
