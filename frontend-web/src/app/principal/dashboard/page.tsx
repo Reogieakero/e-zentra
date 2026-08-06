@@ -78,11 +78,11 @@ function kpiCards(stats: DashboardOverview["stats"]) {
 }
 
 export default function DashboardPage() {
-  const { data, error, isLoading, refresh } = useDashboardOverview();
+  const { data, error, refresh } = useDashboardOverview();
 
-  const loading = isLoading && !data;
+  const loading = !data && !error;
 
-  if (loading && !data) {
+  if (loading) {
     return (
       <>
         <div className={styles.skHeaderRow}>
