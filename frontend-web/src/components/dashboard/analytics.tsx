@@ -240,10 +240,11 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                   { value: "presentAbsent", label: "Present / Absent" },
                   { value: "lateExcused", label: "Late / Excused" },
                 ]}
-                onChange={(v) => setView(v as AttendanceView)}
-                className={styles.viewSelect}
-                size="sm"
-              />
+              onChange={(v) => setView(v as AttendanceView)}
+              className={styles.viewSelect}
+              size="sm"
+              showCheck={false}
+            />
               <MonthPicker
                 id="section-month"
                 value={month}

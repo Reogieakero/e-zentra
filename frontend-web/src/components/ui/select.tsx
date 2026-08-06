@@ -19,9 +19,10 @@ interface SelectProps {
   onChange: (value: string) => void;
   className?: string;
   size?: "default" | "sm";
+  showCheck?: boolean;
 }
 
-export function CustomSelect({ id, label, value, options, placeholder = "Select…", onChange, className, size = "default" }: SelectProps) {
+export function CustomSelect({ id, label, value, options, placeholder = "Select…", onChange, className, size = "default", showCheck = true }: SelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
@@ -63,7 +64,7 @@ export function CustomSelect({ id, label, value, options, placeholder = "Select�
                 }}
               >
                 <span>{option.label}</span>
-                {active ? <Check size={14} aria-hidden /> : null}
+                {showCheck && active ? <Check size={14} aria-hidden /> : null}
               </button>
             );
           })}
