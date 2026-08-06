@@ -45,6 +45,12 @@
   border-radius: 14px;
   box-shadow: var(--shadow-lg, 0 20px 40px rgba(17, 24, 39, 0.2));
   animation: modalIn 0.2s ease;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.modal::-webkit-scrollbar {
+  display: none;
 }
 
 .modalHeader {
