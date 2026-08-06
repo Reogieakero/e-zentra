@@ -12,6 +12,7 @@ import {
   FilePlus,
   FileText,
   FolderOpen,
+  Info,
   QrCode,
   RefreshCw,
   TrendingDown,
@@ -20,6 +21,7 @@ import {
   UserPlus,
   Users,
   UserX,
+  X,
 } from "lucide-react";
 import Analytics from "@/components/dashboard/analytics";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -82,6 +84,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [showInfo, setShowInfo] = useState(false);
+
+  useEffect(() => {
+    if (!showInfo) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowInfo(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showInfo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,9 +153,19 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className={styles.pageHeading}>
-        <h1 className={styles.pageTitle}>Dashboard</h1>
-        <p className={styles.pageSubtitle}>Monitor attendance, student records, and school activities from a centralized dashboard.</p>
+      <div className={styles.pageHeaderRow}>
+        <div className={styles.pageHeading}>
+          <h1 className={styles.pageTitle}>Dashboard</h1>
+          <p className={styles.pageSubtitle}>Monitor attendance, student records, and school activities from a centralized dashboard.</p>
+        </div>
+        <button
+          type="button"
+          className={styles.infoButton}
+          onClick={() => setShowInfo(true)}
+          aria-label="About this dashboard"
+        >
+          <Info className={styles.infoButtonIcon} />
+        </button>
       </div>
 
       <div className={styles.kpiGrid}>
@@ -252,11 +274,59 @@ export default function DashboardPage() {
 
         <Analytics
           trend={data.dailyTrend.map((t) => ({ label: t.label, rate: t.rate }))}
-          sections={data.sectionAttendance.map((s) => ({ sectionName: s.sectionName, rate: s.rate }))}
+          sections={data.sectionAttendance.map((s) => ({
+            sectionName: s.sectionName,
+            rate: s.rate,
+            absentRate: s.absentRate,
+          }))}
           heatmap={data.heatmap}
           schoolYear={data.schoolYear}
         />
       </div>
+
+      {showInfo && (
+        <div className={styles.modalOverlay} onClick={() => setShowInfo(false)}>
+          <div className={styles.modal} role="dialog" aria-modal="true" aria-label="About this dashboard" onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Principal Dashboard — What You See</h2>
+              <button type="button" className={styles.modalClose} onClick={() => setShowInfo(false)} aria-label="Close">
+                <X className={styles.modalCloseIcon} />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <p className={styles.modalIntro}>
+                This dashboard aggregates live school records so you can monitor enrollment, attendance, student risk, and
+                approval workflows from a single view. Every figure updates after each school day ends.
+              </p>
+
+              <h3 className={styles.modalSection}>Top cards (KPIs)</h3>
+              <ul className={styles.modalList}>
+                <li><strong>Enrollment Stats</strong> — Total learners on the active school-year roster (assigned to an active section) and ADM profiles that are approved.</li>
+                <li><strong>Attendance &amp; ADM</strong> — Learners marked Present or Absent in today&apos;s logs, plus the Present rate as a percentage of everyone logged today.</li>
+                <li><strong>Action Items</strong> — Pending = open record flags + ADM profiles awaiting approval + accounts still pending; At Risk = unique learners with a moderate/high risk assessment.</li>
+                <li><strong>Documentation</strong> — Anecdotal/behavior records created this month and SF10 (Form 137) records marked Ready or Released.</li>
+              </ul>
+              <p className={styles.modalNote}>Hover any KPI stat to see a short explanation of what it measures.</p>
+
+              <h3 className={styles.modalSection}>At Risk Students</h3>
+              <p>Lists up to 3 learners flagged with a moderate/high risk in the active year, with their section and attendance rate. The displayed threshold is below 85%.</p>
+
+              <h3 className={styles.modalSection}>Quick Actions</h3>
+              <p>Shortcuts to common tasks: add a student, scan attendance, generate SF10, write an anecdotal report, open ADM records, and export reports.</p>
+
+              <h3 className={styles.modalSection}>ADM for Approval</h3>
+              <p>ADM learner profiles submitted by staff and awaiting your approval/signature (up to 3).</p>
+
+              <h3 className={styles.modalSection}>Analytics</h3>
+              <ul className={styles.modalList}>
+                <li><strong>Daily Attendance Trend</strong> — the school week (Mon–Fri). Each dot is that day&apos;s Present to-logged rate; days with no logs yet show &quot;No data yet&quot;. The dashed line is the 95% target.</li>
+                <li><strong>Section Attendance Heatmap</strong> — colour intensity shows each section&apos;s attendance per weekday of the current week.</li>
+                <li><strong>Section Performance Breakdown</strong> — for each section, the green (Present) and red (Absent) bars show those statuses as % of all attendance it has logged.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

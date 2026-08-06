@@ -7,7 +7,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -25,6 +24,7 @@ interface TrendPoint {
 interface SectionRate {
   sectionName: string;
   rate: number;
+  absentRate: number;
 }
 
 interface AnalyticsProps {
@@ -34,9 +34,15 @@ interface AnalyticsProps {
   schoolYear: string | null;
 }
 
+interface ChartTooltipEntry {
+  name?: string | number;
+  value?: number | string;
+  color?: string;
+}
+
 interface ChartTooltipProps {
   active?: boolean;
-  payload?: Array<{ value?: number | string }>;
+  payload?: ChartTooltipEntry[];
   label?: string | number;
 }
 
@@ -45,9 +51,15 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   return (
     <div className={styles.chartTooltip}>
       <span className={styles.chartTooltipLabel}>{label}</span>
-      <span className={styles.chartTooltipValue}>
-        {payload[0].value == null ? "No data yet" : `${payload[0].value}%`}
-      </span>
+      {payload.map((entry, i) => (
+        <div key={i} className={styles.chartTooltipRow}>
+          <span className={styles.chartTooltipDot} style={{ background: entry.color ?? "#16a34a" }} />
+          <span className={styles.chartTooltipName}>{entry.name}</span>
+          <span className={styles.chartTooltipValue}>
+            {entry.value == null ? "No data yet" : `${entry.value}%`}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -63,7 +75,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
   );
 
   const trendData = trend.map((t) => ({ day: t.label, rate: t.rate }));
-  const sectionData = sections.map((s) => ({ name: s.sectionName, rate: s.rate }));
+  const sectionData = sections.map((s) => ({ name: s.sectionName, present: s.rate, absent: s.absentRate }));
 
   return (
     <div className={styles.panel}>
@@ -115,6 +127,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
                   <Area
                     type="monotone"
                     dataKey="rate"
+                    name="Rate"
                     stroke="#16a34a"
                     strokeWidth={2.5}
                     fill="url(#trendGradient)"
@@ -197,7 +210,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
                 <BarChart2 className={styles.chartTitleIcon} />
                 Section Performance Breakdown
               </h4>
-              <p className={styles.chartSubtitle}>Section attendance rate comparison with angled X-axis section labels</p>
+              <p className={styles.chartSubtitle}>Present vs absent rate by section, with angled X-axis section labels</p>
             </div>
             <span className={styles.link}>View All</span>
           </div>
@@ -218,23 +231,23 @@ export default function Analytics({ trend, sections, heatmap, schoolYear }: Anal
                 />
                 <YAxis hide domain={[0, 100]} />
                 <Tooltip cursor={TOOLTIP_CURSOR} content={<ChartTooltip />} />
-                <Bar dataKey="rate" radius={[2, 2, 0, 0]}>
-                  {sectionData.map((s) => (
-                    <Cell
-                      key={s.name}
-                      fill={s.rate >= 95 ? "var(--brand-primary)" : "rgba(22, 163, 74, 0.85)"}
-                    />
-                  ))}
-                </Bar>
+                <Bar dataKey="present" name="Present" fill="#16a34a" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className={styles.barFooter}>
-            <span className={styles.legendItem}>
-              <span className={`${styles.legendDot} ${styles.legendDotSolid}`} />
-              Attendance Rate
-            </span>
+            <div className={styles.barLegend}>
+              <span className={styles.legendItem}>
+                <span className={`${styles.legendDot} ${styles.legendDotSolid}`} />
+                Present
+              </span>
+              <span className={styles.legendItem}>
+                <span className={`${styles.legendDot} ${styles.legendDotRed}`} />
+                Absent
+              </span>
+            </div>
             <span className={styles.barHint}>Hover bars to view exact percentages</span>
           </div>
         </div>
