@@ -235,6 +235,18 @@
   border-bottom: 1px solid var(--border);
 }
 
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.modeSelect {
+  width: 76px;
+  min-width: 0;
+}
+
 .cardTitle {
   font-size: 12px;
   font-weight: 600;
