@@ -37,6 +37,13 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().default('zentra-uploads'),
   GOOGLE_OAUTH_REDIRECT_URL: z.string().url().optional(),
+  GOOGLE_DRIVE_CLIENT_ID: z.string().optional(),
+  GOOGLE_DRIVE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_DRIVE_REDIRECT_URI: z.string().url().optional(),
+  CIPHER_KEY: z.string().optional(),
+  BACKUP_ENABLED: boolFromString(false),
+  BACKUP_INTERVAL_HOURS: z.coerce.number().default(24),
+  BACKUP_RETENTION_DAYS: z.coerce.number().default(30),
   OCR_ENGINE: z.enum(['fake', 'paddle', 'textract']).default('fake'),
   OCR_SERVICE_URL: z.string().url().optional(),
   OCR_SERVICE_TOKEN: z.string().optional(),
@@ -129,6 +136,24 @@ export const config = {
     ttlMs: parsed.data.PASSWORD_RESET_TTL_MIN * 60 * 1000,
   },
   frontendUrl: parsed.data.FRONTEND_URL ?? 'http://localhost:3001',
+  backup: {
+    enabled:
+      parsed.data.BACKUP_ENABLED &&
+      Boolean(
+        parsed.data.GOOGLE_DRIVE_CLIENT_ID &&
+        parsed.data.GOOGLE_DRIVE_CLIENT_SECRET &&
+        parsed.data.GOOGLE_DRIVE_REDIRECT_URI &&
+        parsed.data.CIPHER_KEY
+      ),
+    drive: {
+      clientId: parsed.data.GOOGLE_DRIVE_CLIENT_ID,
+      clientSecret: parsed.data.GOOGLE_DRIVE_CLIENT_SECRET,
+      redirectUri: parsed.data.GOOGLE_DRIVE_REDIRECT_URI,
+    },
+    cipherKey: parsed.data.CIPHER_KEY,
+    intervalHours: parsed.data.BACKUP_INTERVAL_HOURS,
+    retentionDays: parsed.data.BACKUP_RETENTION_DAYS,
+  },
 };
 
 export type AppConfig = typeof config;

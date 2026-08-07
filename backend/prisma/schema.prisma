@@ -325,8 +325,76 @@ model User {
   reportCardStudents      ReportCard[]                 @relation("ReportCardStudent")
   ocrJobs                 OcrJob[]                     @relation("OcrJobActor")
   ocrExtractionReviews    ReportCardExtraction[]       @relation("ExtractionReviewedBy")
+  googleDriveLink         GoogleDriveLink?
+  backupsCreated          BackupJob[]                  @relation("BackupCreatedBy")
+  exportsCreated          ExportJob[]                  @relation("ExportOwner")
 
   @@map("users")
+}
+
+model GoogleDriveLink {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @unique @map("user_id") @db.Uuid
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email           String    @db.VarChar(200)
+  accessTokenEnc  String    @map("access_token_enc") @db.Text
+  refreshTokenEnc String    @map("refresh_token_enc") @db.Text
+  tokenExpiresAt  DateTime  @map("token_expires_at") @db.Timestamptz(3)
+  folderId        String?   @map("folder_id") @db.VarChar(200)
+  connectedAt     DateTime  @default(now()) @map("connected_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("google_drive_links")
+}
+
+enum BackupKind {
+  manual
+  automatic
+}
+
+enum BackupStatus {
+  running
+  succeeded
+  failed
+}
+
+enum ExportStatus {
+  running
+  succeeded
+  failed
+}
+
+model BackupJob {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind         BackupKind   @default(manual)
+  status       BackupStatus @default(running)
+  fileId       String?      @map("file_id") @db.VarChar(200)
+  fileName     String?      @map("file_name") @db.VarChar(200)
+  sizeBytes    BigInt?      @map("size_bytes") @db.BigInt
+  errorMessage String?      @map("error_message") @db.Text
+  createdBy    String?      @map("created_by") @db.Uuid
+  creator      User?        @relation("BackupCreatedBy", fields: [createdBy], references: [id])
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt  DateTime?    @map("completed_at") @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+  @@map("backup_jobs")
+}
+
+model ExportJob {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String       @map("user_id") @db.Uuid
+  user         User         @relation("ExportOwner", fields: [userId], references: [id])
+  status       ExportStatus @default(running)
+  folderName   String       @map("folder_name") @db.VarChar(200)
+  folderUrl    String?      @map("folder_url") @db.Text
+  fileCount    Int          @default(0) @map("file_count")
+  errorMessage String?      @map("error_message") @db.Text
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt  DateTime?    @map("completed_at") @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+  @@map("export_jobs")
 }
 
 model StudentProfile {

@@ -121,7 +121,7 @@ export async function listSectionsByGrade(gradeLevel: string) {
   return sections;
 }
 
-async function loadAttendanceReport(
+export async function loadAttendanceReport(
   view: 'monthly' | 'daily' = 'monthly',
   gradeLevel?: string,
   sectionId?: string

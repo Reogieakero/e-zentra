@@ -23,7 +23,7 @@ const mainNav = [
 ];
 
 const systemNav = [
-  { key: "reports", label: "Reports", icon: BarChart3, href: "#" },
+  { key: "reports", label: "Reports", icon: BarChart3, href: "/principal/reports/attendance" },
   { key: "settings", label: "Settings", icon: Settings, href: "#" },
 ];
 

@@ -7,6 +7,7 @@ import {
   getAttendanceReport,
   listSectionsByGrade,
 } from '../services/dashboard.service';
+import { getAiRecommendations } from '../services/ai.service';
 
 const GRADE_LEVELS = [
   'grade_7',
@@ -38,6 +39,18 @@ router.get(
     const grade = GRADE_LEVELS.includes(String(req.query.grade)) ? String(req.query.grade) : undefined;
     const section = typeof req.query.section === 'string' ? req.query.section : undefined;
     const result = await getAttendanceReport(view, grade, section);
+    res.json(result);
+  })
+);
+
+router.get(
+  '/dashboard/attendance/report/ai-recommendations',
+  requireRole(...STAFF_VIEW_ROLES),
+  asyncHandler(async (req, res) => {
+    const view = req.query.view === 'daily' ? 'daily' : 'monthly';
+    const grade = GRADE_LEVELS.includes(String(req.query.grade)) ? String(req.query.grade) : undefined;
+    const section = typeof req.query.section === 'string' ? req.query.section : undefined;
+    const result = await getAiRecommendations(view, grade, section);
     res.json(result);
   })
 );

@@ -5,6 +5,7 @@ import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
 import { startEscalationJob } from './jobs/flagEscalation';
 import { startOcrWorker } from './services/ocr.service';
+import { startBackupJob } from './jobs/backupJob';
 
 const app = createApp();
 
@@ -13,6 +14,7 @@ const server = app.listen(config.port, () => {
   logger.info(`OpenAPI docs at http://localhost:${config.port}/api-docs`);
   startEscalationJob();
   startOcrWorker();
+  startBackupJob();
 });
 
 async function shutdown(signal: string) {
