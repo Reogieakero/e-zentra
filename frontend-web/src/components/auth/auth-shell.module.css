@@ -17,7 +17,7 @@
   display: none;
   position: relative;
   flex-direction: column;
-  background: var(--brand-gradient);
+  background: var(--brand-panel);
   padding: 40px;
   overflow: hidden;
 }
@@ -54,7 +54,7 @@
 .dotGrid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(var(--dot-grid) 1.5px, transparent 1.5px);
   background-size: 22px 22px;
 }
 

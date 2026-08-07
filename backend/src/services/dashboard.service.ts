@@ -1,4 +1,4 @@
-import { AttendanceStatus, Prisma } from '@prisma/client';
+import { AttendanceStatus, GradeLevel, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { cacheKey, getCached, invalidateByPattern } from './cache.service';
 
@@ -28,6 +28,369 @@ export function dashboardCacheKey(month?: string): string {
 
 export async function invalidateDashboardCache(): Promise<void> {
   await invalidateByPattern('dashboard');
+}
+
+const GRADE_LABELS: Record<string, string> = {
+  grade_7: 'Grade 7',
+  grade_8: 'Grade 8',
+  grade_9: 'Grade 9',
+  grade_10: 'Grade 10',
+  grade_11: 'Grade 11',
+  grade_12: 'Grade 12',
+};
+
+const MONTH_LONG = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const WEEKDAYS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+interface StatusCount {
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+}
+
+function addStatus(counts: StatusCount, status: AttendanceStatus): void {
+  switch (status) {
+    case AttendanceStatus.present:
+      counts.present += 1;
+      break;
+    case AttendanceStatus.absent:
+      counts.absent += 1;
+      break;
+    case AttendanceStatus.late:
+      counts.late += 1;
+      break;
+    case AttendanceStatus.excused:
+      counts.excused += 1;
+      break;
+  }
+}
+
+function rateOf(counts: StatusCount): number {
+  const total = counts.present + counts.absent + counts.late + counts.excused;
+  return total > 0 ? Math.round((counts.present / total) * 1000) / 10 : 0;
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+export async function getAttendanceReport(
+  view: 'monthly' | 'daily' = 'monthly',
+  gradeLevel?: string,
+  sectionId?: string
+) {
+  const key = cacheKey('dashboard', `attendance-report:${view}:${gradeLevel ?? 'all'}:${sectionId ?? 'all'}`);
+  return getCached<{ data: unknown }>(key, DASHBOARD_CACHE_TTL, async () => ({
+    data: await loadAttendanceReport(view, gradeLevel, sectionId),
+  }));
+}
+
+export async function listSectionsByGrade(gradeLevel: string) {
+  const sections = await prisma.section.findMany({
+    where: {
+      gradeLevel: gradeLevel as GradeLevel,
+      status: 'active',
+      schoolYear: { status: 'active' },
+    },
+    select: { id: true, sectionName: true },
+    orderBy: { sectionName: 'asc' },
+  });
+  return sections;
+}
+
+async function loadAttendanceReport(
+  view: 'monthly' | 'daily' = 'monthly',
+  gradeLevel?: string,
+  sectionId?: string
+) {
+  const activeYear = await prisma.schoolYear.findFirst({
+    where: { status: 'active' },
+    select: { id: true, yearLabel: true, startDate: true, endDate: true },
+  });
+
+  const emptyReport = {
+    schoolYear: null,
+    term: null,
+    targetRate: 95,
+    granularity: view,
+    enrollmentTotal: 0,
+    series: [],
+    statBlocks: {
+      averageRate: 0,
+      bestPeriod: null,
+      lowestPeriod: null,
+      periodsAboveTarget: 0,
+      periodsTracked: 0,
+    },
+    gradeLevels: [],
+    insights: [],
+  };
+
+  if (!activeYear) return emptyReport;
+
+  const target = 95;
+  const start = new Date(activeYear.startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(activeYear.endDate);
+  end.setHours(0, 0, 0, 0);
+  const endExclusive = new Date(end);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+
+  const sectionFilter = sectionId
+    ? { sectionId }
+    : gradeLevel
+    ? { section: { gradeLevel: gradeLevel as GradeLevel } }
+    : {};
+
+  const [records, enrollmentTotal, activeTerm] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+where: {
+        term: { schoolYearId: activeYear.id },
+        attendanceDate: { gte: start, lt: endExclusive },
+        ...sectionFilter,
+      },
+      select: { status: true, attendanceDate: true, section: { select: { gradeLevel: true } } },
+    }),
+    countEnrolledStudents(activeYear.id),
+    prisma.term.findFirst({
+      where: { schoolYearId: activeYear.id, status: 'active' },
+      orderBy: { startDate: 'asc' },
+      select: { termLabel: true },
+    }),
+  ]);
+
+  const bucketKey = view === 'monthly' ? monthlyKey : dailyKey;
+  const byBucket = new Map<string, StatusCount>();
+  const byGrade = new Map<string, StatusCount>();
+  for (const r of records) {
+    const bKey = bucketKey(r.attendanceDate);
+    let bb = byBucket.get(bKey);
+    if (!bb) {
+      bb = { present: 0, absent: 0, late: 0, excused: 0 };
+      byBucket.set(bKey, bb);
+    }
+    addStatus(bb, r.status);
+
+    let gb = byGrade.get(r.section.gradeLevel);
+    if (!gb) {
+      gb = { present: 0, absent: 0, late: 0, excused: 0 };
+      byGrade.set(r.section.gradeLevel, gb);
+    }
+    addStatus(gb, r.status);
+  }
+
+  const tomorrow = new Date();
+  tomorrow.setHours(0, 0, 0, 0);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const seriesEnd = tomorrow < endExclusive ? tomorrow : endExclusive;
+
+  const series = view === 'monthly' ? buildMonthlySeries(byBucket) : buildDailySeries(byBucket, start, seriesEnd);
+
+  const tracked = series.filter((s) => s.rate !== null);
+  const rates = tracked.map((s) => s.rate as number);
+  const averageRate = rates.length > 0 ? round1(rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
+  const bestPeriod =
+    rates.length > 0
+      ? tracked.reduce((a, b) => ((b.rate as number) > (a.rate as number) ? b : a))
+      : null;
+  const lowestPeriod =
+    rates.length > 0
+      ? tracked.reduce((a, b) => ((b.rate as number) < (a.rate as number) ? b : a))
+      : null;
+  const periodsAboveTarget = rates.filter((r) => r >= target).length;
+
+  const gradesOrder = [
+    'grade_7',
+    'grade_8',
+    'grade_9',
+    'grade_10',
+    'grade_11',
+    'grade_12',
+  ];
+  const gradeLevels = gradesOrder
+    .filter((g) => byGrade.has(g) && rateOf(byGrade.get(g)!) > 0)
+    .map((g) => {
+      const counts = byGrade.get(g)!;
+      const total = counts.present + counts.absent + counts.late + counts.excused;
+      return {
+        gradeLevel: g,
+        label: GRADE_LABELS[g],
+        presentCount: counts.present,
+        absentCount: counts.absent,
+        totalCount: total,
+        rate: rateOf(counts),
+      };
+    });
+
+  const insights = buildReportInsights(
+    averageRate,
+    bestPeriod?.label,
+    bestPeriod?.rate,
+    lowestPeriod?.label,
+    lowestPeriod?.rate,
+    periodsAboveTarget,
+    tracked.length,
+    target,
+    gradeLevels,
+    view
+  );
+
+  return {
+    schoolYear: activeYear.yearLabel,
+    term: activeTerm?.termLabel ?? null,
+    targetRate: target,
+    granularity: view,
+    enrollmentTotal,
+    series,
+    statBlocks: {
+      averageRate,
+      bestPeriod,
+      lowestPeriod,
+      periodsAboveTarget,
+      periodsTracked: tracked.length,
+    },
+    gradeLevels,
+    insights,
+  };
+}
+
+function monthlyKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function dailyKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function monthlyOrder(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+function dailyOrder(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+function buildMonthlySeries(byMonth: Map<string, StatusCount>) {
+  const keys = Array.from(byMonth.keys()).sort(monthlyOrder);
+  return keys.map((mKey) => {
+    const [year, monthNum] = mKey.split('-').map(Number);
+    const counts = byMonth.get(mKey);
+    const total = counts ? counts.present + counts.absent + counts.late + counts.excused : 0;
+    return {
+      key: mKey,
+      shortLabel: MONTH_SHORT[monthNum - 1],
+      label: `${MONTH_LONG[monthNum - 1]} ${year}`,
+      year,
+      month: monthNum,
+      total,
+      present: counts?.present ?? 0,
+      absent: counts?.absent ?? 0,
+      late: counts?.late ?? 0,
+      excused: counts?.excused ?? 0,
+      rate: total > 0 ? rateOf(counts!) : null,
+    };
+  });
+}
+
+function buildDailySeries(byDay: Map<string, StatusCount>, start: Date, endExclusive: Date) {
+  const keys: string[] = [];
+  const cur = new Date(start);
+  while (cur < endExclusive) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) keys.push(dailyKey(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  keys.sort(dailyOrder);
+  return keys.map((dKey) => {
+    const counts = byDay.get(dKey);
+    const total = counts ? counts.present + counts.absent + counts.late + counts.excused : 0;
+    const [year, monthNum, dayNum] = dKey.split('-').map(Number);
+    const date = new Date(year, monthNum - 1, dayNum);
+    return {
+      key: dKey,
+      shortLabel: `${MONTH_SHORT[monthNum - 1]} ${dayNum}`,
+      label: `${WEEKDAYS[date.getDay()]}, ${MONTH_LONG[monthNum - 1]} ${dayNum}, ${year}`,
+      year,
+      month: monthNum,
+      total,
+      present: counts?.present ?? 0,
+      absent: counts?.absent ?? 0,
+      late: counts?.late ?? 0,
+      excused: counts?.excused ?? 0,
+      rate: total > 0 ? rateOf(counts!) : null,
+    };
+  });
+}
+
+function buildReportInsights(
+  averageRate: number,
+  bestLabel: string | null | undefined,
+  bestRate: number | null | undefined,
+  lowestLabel: string | null | undefined,
+  lowestRate: number | null | undefined,
+  aboveTarget: number,
+  tracked: number,
+  target: number,
+  gradeLevels: Array<{ label: string; rate: number }>,
+  view: 'monthly' | 'daily'
+): string[] {
+  const period = view === 'monthly' ? 'month' : 'day';
+  const periodsPlural = view === 'monthly' ? 'months' : 'days';
+  const out: string[] = [];
+  if (tracked > 0) {
+    out.push(
+      `School-wide attendance averaged ${averageRate}% across ${tracked} tracked ${period}${tracked === 1 ? '' : 's'}.`
+    );
+  }
+  if (bestRate !== undefined && bestLabel) {
+    out.push(
+      view === 'monthly'
+        ? `${bestLabel} was the strongest month at ${bestRate}%.`
+        : `${bestLabel} was the strongest day at ${bestRate}%.`
+    );
+  }
+  if (lowestRate !== undefined && lowestLabel) {
+    out.push(
+      view === 'monthly'
+        ? `${lowestLabel} recorded the lowest rate at ${lowestRate}%.`
+        : `${lowestLabel} recorded the lowest rate at ${lowestRate}%.`
+    );
+  }
+  out.push(
+    `${aboveTarget} of ${tracked} tracked ${period}${tracked === 1 ? '' : 's'} met or exceeded the ${target}% target.`
+  );
+  const below = gradeLevels.filter((g) => g.rate < target);
+  if (below.length > 0) {
+    out.push(
+      `Grade level${below.length === 1 ? '' : 's'} below target: ${below.map((g) => `${g.label} (${g.rate}%)`).join(', ')}.`
+    );
+  } else if (gradeLevels.length > 0) {
+    out.push('All grade levels averaged at or above the attendance target this year.');
+  }
+  return out;
 }
 
 export async function getDashboardOverview(month?: string) {

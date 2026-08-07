@@ -5,6 +5,9 @@
   --brand-light: #86efac;
   --brand-gradient: linear-gradient(135deg, #16a34a, #22c55e);
   --brand-weak: #d1fae5;
+  --brand-panel: linear-gradient(135deg, #16a34a, #22c55e);
+  --dot-grid: rgba(134, 239, 172, 0.5);
+  --dot-grid-page: #d1fae5;
 
   /* Neutrals */
   --background: #ffffff;
@@ -69,6 +72,9 @@
 html[data-theme="dark"] {
   color-scheme: dark;
   --brand-weak: #14532d;
+  --brand-panel: linear-gradient(165deg, #1c1c1c 0%, #0b0b0b 100%);
+  --dot-grid: rgba(52, 211, 153, 0.35);
+  --dot-grid-page: rgba(74, 222, 128, 0.35);
   --background: #121212;
   --foreground: #ededed;
   --muted: #1a1a1a;

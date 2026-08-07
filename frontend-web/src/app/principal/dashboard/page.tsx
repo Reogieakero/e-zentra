@@ -209,7 +209,7 @@ export default function DashboardPage() {
               <PanelLeftOpen className={styles.railBtnIcon} />
             )}
           </button>
-          <InfoDialog title="Principal Dashboard — What You See">
+          <InfoDialog title="Principal Dashboard — What You See" bare>
           <p className={styles.modalIntro}>
             This dashboard aggregates live school records so you can monitor enrollment, attendance, student risk, and
             approval workflows from a single view. Every figure updates after each school day ends.

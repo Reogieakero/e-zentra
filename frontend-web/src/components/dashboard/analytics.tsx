@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart2, Calendar, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { BarChart2, Calendar, ChevronRight, TrendingUp } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -123,7 +124,9 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                 </h4>
                 <p className={styles.chartSubtitle}>Monday – Friday · current week</p>
               </div>
-              <span className={styles.link}>Report</span>
+              <Link href="/principal/reports/attendance" className={styles.link}>
+                Report <ChevronRight className={styles.linkChevron} />
+              </Link>
             </div>
 
             <div className={styles.chartBody}>

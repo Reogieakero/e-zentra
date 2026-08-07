@@ -18,7 +18,7 @@
 .dotGrid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(var(--brand-weak) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(var(--dot-grid-page) 1.5px, transparent 1.5px);
   background-size: 22px 22px;
   pointer-events: none;
 }
