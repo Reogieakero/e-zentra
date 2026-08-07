@@ -255,7 +255,7 @@ export async function listStudents(query: ListStudentsQuery) {
     prisma.schoolYear.findFirst({ where: { status: 'active' }, select: { id: true } }),
     Promise.all([
       prisma.studentProfile.count({ where: statsWhere }),
-      prisma.studentProfile.count({ where: { AND: [statsWhere, { user: { accountStatus: 'active' } }] } }),
+      prisma.user.count({ where: { role: 'student', accountStatus: 'active' } }),
       prisma.studentProfile.count({ where: { AND: [statsWhere, { section: { schoolYear: { status: 'active' } } }] } }),
       prisma.studentProfile.count({ where: { AND: [statsWhere, { section: { schoolYear: { status: 'completed' } } }] } }),
     ]),
