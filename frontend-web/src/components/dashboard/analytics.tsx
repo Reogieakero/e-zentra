@@ -15,6 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import type { SectionHeatmap } from "@/lib/dashboard";
+import { useTheme } from "@/components/theme-provider";
 import { CustomSelect } from "@/components/ui/select";
 import { MonthPicker } from "@/components/ui/month-picker";
 import styles from "./analytics.module.css";
@@ -72,12 +73,17 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
 }
 
 const heatLevels = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
-const TOOLTIP_CURSOR = { stroke: "#d1d5db" };
 
 type AttendanceView = "presentAbsent" | "lateExcused";
 
 export default function Analytics({ trend, sections, heatmap, schoolYear, month, onMonthChange }: AnalyticsProps) {
   const [view, setView] = useState<AttendanceView>("presentAbsent");
+  const { theme } = useTheme();
+  const dark = theme === "dark";
+  const TOOLTIP_CURSOR = { stroke: dark ? "rgba(255,255,255,0.25)" : "#d1d5db" };
+  const gridStroke = dark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
+  const tickFill = dark ? "#94a3b8" : "#6b7280";
+  const tickAltFill = dark ? "#a1a1aa" : "#4b5563";
 
   const peakRate = heatmap.reduce(
     (max, col) => Math.max(max, ...col.days.map((d) => d.rate)),
@@ -129,10 +135,10 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                       <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="day"
-                    tick={{ fontSize: 10, fill: "#9ca3af" }}
+                    tick={{ fontSize: 10, fill: tickFill }}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
@@ -258,14 +264,14 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
           <div className={styles.chartBodyBars}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={sectionData} margin={{ top: 8, right: 8, left: 8, bottom: 4 }}>
-                <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="name"
                   interval={0}
                   angle={-45}
                   textAnchor="end"
                   height={44}
-                  tick={{ fontSize: 10, fill: "#4b5563" }}
+                  tick={{ fontSize: 10, fill: tickAltFill }}
                   axisLine={false}
                   tickLine={false}
                 />

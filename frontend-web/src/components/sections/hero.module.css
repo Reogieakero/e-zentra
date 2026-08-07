@@ -234,7 +234,7 @@
 
 .body {
   padding: 16px;
-  background: rgba(249, 250, 251, 0.4);
+  background: var(--chart-bg);
   display: flex;
   flex-direction: column;
   gap: 12px;

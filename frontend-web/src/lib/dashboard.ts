@@ -76,6 +76,7 @@ export interface DashboardOverview {
   dailyTrend: DailyTrend[];
   heatmap: SectionHeatmap[];
   schoolYear: string | null;
+  term: string | null;
 }
 
 export async function fetchDashboardOverview(month?: string): Promise<DashboardOverview> {

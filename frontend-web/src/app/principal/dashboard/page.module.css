@@ -10,14 +10,54 @@
   gap: 16px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.railBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.railBtn:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.railBtnActive,
+.railBtnActive:hover {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: #ffffff;
+}
+
+.railBtnIcon {
+  width: 18px;
+  height: 18px;
+}
+
 .modalIntro {
-  color: #6b7280;
+  color: var(--muted-foreground);
 }
 
 .modalSection {
   font-size: 12px;
   font-weight: 700;
-  color: #111827;
+  color: var(--foreground);
   margin-top: 4px;
 }
 
@@ -31,19 +71,19 @@
 
 .modalNote {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--muted-foreground);
 }
 
 .pageTitle {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #111827;
+  color: var(--foreground);
 }
 
 .pageSubtitle {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--muted-foreground);
   margin-top: 2px;
 }
 
@@ -54,7 +94,7 @@
 }
 
 .kpiCard {
-  background: #ffffff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
@@ -69,7 +109,7 @@
 .kpiCardHeader {
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: var(--foreground);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -84,6 +124,11 @@
   color: var(--brand-primary);
 }
 
+.kpiAttendanceSelect {
+  width: 160px;
+  min-width: 0;
+}
+
 .kpiStats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -93,14 +138,14 @@
 .kpiStat {
   padding: 10px;
   border-radius: 8px;
-  background: #a7f3d0;
-  border: 1px solid #34d399;
+  background: var(--success-bg);
+  border: 1px solid var(--success-bd);
   transition: border-color 0.2s, background 0.2s;
 }
 
 .kpiStat:hover {
-  border-color: #10b981;
-  background: #6ee7b7;
+  border-color: var(--success-bd-hover);
+  background: var(--success-bg-hover);
 }
 
 .kpiStatHeader {
@@ -113,7 +158,7 @@
 .kpiStatHeader > span {
   font-size: 10px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -127,18 +172,20 @@
 .kpiValue {
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--foreground);
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .kpiNote {
   font-size: 10px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--muted-foreground);
   margin-top: 2px;
   display: flex;
   align-items: center;
   gap: 2px;
+  white-space: nowrap;
 }
 
 .kpiNoteStrong {
@@ -155,23 +202,142 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
+  transition: grid-template-columns 0.55s cubic-bezier(0.4, 0, 0.2, 1), gap 0.55s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .leftRail {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+  transition: opacity 0.4s ease;
+}
+
+.leftRailCollapsed {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .atRiskCard,
 .admCard {
-  background: #ffffff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+
+.atRiskCard {
+  background: #101010;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.atRiskCard .cardTitle {
+  color: #f9fafb;
+}
+
+.atRiskCard .cardSubtitle {
+  color: #9ca3af;
+}
+
+.atRiskCard .badgeDanger {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.atRiskCard .atRiskItem {
+  padding: 14px;
+}
+
+.atRiskCard .atRiskItemHigh {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(254, 202, 202, 0.28);
+}
+
+.atRiskCard .atRiskItemModerate {
+  background: rgba(6, 78, 59, 0.38);
+  border-color: rgba(187, 247, 208, 0.28);
+}
+
+.atRiskCard .atRiskItemLow {
+  background: rgba(124, 45, 18, 0.38);
+  border-color: rgba(254, 215, 170, 0.28);
+}
+
+.atRiskCard .atRiskItem:hover {
+  border-color: #374151;
+}
+
+.atRiskCard .atRiskName {
+  color: #f9fafb;
+}
+
+.atRiskCard .avatarDanger {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
+.atRiskCard .avatarModerate {
+  background: rgba(34, 197, 94, 0.18);
+  color: #6ee7b7;
+}
+
+.atRiskCard .avatarLow {
+  background: rgba(234, 88, 12, 0.18);
+  color: #fdba74;
+}
+
+.atRiskCard .atRiskDetail {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.atRiskCard .atRiskDetailLabel {
+  color: #9ca3af;
+}
+
+.atRiskCard .atRiskDetailValue {
+  color: #f9fafb;
+}
+
+.atRiskCard .atRiskDetailValueDanger {
+  color: #f87171;
+}
+
+.atRiskCard .atRiskDetailValueModerate {
+  color: #4ade80;
+}
+
+.atRiskCard .atRiskDetailValueLow {
+  color: #fb923c;
+}
+
+.atRiskCard .atRiskDot {
+  background: var(--muted-foreground);
+}
+
+.atRiskCard .atRiskDot:hover {
+  background: var(--muted-foreground);
+}
+
+.atRiskCard .atRiskDotActive {
+  background: #f87171;
+}
+
+.atRiskCard .cardFooter {
+  color: #9ca3af;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.atRiskCard .cardLink {
+  color: #22c55e;
+}
+
+.atRiskCard .emptyText {
+  color: #9ca3af;
 }
 
 .admCard {
@@ -188,7 +354,14 @@
 .cardTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
+  color: var(--foreground);
+}
+
+.cardSubtitle {
+  font-size: 10px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
 .badge {
@@ -199,15 +372,15 @@
 }
 
 .badgeDanger {
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fee2e2;
+  color: var(--danger-fg);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-bd);
 }
 
 .badgeWarning {
-  color: #d97706;
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
+  color: var(--warning-fg);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-bd);
 }
 
 .atRiskList,
@@ -241,21 +414,50 @@
 }
 
 .atRiskItem {
-  background: rgba(254, 242, 242, 0.4);
-  border: 1px solid rgba(254, 226, 226, 0.6);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px;
+}
+
+.atRiskItemHigh {
+  background: rgba(254, 242, 242, 0.55);
+  border: 1px solid rgba(254, 226, 226, 0.8);
+}
+
+.atRiskItemModerate {
+  background: rgba(240, 253, 244, 0.6);
+  border: 1px solid rgba(187, 247, 208, 0.8);
+}
+
+.atRiskItemLow {
+  background: rgba(255, 247, 237, 0.6);
+  border: 1px solid rgba(254, 215, 170, 0.8);
 }
 
 .atRiskItem:hover {
+  border-color: #d1d5db;
+}
+
+.atRiskItemHigh:hover {
   border-color: #fecaca;
 }
 
+.atRiskItemModerate:hover {
+  border-color: #bbf7d0;
+}
+
+.atRiskItemLow:hover {
+  border-color: #fed7aa;
+}
+
 .admItem {
-  background: rgba(255, 251, 235, 0.4);
-  border: 1px solid rgba(254, 243, 199, 0.6);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-bd);
 }
 
 .admItem:hover {
-  border-color: #fde68a;
+  border-color: var(--warning-bd-strong);
 }
 
 .avatar {
@@ -271,8 +473,18 @@
 }
 
 .avatarDanger {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.avatarModerate {
+  background: var(--success-bg-soft);
+  color: var(--success-fg);
+}
+
+.avatarLow {
+  background: var(--warning-bg-strong);
+  color: var(--warning-fg);
 }
 
 .atRiskInfo,
@@ -286,7 +498,7 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #111827;
+  color: var(--foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -296,7 +508,7 @@
 .admMeta {
   display: block;
   font-size: 10px;
-  color: #6b7280;
+  color: var(--muted-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -309,12 +521,103 @@
   flex-shrink: 0;
 }
 
+.atRiskCarousel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atRiskTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.atRiskAvatar {
+  width: 48px;
+  height: 48px;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.atRiskDetail {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  padding-top: 10px;
+  border-top: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+.atRiskDetailCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.atRiskDetailLabel {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+
+.atRiskDetailValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atRiskDetailValueDanger {
+  color: #dc2626;
+}
+
+.atRiskDetailValueModerate {
+  color: #16a34a;
+}
+
+.atRiskDetailValueLow {
+  color: #ea580c;
+}
+
+.atRiskDots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.atRiskDot {
+  width: 6px;
+  height: 6px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.atRiskDot:hover {
+  background: #fca5a5;
+}
+
+.atRiskDotActive {
+  background: #dc2626;
+}
+
 .cardFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--muted-foreground);
   padding-top: 8px;
   border-top: 1px solid var(--border);
 }
@@ -348,13 +651,13 @@
   gap: 8px;
   padding: 8px;
   border-radius: 8px;
-  border: 1px solid rgba(229, 231, 235, 0.8);
-  background: rgba(249, 250, 251, 0.5);
+  border: 1px solid var(--chart-bd);
+  background: var(--chart-bg);
   transition: all 0.2s;
 }
 
 .quickItem:hover {
-  background: #ffffff;
+  background: var(--card);
   border-color: var(--brand-primary);
   box-shadow: var(--shadow-xs);
 }
@@ -363,8 +666,8 @@
 .admIcon {
   padding: 6px;
   border-radius: 6px;
-  background: #ecfdf5;
-  border: 1px solid #d1fae5;
+  background: var(--success-bg-soft);
+  border: 1px solid var(--success-bd-soft);
   color: var(--brand-primary);
   transition: all 0.2s;
   flex-shrink: 0;
@@ -391,7 +694,7 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #111827;
+  color: var(--foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -407,15 +710,15 @@
 }
 
 .admIcon {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #d97706;
+  background: var(--warning-bg-strong);
+  border-color: var(--warning-bd-strong);
+  color: var(--warning-fg);
 }
 
 .admStatus {
   font-size: 9px;
   font-weight: 600;
-  color: #d97706;
+  color: var(--warning-fg);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -426,7 +729,7 @@
   align-items: center;
   gap: 12px;
   padding: 48px 24px;
-  background: #ffffff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow-xs);
@@ -440,7 +743,7 @@
 
 .errorText {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted-foreground);
   text-align: center;
   max-width: 420px;
 }
@@ -452,8 +755,8 @@
   padding: 8px 16px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: #ffffff;
-  color: #111827;
+  background: var(--card);
+  color: var(--foreground);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -477,7 +780,7 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
   background-size: 200% 100%;
   animation: skeletonShimmer 1.5s infinite;
   border-radius: 6px;
@@ -502,7 +805,7 @@
 }
 
 .skCard {
-  background: #ffffff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
@@ -551,7 +854,7 @@
 }
 
 .skRailItem {
-  background: #ffffff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
@@ -576,8 +879,8 @@
 }
 
 .skPanel {
-  background: rgba(249, 250, 251, 0.4);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  background: var(--chart-bg);
+  border: 1px solid var(--chart-bd);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -590,7 +893,7 @@
   align-items: center;
   justify-content: space-between;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+  border-bottom: 1px solid var(--chart-bd-soft);
 }
 
 .skPanelTitle {
@@ -666,4 +969,9 @@
   .skChartGrid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.dashboardGridWide {
+  grid-template-columns: 0fr 12fr;
+  gap: 0;
 }

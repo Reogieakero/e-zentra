@@ -16,7 +16,7 @@
   font-weight: 600;
   font-family: var(--font-sans);
   color: var(--foreground);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   cursor: pointer;
