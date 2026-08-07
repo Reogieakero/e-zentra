@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { BarChart2, Calendar, ChevronRight, TrendingUp } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ import type { SectionHeatmap } from "@/lib/dashboard";
 import { useTheme } from "@/components/theme-provider";
 import { CustomSelect } from "@/components/ui/select";
 import { MonthPicker } from "@/components/ui/month-picker";
+import { ThreeDOverlay } from "@/components/dashboard/three-d-bar-chart";
 import styles from "./analytics.module.css";
 
 interface TrendPoint {
@@ -79,6 +80,7 @@ type AttendanceView = "presentAbsent" | "lateExcused";
 
 export default function Analytics({ trend, sections, heatmap, schoolYear, month, onMonthChange }: AnalyticsProps) {
   const [view, setView] = useState<AttendanceView>("presentAbsent");
+  const [chartMode, setChartMode] = useState<"2d" | "3d">("2d");
   const { theme } = useTheme();
   const dark = theme === "dark";
   const TOOLTIP_CURSOR = { stroke: dark ? "rgba(255,255,255,0.25)" : "#d1d5db" };
@@ -92,13 +94,17 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
   );
 
   const trendData = trend.map((t) => ({ day: t.label, rate: t.rate }));
-  const sectionData = sections.map((s) => ({
-    name: s.sectionName,
-    present: s.rate,
-    absent: s.absentRate,
-    late: s.lateRate,
-    excused: s.excusedRate,
-  }));
+  const sectionData = useMemo(
+    () =>
+      sections.map((s) => ({
+        name: s.sectionName,
+        present: s.rate,
+        absent: s.absentRate,
+        late: s.lateRate,
+        excused: s.excusedRate,
+      })),
+    [sections]
+  );
 
   return (
     <div className={styles.panel}>
@@ -242,6 +248,24 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
             </div>
 
             <div className={styles.chartControls}>
+              <div className={styles.modeToggle} role="tablist" aria-label="Chart mode">
+                <button
+                  type="button"
+                  className={`${styles.modeBtn} ${chartMode === "2d" ? styles.modeBtnActive : ""}`}
+                  onClick={() => setChartMode("2d")}
+                  aria-pressed={chartMode === "2d"}
+                >
+                  2D
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.modeBtn} ${chartMode === "3d" ? styles.modeBtnActive : ""}`}
+                  onClick={() => setChartMode("3d")}
+                  aria-pressed={chartMode === "3d"}
+                >
+                  3D
+                </button>
+              </div>
               <CustomSelect
                 id="section-view"
                 value={view}
@@ -294,6 +318,13 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
               </BarChart>
             </ResponsiveContainer>
           </div>
+          {chartMode === "3d" && (
+            <ThreeDOverlay
+              data={sectionData}
+              initialView={view}
+              onClose={() => setChartMode("2d")}
+            />
+          )}
 
           <div className={styles.barFooter}>
             <div className={styles.barLegend}>
