@@ -52,13 +52,9 @@ function buildWhere(query: ListStudentsQuery): Prisma.StudentProfileWhereInput {
   return where;
 }
 
-async function loadAtRiskStats(activeYearId: string | null) {
-  if (!activeYearId) return { total: 0, high: 0, moderate: 0 };
+async function loadAtRiskStats(where: Prisma.StudentProfileWhereInput) {
   const profiles = await prisma.studentProfile.findMany({
-    where: {
-      section: { status: 'active', schoolYearId: activeYearId },
-      user: { accountStatus: 'active' },
-    },
+    where,
     select: { id: true },
   });
   if (profiles.length === 0) return { total: 0, high: 0, moderate: 0 };
@@ -253,13 +249,15 @@ export async function listStudents(query: ListStudentsQuery) {
     };
   });
 
+  const statsWhere = buildWhere(query);
+
   const [activeYear, stats, years, sections] = await Promise.all([
     prisma.schoolYear.findFirst({ where: { status: 'active' }, select: { id: true } }),
     Promise.all([
-      prisma.studentProfile.count(),
-      prisma.studentProfile.count({ where: { user: { accountStatus: 'active' } } }),
-      prisma.studentProfile.count({ where: { section: { schoolYear: { status: 'active' } } } }),
-      prisma.studentProfile.count({ where: { section: { schoolYear: { status: 'completed' } } } }),
+      prisma.studentProfile.count({ where: statsWhere }),
+      prisma.studentProfile.count({ where: { AND: [statsWhere, { user: { accountStatus: 'active' } }] } }),
+      prisma.studentProfile.count({ where: { AND: [statsWhere, { section: { schoolYear: { status: 'active' } } }] } }),
+      prisma.studentProfile.count({ where: { AND: [statsWhere, { section: { schoolYear: { status: 'completed' } } }] } }),
     ]),
     prisma.schoolYear.findMany({ select: { id: true, yearLabel: true }, orderBy: { yearLabel: 'desc' } }),
     prisma.section.findMany({
@@ -268,7 +266,7 @@ export async function listStudents(query: ListStudentsQuery) {
     }),
   ]);
 
-  const atRisk = await loadAtRiskStats(activeYear?.id ?? null);
+  const atRisk = await loadAtRiskStats(statsWhere);
 
   return {
     data,
