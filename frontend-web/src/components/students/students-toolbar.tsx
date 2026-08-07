@@ -13,15 +13,6 @@ export const GRADE_OPTIONS = [
   { value: "grade_12", label: "Grade 12" },
 ];
 
-export const STATUS_OPTIONS = [
-  { value: "all", label: "All Statuses" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-  { value: "suspended", label: "Suspended" },
-  { value: "rejected", label: "Rejected" },
-];
-
 interface StudentsToolbarProps {
   search: string;
   onSearchChange: (v: string) => void;
@@ -79,14 +70,6 @@ export default function StudentsToolbar({
             ...(years.map((y) => ({ value: y.id, label: y.yearLabel })) ?? []),
           ]}
           onChange={(v) => onFilterChange({ schoolYearId: v })}
-          size="sm"
-          showCheck={false}
-          className={styles.filterSelect}
-        />
-        <CustomSelect
-          value={query.status}
-          options={STATUS_OPTIONS}
-          onChange={(v) => onFilterChange({ status: v })}
           size="sm"
           showCheck={false}
           className={styles.filterSelect}
