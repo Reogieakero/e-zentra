@@ -60,8 +60,8 @@ export default function StudentsStats({ stats }: StudentsStatsProps) {
       <StatCard
         icon={AlertTriangle}
         label="At-Risk Students"
-        value={stats?.atRiskTotal.toLocaleString() ?? "0"}
-        note={`${stats?.atRiskHigh ?? 0} high · ${stats?.atRiskModerate ?? 0} moderate`}
+        value={stats?.atRiskHigh.toLocaleString() ?? "0"}
+        note="High risk level"
         danger
       />
     </div>
