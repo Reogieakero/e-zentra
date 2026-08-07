@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStudents, useStudentDetail, type StudentDetail } from "@/lib/students";
 
 export interface StudentsQuery {
@@ -32,6 +32,7 @@ export function useStudentsQueryState() {
   });
   const [debounced, setDebounced] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const schoolYearInitialized = useRef(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -50,6 +51,17 @@ export function useStudentsQueryState() {
     schoolYearId: query.schoolYearId || undefined,
     status: query.status === "all" ? undefined : query.status,
   });
+
+  useEffect(() => {
+    if (schoolYearInitialized.current) return;
+    const activeYearId = data?.filters?.activeYearId;
+    if (activeYearId) {
+      schoolYearInitialized.current = true;
+      // Sync once: default the year filter to the active school year after the first load.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQuery((q) => ({ ...q, schoolYearId: activeYearId, page: 1 }));
+    }
+  }, [data?.filters?.activeYearId]);
 
   const detail = useStudentDetail(selectedId);
   const selectedDetail: StudentDetail["data"] | undefined = detail.data?.data ?? undefined;
