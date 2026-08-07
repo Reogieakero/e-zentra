@@ -11,8 +11,6 @@ import {
   FileText,
   FolderOpen,
   GraduationCap,
-  MoreHorizontal,
-  Pencil,
   RefreshCw,
   Search,
   UserCheck,
@@ -64,7 +62,13 @@ function formatDate(iso: string | null): string {
 function RiskBadge({ tone }: { tone: string | null }) {
   if (!tone || tone === "neutral") return <span className={styles.muted}>No data</span>;
   const badgeTone = tone === "high" ? "danger" : tone === "moderate" ? "warning" : "brand";
-  return <Badge tone={badgeTone}>{tone} risk</Badge>;
+  const label = tone.charAt(0).toUpperCase() + tone.slice(1);
+  return <Badge tone={badgeTone}>{label} Risk</Badge>;
+}
+
+function sessionLabel(status: string): string {
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  return status === "present" ? `Class Time (${label})` : label;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -124,13 +128,31 @@ function StudentDrawer({
   student: StudentDetail["data"] | undefined;
   onClose: () => void;
 }) {
-  const flags = student?.risk
+  const risk = student?.risk;
+  const flags = risk
     ? [
-        { label: "Academic average", ok: !student.risk.academicRisk, text: student.risk.academicRisk ? "below 75" : "above 75" },
-        { label: "Attendance rate", ok: !student.risk.attendanceRisk, text: student.risk.attendanceRisk ? "below 80%" : "above 80%" },
-        { label: "Behavioral incidents", ok: !student.risk.behavioralRisk, text: student.risk.behavioralRisk ? "logged concerns" : "0 logged" },
+        {
+          label: "Academic average",
+          ok: !risk.academicRisk,
+          value: student.generalAverage != null ? String(student.generalAverage) : "—",
+          detail: risk.academicRisk ? "Below passing 75" : "On or above 75",
+        },
+        {
+          label: "Attendance rate",
+          ok: !risk.attendanceRisk,
+          value: student.attendance != null ? `${student.attendance}%` : "—",
+          detail: risk.attendanceRisk ? "Below 80%" : "At or above 80%",
+        },
+        {
+          label: "Behavioral incidents",
+          ok: !risk.behavioralRisk,
+          value: String(student.anecdotalCount),
+          detail: risk.behavioralRisk ? "Logged concerns" : "No logged concerns",
+        },
       ]
     : [];
+  const flaggedCount = flags.filter((f) => !f.ok).length;
+  const riskLevelLabel = risk ? risk.riskLevel.charAt(0).toUpperCase() + risk.riskLevel.slice(1) : "";
 
   return (
     <div className={styles.drawerRoot} role="dialog" aria-modal="true">
@@ -186,9 +208,9 @@ function StudentDrawer({
               <section className={styles.drawerSection}>
                 <div className={styles.sectionLabelRow}>
                   <span className={styles.sectionLabel}>Risk Snapshot</span>
-                  {student.risk ? (
-                    <span className={`${styles.riskChip} ${styles[`riskChip_${student.risk.riskLevel}`]}`}>
-                      {student.risk.riskLevel} · {student.risk.termLabel ?? ""}
+                  {risk ? (
+                    <span className={`${styles.riskChip} ${styles[`riskChip_${risk.riskLevel}`]}`}>
+                      {riskLevelLabel} Risk · {flaggedCount} of 3
                     </span>
                   ) : (
                     <span className={styles.muted}>No assessment</span>
@@ -201,79 +223,52 @@ function StudentDrawer({
                     flags.map((row) => (
                       <div key={row.label} className={styles.riskRow}>
                         <span className={styles.riskRowLabel}>{row.label}</span>
-                        <span className={styles.riskRowValue}>{row.text}</span>
+                        <span className={styles.riskRowValueWrap}>
+                          <span className={`${styles.riskRowValue} ${row.ok ? styles.riskRowValueOk : styles.riskRowValueBad}`}>
+                            {row.value}
+                          </span>
+                          <span className={styles.riskRowDetail}>{row.detail}</span>
+                        </span>
                       </div>
                     ))
                   )}
                 </div>
               </section>
 
-              {student.academicRecord.length > 0 && (
-                <section className={styles.drawerSection}>
-                  <span className={styles.sectionLabel}>Academic Performance</span>
-                  {student.academicRecord.map((term) => (
-                    <div key={term.termLabel} className={styles.academicGroup}>
-                      <div className={styles.academicTermRow}>
-                        <span className={styles.academicTerm}>{term.termLabel}</span>
-                        <span className={styles.academicAvg}>Average {term.average ?? "—"}</span>
-                      </div>
-                      <div className={styles.academicList}>
-                        {term.grades.slice(0, 5).map((g) => (
-                          <div key={g.subjectName} className={styles.subjectRow}>
-                            <span className={styles.subjectName}>{g.subjectName}</span>
-                            <span className={styles.subjectGrade}>{g.grade}</span>
-                          </div>
-                        ))}
-                        {term.grades.length === 0 && <span className={styles.muted}>No grades posted yet.</span>}
-                      </div>
-                    </div>
-                  ))}
-                </section>
-              )}
-
               {student.recentAttendance.length > 0 && (
                 <section className={styles.drawerSection}>
                   <div className={styles.sectionLabelRow}>
                     <span className={styles.sectionLabel}>Attendance Records</span>
-                    <span className={styles.sectionHint}>Last 7 days</span>
+                    <span className={styles.sectionHint}>Showing last 7 days of attendance</span>
                   </div>
-                  <div className={styles.attendanceHeader}>
-                    <span>Date</span>
-                    <span>AM</span>
-                    <span>PM</span>
-                  </div>
-                  <div className={styles.attendanceList}>
+                  <div className={styles.attendanceCard}>
+                    <div className={styles.attendanceColHead}>
+                      <span className={styles.attColDate}>Date</span>
+                      <span className={styles.attColSession}>Morning Session</span>
+                      <span className={styles.attColBreak}>Break</span>
+                      <span className={styles.attColSession}>Afternoon Session</span>
+                    </div>
                     {student.recentAttendance.map((day) => (
-                      <div key={day.date} className={styles.attendanceRow}>
-                        <span className={styles.attendanceDate}>{formatDate(day.date)}</span>
-                        <span className={`${styles.attendanceSlot} ${day.morning ? styles[`attendance_${day.morning}`] : ""}`}>
-                          {day.morning ?? "—"}
-                        </span>
-                        <span className={`${styles.attendanceSlot} ${day.afternoon ? styles[`attendance_${day.afternoon}`] : ""}`}>
-                          {day.afternoon ?? "—"}
-                        </span>
+                      <div key={day.date} className={styles.attendanceDay}>
+                        <div className={styles.attendanceDate}>{formatDate(day.date)}</div>
+                        <div className={styles.attendanceSlots}>
+                          <span
+                            className={`${styles.attSession} ${day.morning ? styles[`att_${day.morning}`] : styles.att_missing}`}
+                          >
+                            {day.morning ? sessionLabel(day.morning) : "No Record"}
+                          </span>
+                          <span className={styles.attBreak}>Break</span>
+                          <span
+                            className={`${styles.attSession} ${day.afternoon ? styles[`att_${day.afternoon}`] : styles.att_missing}`}
+                          >
+                            {day.afternoon ? sessionLabel(day.afternoon) : "No Record"}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </section>
               )}
-
-              <section className={styles.drawerSection}>
-                <span className={styles.sectionLabel}>Personal Information</span>
-                <div className={styles.infoList}>
-                  <InfoRow label="Student ID" value={student.lrn} />
-                  <InfoRow label="Full Name" value={student.fullName} />
-                  <InfoRow label="Grade & Section" value={`${student.gradeLabel}${student.sectionName ? ` - ${student.sectionName}` : ""}`} />
-                  <InfoRow label="Adviser" value={student.adviserName ?? "—"} />
-                  <InfoRow
-                    label="Parent/Guardian"
-                    value={student.parents.length > 0 ? student.parents.map((p) => p.name).join(", ") : "—"}
-                  />
-                  <InfoRow label="Contact Number" value={student.phone ?? "—"} />
-                  <InfoRow label="Address" value={student.address ?? "—"} />
-                  <InfoRow label="Birthdate" value={student.birthdate ? formatDate(student.birthdate) : "—"} />
-                </div>
-              </section>
 
               <div className={styles.drawerActions}>
                 <button className={styles.drawerActionBtn}>
@@ -285,23 +280,11 @@ function StudentDrawer({
                 <button className={styles.drawerActionBtn}>
                   <FileText size={16} className={styles.drawerActionIcon} /> Anecdotal Records
                 </button>
-                <button className={styles.drawerActionBtn}>
-                  <Pencil size={16} className={styles.drawerActionIcon} /> Edit Student
-                </button>
               </div>
             </>
           )}
         </div>
       </aside>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className={styles.infoRow}>
-      <span className={styles.infoLabel}>{label}</span>
-      <span className={styles.infoValue}>{value}</span>
     </div>
   );
 }
@@ -381,12 +364,6 @@ function Root({ page, onSelect }: { page: NonNullable<StudentsPage>; onSelect: (
                       aria-label={`View ${s.firstName} ${s.lastName}`}
                     >
                       <Eye size={15} />
-                    </button>
-                    <button className={styles.iconBtn} title="Edit" aria-label={`Edit ${s.firstName} ${s.lastName}`}>
-                      <Pencil size={15} />
-                    </button>
-                    <button className={styles.iconBtn} title="More" aria-label={`More actions for ${s.firstName} ${s.lastName}`}>
-                      <MoreHorizontal size={15} />
                     </button>
                   </div>
                 </td>

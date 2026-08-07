@@ -830,142 +830,126 @@
   color: var(--muted-foreground);
 }
 
-.riskRowValue {
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.academicGroup {
+.riskRowValueWrap {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.academicTermRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.academicTerm {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.academicAvg {
-  font-size: 11px;
-  color: var(--muted-foreground);
-}
-
-.academicList {
-  display: flex;
-  flex-direction: column;
+  align-items: baseline;
   gap: 6px;
 }
 
-.subjectRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-}
-
-.subjectName {
+.riskRowValue {
+  font-weight: 700;
   color: var(--foreground);
 }
 
-.subjectGrade {
-  font-weight: 600;
-  color: var(--foreground);
+.riskRowValueOk {
+  color: var(--success-fg);
 }
 
-.attendanceHeader {
+.riskRowValueBad {
+  color: var(--danger-fg);
+}
+
+.riskRowDetail {
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.attendanceCard {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.attendanceColHead {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 90px 1fr 56px 1fr;
   gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--muted);
+  border-bottom: 1px solid var(--border);
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted-foreground);
-  padding: 0 12px;
 }
 
-.attendanceList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.attColSession {
+  text-align: center;
 }
 
-.attendanceRow {
+.attColBreak {
+  text-align: center;
+}
+
+.attendanceDay {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 90px 1fr 56px 1fr;
   gap: 8px;
   align-items: center;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-.attendanceDate {
-  color: var(--muted-foreground);
-}
-
-.attendanceSlot {
-  text-transform: capitalize;
-  color: var(--muted-foreground);
-}
-
-.attendance_present {
-  color: var(--success-fg);
-  font-weight: 600;
-}
-
-.attendance_absent {
-  color: var(--danger-fg);
-  font-weight: 600;
-}
-
-.attendance_late {
-  color: var(--warning-fg);
-  font-weight: 600;
-}
-
-.attendance_excused {
-  color: var(--info);
-}
-
-.infoList {
-  display: flex;
-  flex-direction: column;
-}
-
-.infoRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 8px 0;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
 
-.infoRow:last-child {
+.attendanceDay:last-child {
   border-bottom: none;
 }
 
-.infoLabel {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  flex-shrink: 0;
+.attendanceDate {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground);
 }
 
-.infoValue {
-  font-size: 12px;
+.attendanceSlots {
+  display: contents;
+}
+
+.attSession {
+  text-align: center;
+  padding: 8px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.attBreak {
+  text-align: center;
+  background: var(--muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 10px;
   font-weight: 500;
-  color: var(--foreground);
-  text-align: right;
+  color: var(--muted-foreground);
+  padding: 5px 4px;
+}
+
+.att_present {
+  background: var(--success-fg);
+  color: #fff;
+}
+
+.att_absent {
+  background: var(--danger-fg);
+  color: #fff;
+}
+
+.att_late {
+  background: var(--warning-fg);
+  color: #fff;
+}
+
+.att_excused {
+  background: var(--info);
+  color: #fff;
+}
+
+.att_missing {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border-strong);
 }
 
 .drawerActions {
