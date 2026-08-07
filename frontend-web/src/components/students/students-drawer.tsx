@@ -57,9 +57,43 @@ export default function StudentDrawer({ student, onClose }: StudentDrawerProps) 
         <div className={styles.drawerBody}>
           {!student ? (
             <div className={styles.drawerLoading}>
-              <div className={`${styles.skeleton} ${styles.skAvatar}`} />
-              <div className={`${styles.skeleton} ${styles.skName}`} />
-              <div className={`${styles.skeleton} ${styles.skSub}`} />
+              <div className={styles.skProfile}>
+                <div className={`${styles.skeleton} ${styles.skAvatar}`} />
+                <div className={styles.skProfileInfo}>
+                  <div className={`${styles.skeleton} ${styles.skName}`} />
+                  <div className={`${styles.skeleton} ${styles.skBadge}`} />
+                </div>
+              </div>
+
+              <div className={styles.skQuickStats}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className={`${styles.skStatCard} ${styles.skeleton}`}>
+                    <div className={`${styles.skeleton} ${styles.skStatValue}`} />
+                    <div className={`${styles.skeleton} ${styles.skStatLabel}`} />
+                  </div>
+                ))}
+              </div>
+
+              <div className={styles.skSection}>
+                <div className={`${styles.skeleton} ${styles.skSectionTitle}`} />
+                <div className={styles.skPanel}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className={styles.skRow}>
+                      <div className={`${styles.skeleton} ${styles.skRowLabel}`} />
+                      <div className={`${styles.skeleton} ${styles.skRowValue}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.skSection}>
+                <div className={`${styles.skeleton} ${styles.skSectionTitle}`} />
+                <div className={styles.skAttendance}>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className={`${styles.skAttendanceRow} ${styles.skeleton}`} />
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <>

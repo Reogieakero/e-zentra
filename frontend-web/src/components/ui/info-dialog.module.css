@@ -19,11 +19,17 @@
   box-shadow: var(--shadow-xs);
 }
 
-.infoButtonBare,
-.infoButtonBare:hover {
+.infoButtonBare {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
+}
+
+.infoButtonBare:hover {
+  background: var(--card);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  box-shadow: var(--shadow-xs);
 }
 
 .infoButtonIcon {
@@ -86,18 +92,20 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: none;
-  border-radius: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   flex-shrink: 0;
 }
 
 .modalClose:hover {
-  background: var(--muted);
-  color: var(--foreground);
+  background: var(--card);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  box-shadow: var(--shadow-xs);
 }
 
 .modalCloseIcon {

@@ -41,6 +41,9 @@
   --danger-bg: #fef2f2;
   --danger-bd: #fee2e2;
   --danger-fg: #dc2626;
+  --info-bg: #e0f2fe;
+  --info-bd: #bae6fd;
+  --info-fg: #0284c7;
 
   /* Chart containers / light tiles */
   --chart-bg: rgba(249, 250, 251, 0.4);
@@ -104,6 +107,9 @@ html[data-theme="dark"] {
   --danger-bg: rgba(239, 68, 68, 0.14);
   --danger-bd: rgba(239, 68, 68, 0.35);
   --danger-fg: #f87171;
+  --info-bg: rgba(2, 132, 199, 0.14);
+  --info-bd: rgba(2, 132, 199, 0.35);
+  --info-fg: #38bdf8;
 
   /* Chart containers / light tiles (dark) */
   --chart-bg: var(--card);
