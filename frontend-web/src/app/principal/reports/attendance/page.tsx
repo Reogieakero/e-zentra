@@ -30,6 +30,7 @@ import { useTheme } from "@/components/theme-provider";
 import { CustomSelect } from "@/components/ui/select";
 import { InfoDialog } from "@/components/ui/info-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
+import { ThreeDTrendOverlay } from "@/components/dashboard/three-d-trend-chart";
 import styles from "./report.module.css";
 
 const fmt = (n: number) => `${n.toFixed(1)}%`;
@@ -210,6 +211,7 @@ export default function AttendanceReportPage() {
   const [grade, setGrade] = useState(() => storedFilter(FILTER_KEYS.grade) || "all");
   const [section, setSection] = useState(() => storedFilter(FILTER_KEYS.section));
   const [page, setPage] = useState(0);
+  const [chartMode, setChartMode] = useState<"2d" | "3d">("2d");
   const { data, error, isLoading } = useAttendanceReport(view, grade, section);
   const { data: sectionOptions, isLoading: sectionsLoading } = useSectionsByGrade(grade);
   const { theme } = useTheme();
@@ -270,6 +272,11 @@ const chartData = useMemo(
     [data],
   );
   const chartMinWidth = chartData.length * 48;
+
+  const trendBars = useMemo(
+    () => chartData.map((c) => ({ day: c.name, rate: c.rate })),
+    [chartData],
+  );
 
   const chartScrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -482,6 +489,20 @@ const chartData = useMemo(
             </h4>
             <p className={styles.cardSubtitle}>School-wide daily attendance rate compared against the {targetRate}% target</p>
           </div>
+          <div className={styles.cardActions}>
+            <CustomSelect
+              id="report-chart-mode"
+              value={chartMode}
+              options={[
+                { value: "2d", label: "2D" },
+                { value: "3d", label: "3D" },
+              ]}
+              onChange={(v) => setChartMode(v as "2d" | "3d")}
+              className={styles.modeSelect}
+              size="sm"
+              showCheck={false}
+            />
+          </div>
         </div>
 
         <div className={styles.chartScroll} ref={chartScrollRef}>
@@ -536,6 +557,14 @@ const chartData = useMemo(
             {targetRate}% Target
           </span>
         </div>
+
+        {chartMode === "3d" && (
+          <ThreeDTrendOverlay
+            data={trendBars}
+            title={`${isDaily ? "Daily" : "Monthly"} Attendance Trend — 3D View`}
+            onClose={() => setChartMode("2d")}
+          />
+        )}
       </div>
 
       <div className={styles.twoCol}>

@@ -430,9 +430,10 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
 type ThreeDTrendOverlayProps = {
   data: TrendBar[];
   onClose: () => void;
+  title?: string;
 };
 
-export function ThreeDTrendOverlay({ data, onClose }: ThreeDTrendOverlayProps) {
+export function ThreeDTrendOverlay({ data, onClose, title }: ThreeDTrendOverlayProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -445,7 +446,7 @@ export function ThreeDTrendOverlay({ data, onClose }: ThreeDTrendOverlayProps) {
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.overlayCard} onClick={(e) => e.stopPropagation()}>
         <div className={styles.overlayHeader}>
-          <h4>Daily Attendance Trend — 3D View</h4>
+          <h4>{title ?? "Daily Attendance Trend — 3D View"}</h4>
           <button type="button" className={styles.overlayClose} onClick={onClose} aria-label="Close 3D view">
             ×
           </button>
