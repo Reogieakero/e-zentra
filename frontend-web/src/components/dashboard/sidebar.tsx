@@ -17,7 +17,7 @@ import styles from "./sidebar.module.css";
 const mainNav = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/principal/dashboard" },
   { key: "students", label: "Students", icon: Users, href: "/principal/students" },
-  { key: "attendance", label: "Attendance", icon: CalendarCheck2, href: "#" },
+  { key: "attendance", label: "Attendance", icon: CalendarCheck2, href: "/principal/attendance" },
   { key: "sf10", label: "SF10 Records", icon: FileText, href: "#" },
   { key: "anecdotal", label: "Anecdotal", icon: FileText, href: "#" },
   { key: "adm", label: "ADM", icon: BookOpen, href: "#" },

@@ -703,6 +703,308 @@ async function getSectionHeatmap() {
   });
 }
 
+export async function getAttendanceSummary() {
+  const key = cacheKey('dashboard', 'attendance-summary');
+  return getCached<{ data: unknown }>(key, DASHBOARD_CACHE_TTL, async () => ({
+    data: await loadAttendanceSummary(),
+  }));
+}
+
+async function loadAttendanceSummary() {
+  const activeYear = await prisma.schoolYear.findFirst({
+    where: { status: 'active' },
+    select: { id: true, yearLabel: true, startDate: true, endDate: true },
+  });
+
+  const empty = {
+    schoolYear: null,
+    totalEnrolled: 0,
+    today: { total: 0, present: 0, late: 0, absent: 0, excused: 0, presentRate: 0 },
+    monthlyTrend: [],
+    heatmap: [],
+    perfectAttendance: [],
+    lowAttendance: [],
+    topSections: [],
+  };
+
+  if (!activeYear) return empty;
+
+  const start = new Date(activeYear.startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(activeYear.endDate);
+  end.setHours(0, 0, 0, 0);
+  const endExclusive = new Date(end);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [records, enrolledStudents] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: {
+        term: { schoolYearId: activeYear.id },
+        attendanceDate: { gte: start, lt: endExclusive },
+      },
+      select: {
+        status: true,
+        attendanceDate: true,
+        studentId: true,
+        sectionId: true,
+        student: { select: { firstName: true, lastName: true, profilePhotoUrl: true } },
+        section: { select: { sectionName: true, gradeLevel: true } },
+      },
+    }),
+    countEnrolledStudents(activeYear.id),
+  ]);
+
+  const todayKey = dailyKey(today);
+  const todayCounts: StatusCount = { present: 0, absent: 0, late: 0, excused: 0 };
+  const byMonth = new Map<string, StatusCount>();
+  const byDay = new Map<string, StatusCount>();
+  const bySection = new Map<
+    string,
+    { sectionName: string; gradeLevel: string; counts: StatusCount; students: Set<string> }
+  >();
+  const byStudent = new Map<
+    string,
+    {
+      firstName: string;
+      lastName: string;
+      photo: string | null;
+      sectionName: string;
+      gradeLevel: string;
+    }
+  >();
+
+  for (const r of records) {
+    const mKey = monthlyKey(r.attendanceDate);
+    const dKey = dailyKey(r.attendanceDate);
+    let mb = byMonth.get(mKey);
+    if (!mb) {
+      mb = { present: 0, absent: 0, late: 0, excused: 0 };
+      byMonth.set(mKey, mb);
+    }
+    addStatus(mb, r.status);
+
+    let db = byDay.get(dKey);
+    if (!db) {
+      db = { present: 0, absent: 0, late: 0, excused: 0 };
+      byDay.set(dKey, db);
+    }
+    addStatus(db, r.status);
+
+    if (dKey === todayKey) addStatus(todayCounts, r.status);
+
+    let sec = bySection.get(r.sectionId);
+    if (!sec) {
+      sec = {
+        sectionName: r.section.sectionName,
+        gradeLevel: r.section.gradeLevel,
+        counts: { present: 0, absent: 0, late: 0, excused: 0 },
+        students: new Set(),
+      };
+      bySection.set(r.sectionId, sec);
+    }
+    addStatus(sec.counts, r.status);
+    sec.students.add(r.studentId);
+
+    if (!byStudent.has(r.studentId)) {
+      byStudent.set(r.studentId, {
+        firstName: r.student.firstName,
+        lastName: r.student.lastName,
+        photo: r.student.profilePhotoUrl,
+        sectionName: r.section.sectionName,
+        gradeLevel: r.section.gradeLevel,
+      });
+    }
+  }
+
+  const monthlyTrend = buildMonthlySeries(byMonth)
+    .filter((s) => s.rate !== null)
+    .map((s) => ({ key: s.key, label: s.shortLabel, rate: s.rate }));
+
+  const heatmap = buildSchoolYearHeatmap(byDay, start, endExclusive, today);
+
+  const perfectAttendance = buildPerfectAttendance(records, byStudent);
+  const lowAttendance = buildLowAttendance(records, byStudent);
+  const topSections = buildTopSections(bySection);
+
+  const totals = todayCounts;
+  const todayTotal = totals.present + totals.absent + totals.late + totals.excused;
+  const todayRate = todayTotal > 0 ? round1((totals.present / todayTotal) * 100) : 0;
+
+  return {
+    schoolYear: activeYear.yearLabel,
+    totalEnrolled: enrolledStudents,
+    today: {
+      total: todayTotal,
+      present: totals.present,
+      late: totals.late,
+      absent: totals.absent,
+      excused: totals.excused,
+      presentRate: todayRate,
+    },
+    monthlyTrend,
+    heatmap,
+    perfectAttendance,
+    lowAttendance,
+    topSections,
+  };
+}
+
+function buildSchoolYearHeatmap(
+  byDay: Map<string, StatusCount>,
+  start: Date,
+  endExclusive: Date,
+  today: Date
+) {
+  const cells: Array<{ key: string; label: string; rate: number; level: number }> = [];
+  const cur = new Date(start);
+  while (cur < endExclusive && cur <= today) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) {
+      const key = dailyKey(cur);
+      const c = byDay.get(key);
+      const total = c ? c.present + c.absent + c.late + c.excused : 0;
+      const rate = total > 0 ? Math.round((c!.present / total) * 1000) / 10 : 0;
+      let level = 0;
+      if (total > 0) {
+        if (rate >= 95) level = 6;
+        else if (rate >= 90) level = 5;
+        else if (rate >= 85) level = 4;
+        else if (rate >= 75) level = 3;
+        else if (rate >= 60) level = 2;
+        else level = 1;
+      }
+      cells.push({ key, label: shortDate(cur), rate, level });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return cells;
+}
+
+function buildPerfectAttendance(
+  records: Array<{ studentId: string; status: AttendanceStatus; attendanceDate: Date }>,
+  byStudent: Map<
+    string,
+    { firstName: string; lastName: string; photo: string | null; sectionName: string; gradeLevel: string }
+  >
+) {
+  const studentDays = new Map<string, Map<string, StatusCount>>();
+  for (const r of records) {
+    const key = dailyKey(r.attendanceDate);
+    let days = studentDays.get(r.studentId);
+    if (!days) {
+      days = new Map();
+      studentDays.set(r.studentId, days);
+    }
+    let c = days.get(key);
+    if (!c) {
+      c = { present: 0, absent: 0, late: 0, excused: 0 };
+      days.set(key, c);
+    }
+    addStatus(c, r.status);
+  }
+
+  const rows: Array<{
+    studentId: string;
+    fullName: string;
+    sectionName: string;
+    gradeLabel: string;
+    daysPresent: number;
+    rate: number;
+  }> = [];
+  for (const [studentId, days] of studentDays) {
+    let presentDays = 0;
+    const totalDays = days.size;
+    for (const c of days.values()) {
+      if (c.present > 0 && c.absent === 0 && c.late === 0 && c.excused === 0) presentDays += 1;
+    }
+    if (totalDays === 0) continue;
+    const ratePercent = Math.round((presentDays / totalDays) * 100);
+    const info = byStudent.get(studentId);
+    if (!info) continue;
+    rows.push({
+      studentId,
+      fullName: `${info.firstName} ${info.lastName}`,
+      sectionName: info.sectionName,
+      gradeLabel: GRADE_LABELS[info.gradeLevel] ?? info.gradeLevel,
+      daysPresent: presentDays,
+      rate: ratePercent,
+    });
+  }
+  return rows
+    .filter((r) => r.rate === 100)
+    .sort((a, b) => b.daysPresent - a.daysPresent)
+    .slice(0, 18);
+}
+
+function buildLowAttendance(
+  records: Array<{ studentId: string; status: AttendanceStatus; attendanceDate: Date }>,
+  byStudent: Map<
+    string,
+    { firstName: string; lastName: string; photo: string | null; sectionName: string; gradeLevel: string }
+  >
+) {
+  const perStudent = new Map<string, StatusCount>();
+  for (const r of records) {
+    let c = perStudent.get(r.studentId);
+    if (!c) {
+      c = { present: 0, absent: 0, late: 0, excused: 0 };
+      perStudent.set(r.studentId, c);
+    }
+    addStatus(c, r.status);
+  }
+
+  const rows: Array<{
+    studentId: string;
+    fullName: string;
+    sectionName: string;
+    gradeLabel: string;
+    rate: number;
+    tone: 'danger' | 'warn';
+  }> = [];
+  for (const [studentId, c] of perStudent) {
+    const total = c.present + c.absent + c.late + c.excused;
+    if (total === 0) continue;
+    const rate = Math.round((c.present / total) * 100);
+    if (rate >= 80) continue;
+    const info = byStudent.get(studentId);
+    if (!info) continue;
+    rows.push({
+      studentId,
+      fullName: `${info.firstName} ${info.lastName}`,
+      sectionName: info.sectionName,
+      gradeLabel: GRADE_LABELS[info.gradeLevel] ?? info.gradeLevel,
+      rate,
+      tone: rate < 70 ? 'danger' : 'warn',
+    });
+  }
+  return rows.sort((a, b) => a.rate - b.rate).slice(0, 7);
+}
+
+function buildTopSections(
+  bySection: Map<
+    string,
+    { sectionName: string; gradeLevel: string; counts: StatusCount; students: Set<string> }
+  >
+) {
+  const rows = Array.from(bySection.entries()).map(([sectionId, s]) => {
+    const total = s.counts.present + s.counts.absent + s.counts.late + s.counts.excused;
+    const rate = total > 0 ? Math.round((s.counts.present / total) * 1000) / 10 : 0;
+    return {
+      sectionId,
+      sectionName: s.sectionName,
+      gradeLabel: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
+      rate,
+      studentCount: s.students.size,
+    };
+  });
+  return rows
+    .filter((r) => r.studentCount > 0)
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 6);
+}
+
 async function getDailyTrend(today: Date) {
   const dow = today.getDay();
   const monday = new Date(today);
