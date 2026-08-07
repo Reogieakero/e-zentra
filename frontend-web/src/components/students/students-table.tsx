@@ -20,7 +20,6 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
             <th className={styles.th}>Student</th>
             <th className={styles.th}>Grade & Section</th>
             <th className={styles.th}>Gender</th>
-            <th className={styles.th}>Contact Number</th>
             <th className={styles.th}>Account Status</th>
             <th className={styles.th}>SF10</th>
             <th className={styles.th}>Attendance</th>
@@ -57,9 +56,6 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
               </td>
               <td className={styles.td}>
                 <span className={styles.tdText}>{s.sex.charAt(0).toUpperCase() + s.sex.slice(1)}</span>
-              </td>
-              <td className={styles.td}>
-                <span className={styles.tdText}>{s.phone ?? "—"}</span>
               </td>
               <td className={styles.td}>
                 <StatusBadge status={s.accountStatus} />

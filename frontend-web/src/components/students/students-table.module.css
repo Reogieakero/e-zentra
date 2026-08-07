@@ -1,5 +1,7 @@
 .tableWrap {
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .table {
@@ -9,6 +11,9 @@
 }
 
 .tableHeadRow {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   border-bottom: 1px solid var(--border);
   background: var(--muted);
 }
