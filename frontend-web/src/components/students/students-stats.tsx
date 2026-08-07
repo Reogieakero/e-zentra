@@ -55,7 +55,7 @@ export default function StudentsStats({ stats }: StudentsStatsProps) {
     <div className={styles.statGrid}>
       <StatCard icon={Users} label="Total Students" value={stats?.total.toLocaleString() ?? "0"} note="All enrolled records" />
       <StatCard icon={UserCheck} label="Active Students" value={stats?.active.toLocaleString() ?? "0"} note="Active student accounts" />
-      <StatCard icon={UserPlus} label="New Enrollees" value={stats?.newEnrollees.toLocaleString() ?? "0"} note="Active school year" />
+      <StatCard icon={UserPlus} label="New Enrollees" value={stats?.newEnrollees.toLocaleString() ?? "0"} note="Pending student accounts" />
       <StatCard icon={GraduationCap} label="Graduated Students" value={stats?.graduated.toLocaleString() ?? "0"} note="All-time total" />
       <StatCard
         icon={AlertTriangle}
