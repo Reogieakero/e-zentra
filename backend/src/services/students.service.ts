@@ -1,6 +1,7 @@
 import { AccountStatus, AttendanceStatus, GradeLevel, Prisma, Session, RiskLevel } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
+import { classifyLiveRisk } from './risk.service';
 
 export interface ListStudentsQuery {
   page: number;
@@ -116,7 +117,7 @@ export async function listStudents(query: ListStudentsQuery) {
   const ids = profiles.map((p) => p.id);
   const hasIds = ids.length > 0;
 
-  const [attendanceRows, riskRows, reportRows, lastUpdatedRows] = await Promise.all([
+  const [attendanceRows, finalGradeRows, anecdoteRows, reportRows, lastUpdatedRows] = await Promise.all([
     hasIds
       ? prisma.attendanceRecord.groupBy({
           by: ['studentId', 'status'],
@@ -125,11 +126,15 @@ export async function listStudents(query: ListStudentsQuery) {
         })
       : [],
     hasIds
-      ? prisma.studentRiskAssessment.findMany({
+      ? prisma.finalGrade.findMany({
           where: { studentId: { in: ids } },
-          select: { studentId: true, riskLevel: true },
-          orderBy: { computedAt: 'desc' },
-          take: ids.length * 4,
+          select: { studentId: true, transmutedGrade: true },
+        })
+      : [],
+    hasIds
+      ? prisma.anecdotalRecord.findMany({
+          where: { studentId: { in: ids } },
+          select: { studentId: true },
         })
       : [],
     hasIds
@@ -156,9 +161,17 @@ export async function listStudents(query: ListStudentsQuery) {
     attendanceMap.set(a.studentId, bucket);
   }
 
-  const riskMap = new Map<string, string>();
-  for (const r of riskRows) {
-    if (!riskMap.has(r.studentId)) riskMap.set(r.studentId, r.riskLevel);
+  const academicAvgMap = new Map<string, number | null>();
+  for (const s of profiles) {
+    const grades = finalGradeRows
+      .filter((g) => g.studentId === s.id)
+      .map((g) => g.transmutedGrade.toNumber());
+    academicAvgMap.set(s.id, grades.length ? grades.reduce((a, b) => a + b, 0) / grades.length : null);
+  }
+
+  const anecdoteCountMap = new Map<string, number>();
+  for (const a of anecdoteRows) {
+    anecdoteCountMap.set(a.studentId, (anecdoteCountMap.get(a.studentId) ?? 0) + 1);
   }
 
   const reportMap = new Map<string, string>();
@@ -173,6 +186,7 @@ export async function listStudents(query: ListStudentsQuery) {
 
   const data = profiles.map((p) => {
     const counts = attendanceMap.get(p.id);
+    const attendance = counts ? attendanceRate(counts.present, counts.total) : null;
     const lastUpdated = lastUpdatedMap.get(p.id) ?? p.user.createdAt;
     return {
       studentId: p.id,
@@ -188,8 +202,8 @@ export async function listStudents(query: ListStudentsQuery) {
       sectionName: p.section?.sectionName ?? null,
       adviser: p.section?.adviser ? `${p.section.adviser.firstName} ${p.section.adviser.lastName}`.trim() : null,
       accountStatus: p.user.accountStatus,
-      attendance: counts ? attendanceRate(counts.present, counts.total) : null,
-      riskLevel: riskMap.get(p.id) ?? null,
+      attendance,
+      riskLevel: classifyLiveRisk(academicAvgMap.get(p.id) ?? null, attendance, anecdoteCountMap.get(p.id) ?? 0),
       sf10: reportMap.get(p.id) ?? 'pending',
       lastUpdated: lastUpdated.toISOString(),
     };

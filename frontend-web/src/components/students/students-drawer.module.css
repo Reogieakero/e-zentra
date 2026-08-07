@@ -128,26 +128,32 @@
 
 .drawerProfile {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
+  gap: 12px;
   padding-bottom: 8px;
 }
 
 .drawerAvatar {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: var(--brand-gradient);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 600;
   border: 1px solid var(--success-bd-soft);
   object-fit: cover;
-  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.drawerProfileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
 .drawerName {
@@ -160,7 +166,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .quickStats {
@@ -215,6 +221,28 @@
   background: var(--muted);
   padding: 3px 8px;
   border-radius: 6px;
+}
+
+.sectionHintWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewAllLink {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s;
+}
+
+.viewAllLink:hover {
+  color: var(--brand-secondary);
+  text-decoration: underline;
 }
 
 .riskChip {
@@ -384,38 +412,4 @@
   background: var(--muted);
   color: var(--muted-foreground);
   border: 1px dashed var(--border-strong);
-}
-
-.drawerActions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding-top: 4px;
-}
-
-.drawerActionBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-foreground);
-  background: var(--muted);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.drawerActionBtn:hover {
-  background: var(--card);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-}
-
-.drawerActionIcon {
-  width: 15px;
-  height: 15px;
 }
