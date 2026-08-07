@@ -6,6 +6,7 @@
   gap: 12px;
   padding: 14px 16px;
   border-top: 1px solid var(--border);
+  margin-top: auto;
 }
 
 @media (min-width: 640px) {
@@ -31,20 +32,18 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
+  padding: 4px 6px;
   font-size: 12px;
   font-weight: 500;
   color: var(--muted-foreground);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: none;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition: color 0.15s;
 }
 
 .pageArrow:hover:not(:disabled),
 .paginationArrow:hover:not(:disabled) {
-  background: var(--brand-weak);
   color: var(--brand-primary);
 }
 
@@ -55,8 +54,8 @@
 }
 
 .pageNum {
-  width: 28px;
-  height: 28px;
+  min-width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -65,25 +64,21 @@
   color: var(--muted-foreground);
   background: transparent;
   border: none;
-  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition: color 0.15s;
 }
 
 .pageNum:hover {
-  background: var(--brand-weak);
   color: var(--brand-primary);
 }
 
 .pageNumActive {
-  background: var(--brand-gradient);
-  color: #fff;
-  font-weight: 600;
+  color: var(--brand-primary);
+  font-weight: 700;
 }
 
 .pageNumActive:hover {
-  background: var(--brand-gradient);
-  color: #fff;
+  color: var(--brand-primary);
 }
 
 .pageEllipsis {

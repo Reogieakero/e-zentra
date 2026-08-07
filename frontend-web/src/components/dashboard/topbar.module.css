@@ -62,40 +62,8 @@
 }
 
 .search {
-  position: relative;
   display: none;
   width: 192px;
-}
-
-.searchIcon {
-  width: 14px;
-  height: 14px;
-  color: var(--brand-primary);
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.searchInput {
-  width: 100%;
-  padding: 6px 12px 6px 32px;
-  font-size: 12px;
-  color: var(--foreground);
-  background: var(--muted);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  outline: none;
-  transition: border-color 0.2s, background-color 0.2s;
-}
-
-.searchInput:focus {
-  border-color: var(--brand-primary);
-  background: var(--card);
-}
-
-.searchInput::placeholder {
-  color: var(--muted-foreground);
 }
 
 .dot {
