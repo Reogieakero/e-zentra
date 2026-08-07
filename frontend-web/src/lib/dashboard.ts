@@ -219,6 +219,88 @@ export interface AiRecommendationResult {
   reason?: string;
 }
 
+export interface TodayAttendance {
+  total: number;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  presentRate: number;
+}
+
+export interface MonthlyTrendPoint {
+  key: string;
+  label: string;
+  rate: number | null;
+}
+
+export interface HeatmapCell {
+  key: string;
+  label: string;
+  rate: number;
+  level: number;
+}
+
+export interface PerfectAttendanceRow {
+  studentId: string;
+  fullName: string;
+  sectionName: string;
+  gradeLabel: string;
+  daysPresent: number;
+  rate: number;
+}
+
+export interface LowAttendanceRow {
+  studentId: string;
+  fullName: string;
+  sectionName: string;
+  gradeLabel: string;
+  rate: number;
+  tone: "danger" | "warn";
+}
+
+export interface TopSection {
+  sectionId: string;
+  sectionName: string;
+  gradeLabel: string;
+  rate: number;
+  studentCount: number;
+}
+
+export interface AttendanceSummary {
+  schoolYear: string | null;
+  totalEnrolled: number;
+  today: TodayAttendance;
+  monthlyTrend: MonthlyTrendPoint[];
+  heatmap: HeatmapCell[];
+  perfectAttendance: PerfectAttendanceRow[];
+  lowAttendance: LowAttendanceRow[];
+  topSections: TopSection[];
+}
+
+export async function fetchAttendanceSummary(): Promise<AttendanceSummary> {
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  const { data } = await api<{ data: AttendanceSummary }>(`/dashboard/attendance/summary`, { token });
+  return data;
+}
+
+export function useAttendanceSummary() {
+  const userId = getUser()?.id ?? "anon";
+  const key = userId === "anon" ? null : ["/dashboard/attendance/summary", userId];
+  const { data, error, isLoading, isValidating, mutate } = useSWR<AttendanceSummary>(
+    key,
+    () => fetchAttendanceSummary(),
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: REFRESH_INTERVAL_MS,
+      keepPreviousData: true,
+    }
+  );
+  return { data, error: error ?? null, isLoading, isValidating, refresh: () => mutate() };
+}
+
 export async function fetchAiRecommendations(
   view: "monthly" | "daily",
   grade?: string,

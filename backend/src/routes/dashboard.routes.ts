@@ -6,6 +6,7 @@ import {
   getDashboardOverview,
   getAttendanceReport,
   listSectionsByGrade,
+  getAttendanceSummary,
 } from '../services/dashboard.service';
 import { getAiRecommendations } from '../services/ai.service';
 
@@ -27,6 +28,15 @@ router.get(
   asyncHandler(async (req, res) => {
     const month = typeof req.query.month === 'string' ? req.query.month : undefined;
     const result = await getDashboardOverview(month);
+    res.json(result);
+  })
+);
+
+router.get(
+  '/dashboard/attendance/summary',
+  requireRole(...STAFF_VIEW_ROLES),
+  asyncHandler(async (req, res) => {
+    const result = await getAttendanceSummary();
     res.json(result);
   })
 );
