@@ -1,0 +1,140 @@
+.admCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  min-height: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.badgeWarning {
+  color: var(--warning-fg);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-bd);
+}
+
+.admList {
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admList::-webkit-scrollbar {
+  display: none;
+}
+
+.admItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-bd);
+}
+
+.admItem:hover {
+  border-color: var(--warning-bd-strong);
+}
+
+.admIcon {
+  padding: 6px;
+  border-radius: 6px;
+  background: var(--warning-bg-strong);
+  border: 1px solid var(--warning-bd-strong);
+  color: var(--warning-fg);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.admIconGlyph {
+  width: 14px;
+  height: 14px;
+}
+
+.admInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.admTitle {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admMeta {
+  display: block;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admStatus {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--warning-fg);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.cardLink {
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.cardLink:hover {
+  text-decoration: underline;
+}
+
+.emptyText {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  padding: 12px 0;
+}
