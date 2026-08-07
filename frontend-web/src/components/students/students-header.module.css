@@ -39,28 +39,21 @@
   flex-shrink: 0;
 }
 
-.exportButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
+.modalIntro {
   color: var(--muted-foreground);
-  background: var(--card);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.exportButton:hover:not(:disabled) {
-  background: var(--brand-weak);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
+.modalSection {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-top: 4px;
 }
 
-.exportButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.modalList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }

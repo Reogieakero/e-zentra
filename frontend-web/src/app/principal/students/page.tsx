@@ -8,7 +8,6 @@ import StudentsPagination from "@/components/students/students-pagination";
 import { StudentsEmpty, StudentsError, StudentsTableLoading } from "@/components/students/students-states";
 import StudentDrawer from "@/components/students/students-drawer";
 import { useStudentsQueryState } from "@/lib/use-students-query";
-import { exportStudentsCsv } from "@/lib/students-export";
 import styles from "./students.module.css";
 
 export default function StudentsPage() {
@@ -38,7 +37,7 @@ export default function StudentsPage() {
 
   return (
     <>
-      <StudentsHeader onExport={() => exportStudentsCsv(data?.data ?? [])} exportDisabled={!data} />
+      <StudentsHeader />
 
       {!data ? <StudentsStatsLoading cards={5} /> : <StudentsStats stats={stats} />}
 
