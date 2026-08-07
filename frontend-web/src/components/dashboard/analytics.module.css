@@ -130,30 +130,17 @@
   flex-shrink: 0;
 }
 
-.modeToggle {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: 8px;
-  background: var(--muted);
-  border: 1px solid var(--border);
+.modeSelect {
+  width: 76px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
-.modeBtn {
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted-foreground);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.modeBtnActive {
-  background: var(--card);
-  color: var(--brand-primary);
-  box-shadow: var(--shadow-xs);
+.chartCardActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .viewSelect,
