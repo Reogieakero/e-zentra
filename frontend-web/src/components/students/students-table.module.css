@@ -101,12 +101,6 @@
   white-space: nowrap;
 }
 
-.studentLrn {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  white-space: nowrap;
-}
-
 .attendanceValue {
   font-size: 12px;
   font-weight: 600;

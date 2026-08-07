@@ -1,5 +1,5 @@
-import { Search } from "lucide-react";
 import { CustomSelect } from "@/components/ui/select";
+import { SearchInput } from "@/components/ui/search-input";
 import type { StudentsQuery } from "@/lib/use-students-query";
 import styles from "./students-toolbar.module.css";
 
@@ -46,15 +46,13 @@ export default function StudentsToolbar({
         <p className={styles.cardSubtitle}>Manage all enrolled students.</p>
       </div>
       <div className={styles.toolbarFilters}>
-        <div className={styles.searchWrap}>
-          <Search size={15} className={styles.searchIcon} aria-hidden />
-          <input
-            className={styles.searchInput}
-            placeholder="Search student name or ID…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={onSearchChange}
+          placeholder="Search student name or ID…"
+          aria-label="Search students"
+          className={styles.searchWrap}
+        />
         <CustomSelect
           value={query.grade}
           options={GRADE_OPTIONS}
