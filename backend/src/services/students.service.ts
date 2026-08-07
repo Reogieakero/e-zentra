@@ -245,6 +245,8 @@ export async function listStudents(query: ListStudentsQuery) {
       adviser: p.section?.adviser ? `${p.section.adviser.firstName} ${p.section.adviser.lastName}`.trim() : null,
       accountStatus: p.user.accountStatus,
       attendance,
+      academicAvg: academicAvgMap.get(p.id) ?? null,
+      anecdotalCount: anecdoteCountMap.get(p.id) ?? 0,
       riskLevel: classifyLiveRisk(academicAvgMap.get(p.id) ?? null, attendance, anecdoteCountMap.get(p.id) ?? 0),
       sf10: reportMap.get(p.id) ?? 'pending',
       lastUpdated: lastUpdated.toISOString(),
