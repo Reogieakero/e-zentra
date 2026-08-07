@@ -89,7 +89,6 @@ export async function listStudents(query: ListStudentsQuery) {
         lrn: true,
         sex: true,
         gradeLevel: true,
-        createdAt: true,
         user: {
           select: {
             id: true,
@@ -99,6 +98,7 @@ export async function listStudents(query: ListStudentsQuery) {
             contactNumber: true,
             profilePhotoUrl: true,
             accountStatus: true,
+            createdAt: true,
           },
         },
         section: {
@@ -173,7 +173,7 @@ export async function listStudents(query: ListStudentsQuery) {
 
   const data = profiles.map((p) => {
     const counts = attendanceMap.get(p.id);
-    const lastUpdated = lastUpdatedMap.get(p.id) ?? p.createdAt;
+    const lastUpdated = lastUpdatedMap.get(p.id) ?? p.user.createdAt;
     return {
       studentId: p.id,
       lrn: p.lrn,
