@@ -255,8 +255,7 @@ export async function listStudents(query: ListStudentsQuery) {
     prisma.schoolYear.findFirst({ where: { status: 'active' }, select: { id: true } }),
     Promise.all([
       prisma.studentProfile.count({ where: statsWhere }),
-      prisma.user.count({ where: { role: 'student', accountStatus: 'active' } }),
-      prisma.user.count({ where: { role: 'student', accountStatus: 'pending' } }),
+      prisma.admLearnerProfile.findMany({ where: { status: 'approved' }, select: { studentId: true } }),
       prisma.studentProfile.count({ where: { AND: [statsWhere, { section: { schoolYear: { status: 'completed' } } }] } }),
     ]),
     prisma.schoolYear.findMany({ select: { id: true, yearLabel: true }, orderBy: { yearLabel: 'desc' } }),
@@ -276,9 +275,8 @@ export async function listStudents(query: ListStudentsQuery) {
     hasMore: query.page * query.pageSize < total,
     stats: {
       total: stats[0],
-      active: stats[1],
-      newEnrollees: stats[2],
-      graduated: stats[3],
+      adm: new Set(stats[1].map((p) => p.studentId)).size,
+      graduated: stats[2],
       atRiskTotal: atRisk.total,
       atRiskHigh: atRisk.high,
       atRiskModerate: atRisk.moderate,
