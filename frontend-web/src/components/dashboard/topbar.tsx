@@ -2,11 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Menu, Moon, Search, Sun, User } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Moon, Sun, User } from "lucide-react";
 import { api } from "@/lib/api";
 import { clearSession, getTokens, getUser } from "@/lib/auth";
 import { useClickOutside } from "@/lib/use-click-outside";
 import { useTheme, type Theme } from "@/components/theme-provider";
+import { SearchInput } from "@/components/ui/search-input";
 import styles from "./topbar.module.css";
 
 interface TopbarProps {
@@ -36,6 +37,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, () => setMenuOpen(false), menuOpen);
   const user = getUser();
@@ -67,10 +69,13 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
       </div>
 
       <div className={styles.right}>
-        <div className={styles.search}>
-          <Search className={styles.searchIcon} />
-          <input type="text" placeholder="Search..." className={styles.searchInput} />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search..."
+          aria-label="Search"
+          className={styles.search}
+        />
 
         <button className={styles.iconBtn} aria-label="Notifications">
           <Bell className={styles.icon} />

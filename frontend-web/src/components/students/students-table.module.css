@@ -107,28 +107,18 @@
   color: var(--foreground);
 }
 
-.rowActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
-
-.iconBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--muted-foreground);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.iconBtn:hover {
-  background: var(--brand-weak);
+.viewLink {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--brand-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s;
+}
+
+.viewLink:hover {
+  color: var(--brand-secondary);
+  text-decoration: underline;
 }

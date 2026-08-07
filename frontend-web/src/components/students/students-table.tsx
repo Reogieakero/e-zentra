@@ -1,4 +1,3 @@
-import { Eye } from "lucide-react";
 import type { StudentsPage } from "@/lib/students";
 import { initials } from "@/lib/students-format";
 import { RiskBadge, Sf10Badge, StatusBadge } from "@/components/students/badges";
@@ -75,16 +74,9 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
                 <RiskBadge tone={s.riskLevel ?? "neutral"} />
               </td>
               <td className={`${styles.td} ${styles.tdRight}`}>
-                <div className={styles.rowActions}>
-                  <button
-                    className={styles.iconBtn}
-                    onClick={() => onSelect(s.studentId)}
-                    title="View"
-                    aria-label={`View ${s.firstName} ${s.lastName}`}
-                  >
-                    <Eye size={15} />
-                  </button>
-                </div>
+                <button className={styles.viewLink} onClick={() => onSelect(s.studentId)}>
+                  View
+                </button>
               </td>
             </tr>
           ))}
