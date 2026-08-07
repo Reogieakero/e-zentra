@@ -1,0 +1,122 @@
+.kpiGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.kpiCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.2s;
+}
+
+.kpiCard:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.kpiCardHeader {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kpiCardIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--brand-primary);
+}
+
+.kpiAttendanceSelect {
+  width: 160px;
+  min-width: 0;
+}
+
+.kpiStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.kpiStat {
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--success-bg);
+  border: 1px solid var(--success-bd);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.kpiStat:hover {
+  border-color: var(--success-bd-hover);
+  background: var(--success-bg-hover);
+}
+
+.kpiStatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.kpiStatHeader > span {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpiStatIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--brand-primary);
+}
+
+.kpiValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.kpiNote {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.kpiNoteStrong {
+  color: var(--brand-primary);
+}
+
+.kpiNoteIcon {
+  width: 10px;
+  height: 10px;
+  color: var(--brand-primary);
+}
+
+@media (min-width: 640px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

@@ -1,0 +1,230 @@
+.atRiskCard {
+  background: #111827;
+  border-color: #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.cardSubtitle {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.badgeDanger {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.atRiskList {
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.atRiskCarousel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atRiskItem {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.atRiskItemHigh {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(254, 202, 202, 0.28);
+}
+
+.atRiskItemModerate {
+  background: rgba(6, 78, 59, 0.38);
+  border-color: rgba(187, 247, 208, 0.28);
+}
+
+.atRiskItemLow {
+  background: rgba(124, 45, 18, 0.38);
+  border-color: rgba(254, 215, 170, 0.28);
+}
+
+.atRiskItem:hover {
+  border-color: #374151;
+}
+
+.atRiskTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.avatarHigh {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
+.avatarModerate {
+  background: rgba(34, 197, 94, 0.18);
+  color: #6ee7b7;
+}
+
+.avatarLow {
+  background: rgba(234, 88, 12, 0.18);
+  color: #fdba74;
+}
+
+.atRiskAvatar {
+  width: 48px;
+  height: 48px;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.atRiskName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f9fafb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atRiskDetail {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.atRiskDetailCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.atRiskDetailLabel {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+
+.atRiskDetailValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f9fafb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atRiskDetailValueHigh {
+  color: #f87171;
+}
+
+.atRiskDetailValueModerate {
+  color: #4ade80;
+}
+
+.atRiskDetailValueLow {
+  color: #fb923c;
+}
+
+.atRiskDots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.atRiskDot {
+  width: 6px;
+  height: 6px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  background: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.atRiskDot:hover {
+  background: var(--muted-foreground);
+}
+
+.atRiskDotActive {
+  background: #f87171;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #9ca3af;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cardLink {
+  font-weight: 500;
+  color: #22c55e;
+  cursor: pointer;
+}
+
+.cardLink:hover {
+  text-decoration: underline;
+}
+
+.emptyText {
+  font-size: 12px;
+  color: #9ca3af;
+  padding: 12px 0;
+}
