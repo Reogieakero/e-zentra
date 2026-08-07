@@ -111,3 +111,102 @@ export function useDashboardOverview(month?: string) {
     refresh: () => mutate(),
   };
 }
+
+export interface ReportSeriesPoint {
+  key: string;
+  shortLabel: string;
+  label: string;
+  year: number;
+  month: number;
+  total: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  rate: number | null;
+}
+
+export interface ReportStatBlocks {
+  averageRate: number;
+  bestPeriod: { key: string; label: string; rate: number } | null;
+  lowestPeriod: { key: string; label: string; rate: number } | null;
+  periodsAboveTarget: number;
+  periodsTracked: number;
+}
+
+export interface ReportGradeLevel {
+  gradeLevel: string;
+  label: string;
+  presentCount: number;
+  absentCount: number;
+  totalCount: number;
+  rate: number;
+}
+
+export interface AttendanceReport {
+  schoolYear: string | null;
+  term: string | null;
+  targetRate: number;
+  granularity: "monthly" | "daily";
+  enrollmentTotal: number;
+  series: ReportSeriesPoint[];
+  statBlocks: ReportStatBlocks;
+  gradeLevels: ReportGradeLevel[];
+  insights: string[];
+}
+
+export interface ReportSection {
+  id: string;
+  sectionName: string;
+}
+
+export async function fetchAttendanceReport(
+  token: string,
+  view: "monthly" | "daily",
+  grade?: string,
+  section?: string
+): Promise<AttendanceReport> {
+  const params = new URLSearchParams({ view });
+  if (grade && grade !== "all") params.set("grade", grade);
+  if (section) params.set("section", section);
+  const { data } = await api<{ data: AttendanceReport }>(`/dashboard/attendance/report?${params.toString()}`, { token });
+  return data;
+}
+
+export async function fetchSectionsByGrade(token: string, gradeLevel: string): Promise<ReportSection[]> {
+  return api<ReportSection[]>(`/dashboard/attendance/sections?grade=${gradeLevel}`, { token });
+}
+
+export function useAttendanceReport(view: "monthly" | "daily", grade: string = "all", section: string = "") {
+  const userId = getUser()?.id ?? "anon";
+  const key = ["/dashboard/attendance/report", userId, view, grade, section];
+  const { data, error, isLoading } = useSWR<AttendanceReport>(
+    key,
+    async () => {
+      const token = getTokens()?.accessToken;
+      if (!token) throw new Error("Missing access token");
+      return fetchAttendanceReport(token, view, grade, section);
+    },
+    {
+      revalidateOnFocus: true,
+      refreshInterval: 60_000,
+    }
+  );
+  return { data, error: error ?? null, isLoading };
+}
+
+export function useSectionsByGrade(grade: string) {
+  const userId = getUser()?.id ?? "anon";
+  const enabled = grade && grade !== "all";
+  const key = enabled ? ["/dashboard/attendance/sections", userId, grade] : null;
+  const { data, error, isLoading } = useSWR<ReportSection[]>(
+    key,
+    async () => {
+      const token = getTokens()?.accessToken;
+      if (!token) throw new Error("Missing access token");
+      return fetchSectionsByGrade(token, grade);
+    },
+    { revalidateOnFocus: true }
+  );
+  return { data: data ?? [], error: error ?? null, isLoading: enabled && isLoading };
+}

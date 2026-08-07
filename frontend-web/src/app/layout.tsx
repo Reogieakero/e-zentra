@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter } from "next/font/google";
 import { Toaster } from "sileo";
 import { SessionExpiry } from "@/components/session-expiry";
@@ -20,14 +21,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <head>
-        <script
+      <body>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem("zentra.theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`,
           }}
         />
-      </head>
-      <body>
         <ThemeProvider>
           <Toaster position="top-right" theme="dark" />
           <SessionExpiry />

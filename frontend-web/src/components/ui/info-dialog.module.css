@@ -19,6 +19,13 @@
   box-shadow: var(--shadow-xs);
 }
 
+.infoButtonBare,
+.infoButtonBare:hover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .infoButtonIcon {
   width: 18px;
   height: 18px;

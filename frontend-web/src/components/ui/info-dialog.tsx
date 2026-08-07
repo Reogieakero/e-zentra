@@ -7,10 +7,11 @@ import styles from "./info-dialog.module.css";
 interface InfoDialogProps {
   title: string;
   label?: string;
+  bare?: boolean;
   children: ReactNode;
 }
 
-export function InfoDialog({ title, label = "More information", children }: InfoDialogProps) {
+export function InfoDialog({ title, label = "More information", bare = false, children }: InfoDialogProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function InfoDialog({ title, label = "More information", children }: Info
     <>
       <button
         type="button"
-        className={styles.infoButton}
+        className={`${styles.infoButton} ${bare ? styles.infoButtonBare : ""}`}
         onClick={() => setOpen(true)}
         aria-label={label}
         aria-haspopup="dialog"
