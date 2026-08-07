@@ -54,25 +54,67 @@ function buildWhere(query: ListStudentsQuery): Prisma.StudentProfileWhereInput {
 
 async function loadAtRiskStats(activeYearId: string | null) {
   if (!activeYearId) return { total: 0, high: 0, moderate: 0 };
-  const rows = await prisma.studentRiskAssessment.findMany({
+  const profiles = await prisma.studentProfile.findMany({
     where: {
-      term: { schoolYearId: activeYearId },
-      section: { status: 'active' },
-      student: { accountStatus: 'active' },
+      section: { status: 'active', schoolYearId: activeYearId },
+      user: { accountStatus: 'active' },
     },
-    select: { studentId: true, riskLevel: true },
-    orderBy: { computedAt: 'desc' },
+    select: { id: true },
   });
-  const seen = new Set<string>();
+  if (profiles.length === 0) return { total: 0, high: 0, moderate: 0 };
+  const ids = profiles.map((p) => p.id);
+
+  const [attendanceRows, finalGradeRows, anecdoteRows] = await Promise.all([
+    prisma.attendanceRecord.groupBy({
+      by: ['studentId', 'status'],
+      where: { studentId: { in: ids } },
+      _count: { _all: true },
+    }),
+    prisma.finalGrade.findMany({
+      where: { studentId: { in: ids } },
+      select: { studentId: true, transmutedGrade: true },
+    }),
+    prisma.anecdotalRecord.findMany({
+      where: { studentId: { in: ids } },
+      select: { studentId: true },
+    }),
+  ]);
+
+  const attendanceMap = new Map<string, Map<string, number>>();
+  for (const a of attendanceRows) {
+    if (!attendanceMap.has(a.studentId)) attendanceMap.set(a.studentId, new Map());
+    attendanceMap.get(a.studentId)!.set(a.status, a._count._all);
+  }
+
+  const academicAvgMap = new Map<string, number | null>();
+  for (const p of profiles) {
+    const grades = finalGradeRows
+      .filter((g) => g.studentId === p.id)
+      .map((g) => g.transmutedGrade.toNumber());
+    academicAvgMap.set(p.id, grades.length ? grades.reduce((a, b) => a + b, 0) / grades.length : null);
+  }
+
+  const anecdoteCountMap = new Map<string, number>();
+  for (const a of anecdoteRows) {
+    anecdoteCountMap.set(a.studentId, (anecdoteCountMap.get(a.studentId) ?? 0) + 1);
+  }
+
   let high = 0;
   let moderate = 0;
-  for (const r of rows) {
-    if (seen.has(r.studentId)) continue;
-    seen.add(r.studentId);
-    if (r.riskLevel === RiskLevel.high) high += 1;
-    else if (r.riskLevel === RiskLevel.moderate) moderate += 1;
+  for (const p of profiles) {
+    const counts = attendanceMap.get(p.id);
+    const present = counts?.get(AttendanceStatus.present) ?? 0;
+    const total = counts ? Array.from(counts.values()).reduce((sum, n) => sum + n, 0) : 0;
+    const attendance = total > 0 ? Math.round((present / total) * 1000) / 10 : null;
+    const level = classifyLiveRisk(
+      academicAvgMap.get(p.id) ?? null,
+      attendance,
+      anecdoteCountMap.get(p.id) ?? 0
+    );
+    if (level === RiskLevel.high) high += 1;
+    else if (level === RiskLevel.moderate) moderate += 1;
   }
-  return { total: seen.size, high, moderate };
+  return { total: high + moderate, high, moderate };
 }
 
 export async function listStudents(query: ListStudentsQuery) {
