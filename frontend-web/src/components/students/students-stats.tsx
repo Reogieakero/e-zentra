@@ -1,4 +1,4 @@
-import { AlertTriangle, GraduationCap, UserCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { AlertTriangle, GraduationCap, UserCheck, Users, type LucideIcon } from "lucide-react";
 import type { StudentStats } from "@/lib/students";
 import styles from "./students-stats.module.css";
 
@@ -54,8 +54,7 @@ export default function StudentsStats({ stats }: StudentsStatsProps) {
   return (
     <div className={styles.statGrid}>
       <StatCard icon={Users} label="Total Students" value={stats?.total.toLocaleString() ?? "0"} note="All enrolled records" />
-      <StatCard icon={UserCheck} label="Active Zentra Students Account" value={stats?.active.toLocaleString() ?? "0"} note="Active student accounts" />
-      <StatCard icon={UserPlus} label="Pending" value={stats?.newEnrollees.toLocaleString() ?? "0"} note="Pending student accounts" />
+      <StatCard icon={UserCheck} label="ADM Students" value={stats?.adm.toLocaleString() ?? "0"} note="Approved ADM profiles" />
       <StatCard icon={GraduationCap} label="Graduated Students" value={stats?.graduated.toLocaleString() ?? "0"} note="All-time total" />
       <StatCard
         icon={AlertTriangle}

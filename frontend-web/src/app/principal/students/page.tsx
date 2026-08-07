@@ -39,7 +39,7 @@ export default function StudentsPage() {
     <>
       <StudentsHeader />
 
-      {!data ? <StudentsStatsLoading cards={5} /> : <StudentsStats stats={stats} />}
+      {!data ? <StudentsStatsLoading cards={4} /> : <StudentsStats stats={stats} />}
 
       {data ? (
         <div className={styles.card}>

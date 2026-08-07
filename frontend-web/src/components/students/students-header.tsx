@@ -21,10 +21,7 @@ export default function StudentsHeader() {
               <strong>Total Students</strong> — all enrolled student records in the system.
             </li>
             <li>
-              <strong>Active Zentra Students Account</strong> — the number of active student accounts in Zentra.
-            </li>
-            <li>
-              <strong>Pending</strong> — the number of student accounts that are still pending approval.
+              <strong>ADM Students</strong> — the number of students with approved Alternative Delivery Mode (ADM) profiles.
             </li>
             <li>
               <strong>Graduated Students</strong> — all-time count of graduated students.

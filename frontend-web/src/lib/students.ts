@@ -26,8 +26,7 @@ export interface StudentRow {
 
 export interface StudentStats {
   total: number;
-  active: number;
-  newEnrollees: number;
+  adm: number;
   graduated: number;
   atRiskTotal: number;
   atRiskHigh: number;
