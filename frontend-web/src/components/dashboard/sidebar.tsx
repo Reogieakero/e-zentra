@@ -11,11 +11,12 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import styles from "./sidebar.module.css";
 
 const mainNav = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/principal/dashboard", active: true },
-  { key: "students", label: "Students", icon: Users, href: "#" },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/principal/dashboard" },
+  { key: "students", label: "Students", icon: Users, href: "/principal/students" },
   { key: "attendance", label: "Attendance", icon: CalendarCheck2, href: "#" },
   { key: "sf10", label: "SF10 Records", icon: FileText, href: "#" },
   { key: "anecdotal", label: "Anecdotal", icon: FileText, href: "#" },
@@ -33,6 +34,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
+  const pathname = usePathname();
+  const isActive = (href: string) => href !== "#" && pathname.startsWith(href);
+
   return (
     <>
       <div className={`${styles.backdrop} ${open ? styles.backdropVisible : ""}`} onClick={onClose} />
@@ -52,7 +56,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         <nav className={styles.nav}>
           <div className={styles.groupLabel}>Main</div>
           {mainNav.map((item) => (
-            <Link key={item.key} href={item.href} className={`${styles.navItem} ${item.active ? styles.navActive : ""}`}>
+            <Link key={item.key} href={item.href} className={`${styles.navItem} ${isActive(item.href) ? styles.navActive : ""}`}>
               <item.icon className={styles.navIcon} />
               <span>{item.label}</span>
             </Link>
