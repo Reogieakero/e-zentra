@@ -1,6 +1,6 @@
 .header {
-  height: 64px;
-  background: #ffffff;
+  height: 56px;
+  background: var(--card);
   border-bottom: 1px solid var(--border);
   padding: 0 16px;
   display: flex;
@@ -30,7 +30,7 @@
 }
 
 .iconBtn:hover {
-  background: #ecfdf5;
+  background: var(--brand-weak);
 }
 
 .icon {
@@ -41,18 +41,18 @@
 .crumb {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--muted-foreground);
 }
 
 .separator {
   font-size: 12px;
-  color: #d1d5db;
+  color: var(--border-strong);
 }
 
 .crumbCurrent {
   font-size: 12px;
   font-weight: 600;
-  color: #111827;
+  color: var(--foreground);
 }
 
 .right {
@@ -81,6 +81,7 @@
   width: 100%;
   padding: 6px 12px 6px 32px;
   font-size: 12px;
+  color: var(--foreground);
   background: var(--muted);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
@@ -90,7 +91,11 @@
 
 .searchInput:focus {
   border-color: var(--brand-primary);
-  background: #ffffff;
+  background: var(--card);
+}
+
+.searchInput::placeholder {
+  color: var(--muted-foreground);
 }
 
 .dot {
@@ -106,7 +111,11 @@
 .divider {
   width: 1px;
   height: 16px;
-  background: #e5e7eb;
+  background: var(--border-strong);
+}
+
+.profile {
+  position: relative;
 }
 
 .avatarBtn {
@@ -122,27 +131,192 @@
 }
 
 .avatarBtn:hover {
-  background: #ecfdf5;
+  background: var(--brand-weak);
 }
 
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: var(--brand-gradient);
+  background: #111111;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
   box-shadow: var(--shadow-xs);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.avatarIcon {
+  width: 16px;
+  height: 16px;
 }
 
 .chevron {
   width: 14px;
   height: 14px;
+  color: var(--muted-foreground);
+  transition: transform 0.2s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  width: 232px;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  animation: menuIn 0.18s ease;
+}
+
+.menuHeader {
+  padding: 8px 10px 10px;
+}
+
+.menuTitle {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.menuSub {
+  display: block;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menuSection {
+  padding: 8px 10px;
+}
+
+.menuLabel {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  margin-bottom: 8px;
+}
+
+.themeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.themeLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.themeIcon {
+  width: 14px;
+  height: 14px;
   color: var(--brand-primary);
+}
+
+.optionGroup {
+  display: inline-flex;
+  align-items: center;
+  background: var(--muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.optionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.optionBtn:hover {
+  color: var(--foreground);
+}
+
+.optionActive {
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.optionActive:hover {
+  color: #ffffff;
+}
+
+.optionIcon {
+  width: 12px;
+  height: 12px;
+}
+
+.menuDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.logoutBtn:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.logoutIcon {
+  width: 14px;
+  height: 14px;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (min-width: 1024px) {

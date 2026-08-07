@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -12,6 +12,8 @@ import {
   FilePlus,
   FileText,
   FolderOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
   QrCode,
   RefreshCw,
   TrendingDown,
@@ -22,6 +24,7 @@ import {
   UserX,
 } from "lucide-react";
 import Analytics from "@/components/dashboard/analytics";
+import { CustomSelect } from "@/components/ui/select";
 import { InfoDialog } from "@/components/ui/info-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useDashboardOverview, type DashboardOverview } from "@/lib/dashboard";
@@ -41,7 +44,17 @@ function initials(firstName: string, lastName: string): string {
   return `${(firstName[0] ?? "").toUpperCase()}${(lastName[0] ?? "").toUpperCase()}` || "?";
 }
 
-function kpiCards(stats: DashboardOverview["stats"]) {
+function kpiCards(stats: DashboardOverview["stats"], attendanceView: "presentAbsent" | "lateExcused") {
+  const attendanceStats =
+    attendanceView === "presentAbsent"
+      ? [
+          { label: "Present", value: stats.presentToday.toLocaleString(), icon: UserCheck, note: { text: `${stats.presentRate}% rate today` }, desc: "Learners marked present today; the % is present out of everyone logged today." },
+          { label: "Absent", value: stats.absentToday.toLocaleString(), icon: UserX, note: { icon: TrendingDown, text: "Today", strong: true }, desc: "Learners marked absent in today's attendance logs." },
+        ]
+      : [
+          { label: "Late", value: stats.lateToday.toLocaleString(), icon: Clock, note: { icon: TrendingDown, text: "Today", strong: true }, desc: "Learners marked late in today's attendance logs." },
+          { label: "Excused", value: stats.excusedToday.toLocaleString(), icon: FileCheck2, note: { text: "Today" }, desc: "Learners marked excused in today's attendance logs." },
+        ];
   return [
     {
       title: "Enrollment Stats",
@@ -52,19 +65,17 @@ function kpiCards(stats: DashboardOverview["stats"]) {
       ],
     },
     {
-      title: "Attendance & ADM",
+      title: "Attendance",
       icon: CalendarX,
-      stats: [
-        { label: "Absent", value: stats.absentToday.toLocaleString(), icon: UserX, note: { icon: TrendingDown, text: "Today", strong: true }, desc: "Learners marked absent in today's attendance logs." },
-        { label: "Present", value: stats.presentToday.toLocaleString(), icon: UserCheck, note: { text: `${stats.presentRate}% rate today` }, desc: "Learners marked present today; the % is present out of everyone logged today." },
-      ],
+      showViewSelect: true,
+      stats: attendanceStats,
     },
     {
       title: "Action Items",
       icon: AlertCircle,
       stats: [
         { label: "Pending", value: stats.pendingActions.toLocaleString(), icon: Clock, note: { text: "Needs review" }, desc: "Open record flags + submitted ADM awaiting approval + pending accounts." },
-        { label: "At Risk", value: stats.atRiskCount.toLocaleString(), icon: AlertTriangle, note: { text: "Follow-up" }, desc: "Unique learners with a moderate/high risk assessment in the active year." },
+        { label: "At Risk", value: stats.atRiskCount.toLocaleString(), icon: AlertTriangle, note: { text: "Follow-up" }, desc: "Unique learners with a risk assessment in the active year." },
       ],
     },
     {
@@ -80,7 +91,17 @@ function kpiCards(stats: DashboardOverview["stats"]) {
 
 export default function DashboardPage() {
   const [month, setMonth] = useState("");
+  const [attendanceView, setAttendanceView] = useState<"presentAbsent" | "lateExcused">("presentAbsent");
+  const [railOpen, setRailOpen] = useState(true);
   const { data, error, refresh } = useDashboardOverview(month || undefined);
+
+  const riskCount = data?.atRiskStudents?.length ?? 0;
+  const [riskIndex, setRiskIndex] = useState(0);
+  useEffect(() => {
+    if (riskCount <= 1) return;
+    const timer = setTimeout(() => setRiskIndex((i) => (i + 1) % riskCount), 2000);
+    return () => clearTimeout(timer);
+  }, [riskCount, riskIndex]);
 
   const loading = !data && !error;
 
@@ -154,13 +175,17 @@ export default function DashboardPage() {
     );
   }
 
-  const cards = kpiCards(data.stats);
+  const cards = kpiCards(data.stats, attendanceView);
   const atRisk = data.atRiskStudents.map((student) => ({
     initials: initials(student.firstName, student.lastName),
     name: `${student.firstName} ${student.lastName}`.trim(),
-    meta: `${student.sectionName ?? "No section"} · ${student.attendanceRate ?? 0}% attendance`,
+    attendance: student.attendanceRate ?? 0,
     risk: student.riskLevel,
+    section: student.sectionName ?? "No section",
   }));
+  const currentRisk = atRisk.length > 0 ? atRisk[riskIndex % atRisk.length] : undefined;
+  const riskTone =
+    currentRisk?.risk === "high" ? "high" : currentRisk?.risk === "moderate" ? "moderate" : "low";
   const admBadgeCount = data.admForApproval.length;
 
   return (
@@ -170,7 +195,21 @@ export default function DashboardPage() {
           <h1 className={styles.pageTitle}>Dashboard</h1>
           <p className={styles.pageSubtitle}>Monitor attendance, student records, and school activities from a centralized dashboard.</p>
         </div>
-        <InfoDialog title="Principal Dashboard — What You See">
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={`${styles.railBtn} ${!railOpen ? styles.railBtnActive : ""}`}
+            onClick={() => setRailOpen((o) => !o)}
+            aria-label={railOpen ? "Hide side panel" : "Show side panel"}
+            aria-pressed={!railOpen}
+          >
+            {railOpen ? (
+              <PanelLeftClose className={styles.railBtnIcon} />
+            ) : (
+              <PanelLeftOpen className={styles.railBtnIcon} />
+            )}
+          </button>
+          <InfoDialog title="Principal Dashboard — What You See">
           <p className={styles.modalIntro}>
             This dashboard aggregates live school records so you can monitor enrollment, attendance, student risk, and
             approval workflows from a single view. Every figure updates after each school day ends.
@@ -179,14 +218,14 @@ export default function DashboardPage() {
           <h3 className={styles.modalSection}>Top cards (KPIs)</h3>
           <ul className={styles.modalList}>
             <li><strong>Enrollment Stats</strong> — Total learners on the active school-year roster (assigned to an active section) and ADM profiles that are approved.</li>
-            <li><strong>Attendance &amp; ADM</strong> — Learners marked Present or Absent in today&apos;s logs, plus the Present rate as a percentage of everyone logged today.</li>
-            <li><strong>Action Items</strong> — Pending = open record flags + ADM profiles awaiting approval + accounts still pending; At Risk = unique learners with a moderate/high risk assessment.</li>
+            <li><strong>Attendance</strong> — nested cards for today&apos;s logs. Use the select to view Present/Absent or Late/Excused, and the Present rate as a percentage of everyone logged today.</li>
+            <li><strong>Action Items</strong> — Pending = open record flags + ADM profiles awaiting approval + accounts still pending; At Risk = unique learners with a risk assessment in the active year.</li>
             <li><strong>Documentation</strong> — Anecdotal/behavior records created this month and SF10 (Form 137) records marked Ready or Released.</li>
           </ul>
           <p className={styles.modalNote}>Hover any KPI stat to see a short explanation of what it measures.</p>
 
           <h3 className={styles.modalSection}>At Risk Students</h3>
-          <p>Lists up to 3 learners flagged with a moderate/high risk in the active year, with their section and attendance rate. The displayed threshold is below 85%.</p>
+          <p>Carousel of learners with an active-year risk assessment (any level — low, moderate, or high), one at a time, with their section and attendance rate.</p>
 
           <h3 className={styles.modalSection}>Quick Actions</h3>
           <p>Shortcuts to common tasks: add a student, scan attendance, generate SF10, write an anecdotal report, open ADM records, and export reports.</p>
@@ -201,6 +240,7 @@ export default function DashboardPage() {
             <li><strong>Section Performance Breakdown</strong> — for each section, the bars show statuses as % of all attendance it logged. Switch between Present/Absent and Late/Excused with the tabs, and filter to a specific month with the month picker (blank = all time).</li>
           </ul>
         </InfoDialog>
+        </div>
       </div>
 
       <div className={styles.kpiGrid}>
@@ -208,7 +248,22 @@ export default function DashboardPage() {
           <div key={card.title} className={styles.kpiCard}>
             <div className={styles.kpiCardHeader}>
               <span>{card.title}</span>
-              <card.icon className={styles.kpiCardIcon} />
+              {card.showViewSelect ? (
+                <CustomSelect
+                  id="kpi-attendance-view"
+                  value={attendanceView}
+                  options={[
+                    { value: "presentAbsent", label: "Present / Absent" },
+                    { value: "lateExcused", label: "Late / Excused" },
+                  ]}
+                  onChange={(v) => setAttendanceView(v as "presentAbsent" | "lateExcused")}
+                  size="sm"
+                  showCheck={false}
+                  className={styles.kpiAttendanceSelect}
+                />
+              ) : (
+                <card.icon className={styles.kpiCardIcon} />
+              )}
             </div>
             <div className={styles.kpiStats}>
               {card.stats.map((stat) => (
@@ -231,27 +286,85 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className={styles.dashboardGrid}>
-        <div className={styles.leftRail}>
+      <div className={`${styles.dashboardGrid} ${!railOpen ? styles.dashboardGridWide : ""}`}>
+        <div className={`${styles.leftRail} ${!railOpen ? styles.leftRailCollapsed : ""}`}>
           <div className={styles.atRiskCard}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>At Risk Students</h3>
+              <div>
+                <h3 className={styles.cardTitle}>At Risk Students</h3>
+                {data.term || data.schoolYear ? (
+                  <p className={styles.cardSubtitle}>
+                    {data.term ? `${data.term} · ` : ""}
+                    {data.schoolYear ?? ""}
+                  </p>
+                ) : null}
+              </div>
               <span className={`${styles.badge} ${styles.badgeDanger}`}>{data.stats.atRiskCount} Students</span>
             </div>
             <div className={styles.atRiskList}>
-              {atRisk.length === 0 ? (
+              {!currentRisk ? (
                 <span className={styles.emptyText}>No at-risk students detected.</span>
               ) : (
-                atRisk.map((student) => (
-                  <div key={student.name} className={styles.atRiskItem}>
-                    <div className={`${styles.avatar} ${styles.avatarDanger}`}>{student.initials}</div>
-                    <div className={styles.atRiskInfo}>
-                      <span className={styles.atRiskName}>{student.name}</span>
-                      <span className={styles.atRiskMeta}>{student.meta}</span>
+                <div className={styles.atRiskCarousel}>
+                  <div
+                    className={`${styles.atRiskItem} ${styles[riskTone === "high" ? "atRiskItemHigh" : riskTone === "moderate" ? "atRiskItemModerate" : "atRiskItemLow"]}`}
+                  >
+                    <div className={styles.atRiskTop}>
+                      <div
+                        className={`${styles.avatar} ${
+                          styles[
+                            riskTone === "high"
+                              ? "avatarDanger"
+                              : riskTone === "moderate"
+                              ? "avatarModerate"
+                              : "avatarLow"
+                          ]
+                        } ${styles.atRiskAvatar}`}
+                      >
+                        {currentRisk.initials}
+                      </div>
+                      <span className={styles.atRiskName}>{currentRisk.name}</span>
                     </div>
-                    <AlertTriangle className={styles.atRiskIcon} />
+                    <div className={styles.atRiskDetail}>
+                      <div className={styles.atRiskDetailCol}>
+                        <span className={styles.atRiskDetailLabel}>Attendance</span>
+                        <span className={styles.atRiskDetailValue}>{currentRisk.attendance}%</span>
+                      </div>
+                      <div className={styles.atRiskDetailCol}>
+                        <span className={styles.atRiskDetailLabel}>Level</span>
+                        <span
+                          className={`${styles.atRiskDetailValue} ${
+                            styles[
+                              riskTone === "high"
+                                ? "atRiskDetailValueDanger"
+                                : riskTone === "moderate"
+                                  ? "atRiskDetailValueModerate"
+                                  : "atRiskDetailValueLow"
+                            ]
+                          }`}
+                        >
+                          {currentRisk.risk.charAt(0).toUpperCase() + currentRisk.risk.slice(1)}
+                        </span>
+                      </div>
+                      <div className={styles.atRiskDetailCol}>
+                        <span className={styles.atRiskDetailLabel}>Section</span>
+                        <span className={styles.atRiskDetailValue}>{currentRisk.section}</span>
+                      </div>
+                    </div>
                   </div>
-                ))
+                  {atRisk.length > 1 && (
+                    <div className={styles.atRiskDots}>
+                      {atRisk.map((_, i) => (
+                        <button
+                          key={i}
+                          className={`${styles.atRiskDot} ${i === riskIndex ? styles.atRiskDotActive : ""}`}
+                          onClick={() => setRiskIndex(i)}
+                          aria-label={`At-risk student ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <div className={styles.cardFooter}>

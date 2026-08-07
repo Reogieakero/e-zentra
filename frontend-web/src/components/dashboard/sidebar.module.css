@@ -18,7 +18,7 @@
   left: 0;
   z-index: 50;
   width: 180px;
-  background: #ffffff;
+  background: var(--card);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -66,7 +66,7 @@
   font-weight: 700;
   font-size: 14px;
   letter-spacing: -0.02em;
-  color: #111827;
+  color: var(--foreground);
 }
 
 .closeBtn {
@@ -80,7 +80,7 @@
 }
 
 .closeBtn:hover {
-  background: #ecfdf5;
+  background: var(--brand-weak);
 }
 
 .closeIcon {
@@ -101,7 +101,7 @@
   padding: 8px 8px 6px;
   font-size: 10px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -114,17 +114,17 @@
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  color: #4b5563;
+  color: var(--muted-foreground);
   transition: background-color 0.2s, color 0.2s;
 }
 
 .navItem:hover {
-  background: rgba(236, 253, 245, 0.6);
+  background: rgba(22, 163, 74, 0.12);
   color: var(--brand-primary);
 }
 
 .navActive {
-  background: #ecfdf5;
+  background: var(--brand-weak);
   color: var(--brand-primary);
   font-weight: 600;
 }
@@ -139,7 +139,7 @@
 .footer {
   padding: 8px;
   border-top: 1px solid var(--border);
-  background: rgba(249, 250, 251, 0.5);
+  background: var(--muted);
 }
 
 .profile {
@@ -154,15 +154,19 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--brand-gradient);
+  background: #111111;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
   flex-shrink: 0;
   box-shadow: var(--shadow-xs);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.avatarIcon {
+  width: 14px;
+  height: 14px;
 }
 
 .profileInfo {
@@ -174,7 +178,7 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #111827;
+  color: var(--foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -183,7 +187,7 @@
 .profileRole {
   display: block;
   font-size: 10px;
-  color: #6b7280;
+  color: var(--muted-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

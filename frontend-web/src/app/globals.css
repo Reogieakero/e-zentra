@@ -22,6 +22,32 @@
   --warning: #d97706;
   --info: #0284c7;
 
+  /* Tinted surfaces (state chips, nested tiles) */
+  --success-bg: #a7f3d0;
+  --success-bd: #34d399;
+  --success-bg-soft: #ecfdf5;
+  --success-bd-soft: #d1fae5;
+  --success-bg-hover: #6ee7b7;
+  --success-bd-hover: #10b981;
+  --success-fg: #16a34a;
+  --warning-bg: #fffbeb;
+  --warning-bd: #fef3c7;
+  --warning-bg-strong: #fef3c7;
+  --warning-bd-strong: #fde68a;
+  --warning-fg: #d97706;
+  --danger-bg: #fef2f2;
+  --danger-bd: #fee2e2;
+  --danger-fg: #dc2626;
+
+  /* Chart containers / light tiles */
+  --chart-bg: rgba(249, 250, 251, 0.4);
+  --chart-bd: rgba(229, 231, 235, 0.8);
+  --chart-bd-soft: rgba(229, 231, 235, 0.6);
+
+  /* Skeleton shimmer */
+  --skel-1: #f3f4f6;
+  --skel-2: #e5e7eb;
+
   /* Radius */
   --radius-sm: 8px;
   --radius: 8px;
@@ -38,6 +64,49 @@
   /* Type */
   --font-sans: var(--font-inter), "Inter", system-ui, -apple-system,
     "Segoe UI", sans-serif;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --brand-weak: #14532d;
+  --background: #121212;
+  --foreground: #ededed;
+  --muted: #1a1a1a;
+  --muted-foreground: #9ca3af;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --card: #181818;
+  --accent: #f4f4f5;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.55);
+  --shadow-md: 0 6px 16px -6px rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 16px 40px -12px rgba(0, 0, 0, 0.75);
+
+  /* Tinted surfaces (dark) */
+  --success-bg: rgba(16, 185, 129, 0.16);
+  --success-bd: rgba(16, 185, 129, 0.4);
+  --success-bg-soft: rgba(16, 185, 129, 0.14);
+  --success-bd-soft: rgba(16, 185, 129, 0.35);
+  --success-bg-hover: rgba(16, 185, 129, 0.28);
+  --success-bd-hover: rgba(52, 211, 153, 0.6);
+  --success-fg: #4ade80;
+  --warning-bg: rgba(245, 158, 11, 0.14);
+  --warning-bd: rgba(245, 158, 11, 0.35);
+  --warning-bg-strong: rgba(245, 158, 11, 0.16);
+  --warning-bd-strong: rgba(245, 158, 11, 0.4);
+  --warning-fg: #fbbf24;
+  --danger-bg: rgba(239, 68, 68, 0.14);
+  --danger-bd: rgba(239, 68, 68, 0.35);
+  --danger-fg: #f87171;
+
+  /* Chart containers / light tiles (dark) */
+  --chart-bg: var(--card);
+  --chart-bd: var(--border);
+  --chart-bd-soft: var(--border);
+
+  /* Skeleton shimmer (dark) */
+  --skel-1: #2a2a2a;
+  --skel-2: #363636;
 }
 
 html {

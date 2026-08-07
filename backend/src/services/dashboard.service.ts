@@ -2,7 +2,6 @@ import { AttendanceStatus, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { cacheKey, getCached, invalidateByPattern } from './cache.service';
 
-const AT_RISK_LIMIT = 3;
 const ADM_APPROVAL_LIMIT = 3;
 const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const DASHBOARD_CACHE_TTL = 30;
@@ -46,6 +45,14 @@ async function loadDashboardOverview(month?: string) {
     where: { status: 'active' },
     select: { id: true, yearLabel: true, startDate: true, endDate: true },
   });
+
+  const activeTerm = activeYear
+    ? await prisma.term.findFirst({
+        where: { schoolYearId: activeYear.id, status: 'active' },
+        orderBy: { startDate: 'asc' },
+        select: { termLabel: true },
+      })
+    : null;
 
   const [
     totalStudents,
@@ -111,6 +118,7 @@ async function loadDashboardOverview(month?: string) {
       dailyTrend,
       heatmap,
       schoolYear: activeYear?.yearLabel ?? null,
+      term: activeTerm?.termLabel ?? null,
     },
   };
 }
@@ -124,7 +132,6 @@ async function countEnrolledStudents(activeYearId: string | null): Promise<numbe
 
 function buildAtRiskWhere(schoolYearId: string | null): Prisma.StudentRiskAssessmentWhereInput {
   return {
-    riskLevel: { in: ['moderate', 'high'] },
     ...(schoolYearId ? { term: { schoolYearId } } : {}),
     section: { status: 'active' },
     student: {
@@ -148,7 +155,7 @@ async function getAtRiskStudents(schoolYearId: string | null) {
   const rows = await prisma.studentRiskAssessment.findMany({
     where: buildAtRiskWhere(schoolYearId),
     orderBy: { computedAt: 'desc' },
-    take: 200,
+    take: 500,
     select: { studentId: true, riskLevel: true, student: { select: { id: true, firstName: true, lastName: true } } },
   });
 
@@ -158,7 +165,6 @@ async function getAtRiskStudents(schoolYearId: string | null) {
     if (seen.has(r.studentId)) continue;
     seen.add(r.studentId);
     students.push({ studentId: r.studentId, riskLevel: r.riskLevel });
-    if (students.length >= AT_RISK_LIMIT) break;
   }
 
   if (students.length === 0) return [];

@@ -187,7 +187,7 @@
 
 .featureText {
   font-size: 12px;
-  color: #1f2937;
+  color: var(--foreground);
   line-height: 1.45;
 }
 
@@ -371,7 +371,7 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--foreground);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   cursor: pointer;

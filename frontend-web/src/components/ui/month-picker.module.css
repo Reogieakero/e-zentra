@@ -22,7 +22,7 @@
   font-family: var(--font-sans);
   font-weight: 500;
   color: var(--foreground);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -82,7 +82,7 @@
   z-index: 30;
   width: 232px;
   min-width: 0;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);

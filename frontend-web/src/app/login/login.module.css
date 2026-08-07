@@ -70,7 +70,7 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--foreground);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   transition:

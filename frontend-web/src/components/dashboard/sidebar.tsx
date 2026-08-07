@@ -6,6 +6,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   Settings,
+  User,
   Users,
   X,
 } from "lucide-react";
@@ -68,7 +69,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
         <div className={styles.footer}>
           <div className={styles.profile}>
-            <div className={styles.avatar}>EA</div>
+            <div className={styles.avatar}>
+              <User className={styles.avatarIcon} />
+            </div>
             <div className={styles.profileInfo}>
               <span className={styles.profileName}>Elena Vance</span>
               <span className={styles.profileRole}>Administrator</span>
