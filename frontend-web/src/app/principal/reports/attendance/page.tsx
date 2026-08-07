@@ -11,6 +11,7 @@ import {
   Crown,
   Lightbulb,
   Percent,
+  Sparkles,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -24,7 +25,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useAttendanceReport, useSectionsByGrade, type AttendanceReport } from "@/lib/dashboard";
+import { useAttendanceReport, useSectionsByGrade, type AttendanceReport, fetchAiRecommendations, type AiRecommendationResult } from "@/lib/dashboard";
 import { useTheme } from "@/components/theme-provider";
 import { CustomSelect } from "@/components/ui/select";
 import { InfoDialog } from "@/components/ui/info-dialog";
@@ -198,6 +199,10 @@ const storedFilter = (key: string) => {
   }
 };
 
+// AI Recommendations is kept in the codebase but disabled by default.
+// Flip to true to enable (also set AI_RECOMMENDATIONS_ENABLED=true on the backend).
+const AI_RECOMMENDATIONS_ENABLED = false;
+
 export default function AttendanceReportPage() {
   const [view, setView] = useState<"monthly" | "daily">(
     () => (storedFilter(FILTER_KEYS.view) === "daily" ? "daily" : "monthly"),
@@ -212,6 +217,26 @@ export default function AttendanceReportPage() {
   const gridStroke = dark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
   const tickFill = dark ? "#94a3b8" : "#6b7280";
   const cursor = { stroke: dark ? "rgba(255,255,255,0.25)" : "#d1d5db" };
+  const [aiResult, setAiResult] = useState<AiRecommendationResult | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const generateAi = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetchAiRecommendations(view, grade, section);
+      setAiResult(res);
+    } catch {
+      setAiResult({
+        ok: false,
+        summary: "",
+        recommendations: [],
+        model: "",
+        reason: "Could not reach the AI service. Please try again.",
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -598,6 +623,62 @@ const chartData = useMemo(
               ))}
             </ul>
           </div>
+
+          {AI_RECOMMENDATIONS_ENABLED && (
+            <div className={`${styles.card} ${styles.aiCard}`}>
+            <div className={styles.aiHeader}>
+              <h4 className={styles.cardTitle}>
+                <Sparkles className={styles.cardTitleIcon} />
+                AI Recommendations
+              </h4>
+              <Tooltip label="Open-source model (Ollama) analyzes the current report aggregate and suggests next steps. No student-level data is sent.">
+                <button
+                  type="button"
+                  className={styles.aiBtn}
+                  onClick={generateAi}
+                  disabled={aiLoading || isLoading}
+                >
+                  {aiLoading ? "Thinking…" : aiResult ? "Regenerate" : "Generate insights"}
+                </button>
+              </Tooltip>
+            </div>
+
+            {aiLoading ? (
+              <div className={styles.aiLoading}>
+                <span className={styles.aiSpinner} />
+                <p>Analyzing attendance data…</p>
+              </div>
+            ) : aiResult ? (
+              aiResult.ok ? (
+                <div className={styles.aiBody}>
+                  {aiResult.summary && <p className={styles.aiSummary}>{aiResult.summary}</p>}
+                  {aiResult.recommendations.length > 0 && (
+                    <ul className={styles.aiList}>
+                      {aiResult.recommendations.map((rec, i) => (
+                        <li key={i} className={styles.aiItem}>
+                          <span className={styles.aiIndex}>{i + 1}</span>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {aiResult.recommendations.length === 0 && (
+                    <p className={styles.aiEmpty}>No recommendations returned. Try again.</p>
+                  )}
+                </div>
+              ) : (
+                <div className={styles.aiError}>
+                  <AlertTriangle className={styles.aiErrorIcon} />
+                  <span>{aiResult.reason ?? "AI service unavailable."}</span>
+                </div>
+              )
+            ) : (
+              <p className={styles.aiEmpty}>
+                Generate a quick analysis of this report compiled by an open-source AI model running locally.
+              </p>
+            )}
+          </div>
+          )}
         </div>
       </div>
     </div>

@@ -210,3 +210,24 @@ export function useSectionsByGrade(grade: string) {
   );
   return { data: data ?? [], error: error ?? null, isLoading: enabled && isLoading };
 }
+
+export interface AiRecommendationResult {
+  ok: boolean;
+  summary: string;
+  recommendations: string[];
+  model: string;
+  reason?: string;
+}
+
+export async function fetchAiRecommendations(
+  view: "monthly" | "daily",
+  grade?: string,
+  section?: string
+): Promise<AiRecommendationResult> {
+  const params = new URLSearchParams({ view });
+  if (grade && grade !== "all") params.set("grade", grade);
+  if (section) params.set("section", section);
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  return api<AiRecommendationResult>(`/dashboard/attendance/report/ai-recommendations?${params.toString()}`, { token });
+}

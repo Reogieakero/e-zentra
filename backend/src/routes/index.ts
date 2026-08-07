@@ -12,8 +12,12 @@ import parentLinkRoutes from './parentLink.routes';
 import uploadRoutes from './upload.routes';
 import ocrRoutes from './ocr.routes';
 import dashboardRoutes from './dashboard.routes';
+import backupRoutes, { oauthCallback } from './backup.routes';
+import exportRoutes from './export.routes';
 
 const router = Router();
+
+router.get('/backup/oauth/callback', oauthCallback);
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
@@ -28,5 +32,7 @@ router.use('/', notificationRoutes);
 router.use('/', uploadRoutes);
 router.use('/', ocrRoutes);
 router.use('/', dashboardRoutes);
+router.use('/', backupRoutes);
+router.use('/', exportRoutes);
 
 export default router;

@@ -95,6 +95,12 @@
   padding: 6px;
   max-height: 220px;
   overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.menu::-webkit-scrollbar {
+  display: none;
 }
 
 .option {
