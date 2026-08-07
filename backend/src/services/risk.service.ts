@@ -8,6 +8,14 @@ export function computeRiskLevel(riskCount: number): RiskLevel {
   return 'low';
 }
 
+export function classifyLiveRisk(academicAvg: number | null, attendanceRate: number | null, anecdoteCount: number): RiskLevel {
+  const academicRisk = academicAvg != null && academicAvg < 75;
+  const attendanceRisk = attendanceRate != null && attendanceRate < 80;
+  const behavioralRisk = anecdoteCount >= 1;
+  const riskCount = Number(academicRisk) + Number(attendanceRisk) + Number(behavioralRisk);
+  return computeRiskLevel(riskCount);
+}
+
 export interface RiskSignals {
   academicRisk: boolean;
   attendanceRisk: boolean;
