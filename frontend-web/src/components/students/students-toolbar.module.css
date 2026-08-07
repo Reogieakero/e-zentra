@@ -1,0 +1,79 @@
+.toolbar {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.toolbarTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.cardSubtitle {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.toolbarFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  width: 15px;
+  height: 15px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 7px 12px 7px 34px;
+  font-size: 12px;
+  background: var(--muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--foreground);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  background: var(--card);
+}
+
+.filterSelect {
+  min-width: 130px;
+}

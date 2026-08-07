@@ -1,0 +1,135 @@
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+  .statGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .statGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .statGrid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.statCard {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+}
+
+.statCardDanger .statIconWrap {
+  background: var(--danger-bg);
+  border-color: var(--danger-bd);
+}
+
+.statIconWrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--brand-weak);
+  border: 1px solid var(--success-bd-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--brand-primary);
+}
+
+.statIconDanger {
+  width: 16px;
+  height: 16px;
+  color: var(--danger-fg);
+}
+
+.statBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.statLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  line-height: 1.3;
+}
+
+.statNote {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.statNoteDanger {
+  color: var(--danger-fg);
+}
+
+.skeletonCard {
+  min-height: 92px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skStatIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.skStatLabel {
+  width: 70px;
+  height: 12px;
+}
+
+.skStatValue {
+  width: 48px;
+  height: 20px;
+  margin-top: 4px;
+}
+
+.skStatNote {
+  width: 90px;
+  height: 11px;
+  margin-top: 4px;
+}
