@@ -162,22 +162,21 @@
 .overlayClose {
   width: 32px;
   height: 32px;
-  border: none;
   border-radius: 50%;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--muted-foreground);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: all 0.15s;
 }
 
 .overlayClose:hover {
+  background: var(--success-bg-soft);
   color: var(--brand-primary);
-}
-
-.overlayClose:active {
-  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  box-shadow: var(--shadow-xs);
 }
 
 .overlayHint {

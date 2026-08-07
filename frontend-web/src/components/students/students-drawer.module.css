@@ -9,6 +9,7 @@
   inset: 0;
   background: rgba(17, 24, 39, 0.25);
   backdrop-filter: blur(2px);
+  animation: drawerFade 0.3s ease;
 }
 
 .drawer {
@@ -23,6 +24,25 @@
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
+  animation: drawerSlide 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes drawerSlide {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawerFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @media (min-width: 640px) {
@@ -54,17 +74,19 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--muted-foreground);
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition: all 0.15s;
 }
 
 .iconBtn:hover {
-  background: var(--brand-weak);
+  background: var(--card);
+  border-color: var(--brand-primary);
   color: var(--brand-primary);
+  box-shadow: var(--shadow-xs);
 }
 
 .iconBtnIcon {
@@ -84,32 +106,14 @@
 .drawerLoading {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 0;
-}
-
-.skAvatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-}
-
-.skName {
-  width: 180px;
-  height: 14px;
-}
-
-.skSub {
-  width: 120px;
-  height: 12px;
+  gap: 20px;
 }
 
 .skeleton {
   background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.2s ease-in-out infinite;
-  border-radius: 4px;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
 }
 
 @keyframes shimmer {
@@ -119,6 +123,112 @@
   100% {
     background-position: -200% 0;
   }
+}
+
+.skProfile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.skProfileInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.skAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skName {
+  width: 60%;
+  height: 16px;
+}
+
+.skBadge {
+  width: 40%;
+  height: 14px;
+}
+
+.skQuickStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.skStatCard {
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.skStatValue {
+  width: 45%;
+  height: 16px;
+}
+
+.skStatLabel {
+  width: 55%;
+  height: 10px;
+}
+
+.skSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skSectionTitle {
+  width: 40%;
+  height: 12px;
+}
+
+.skPanel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skRowLabel {
+  width: 30%;
+  height: 11px;
+}
+
+.skRowValue {
+  width: 40%;
+  height: 11px;
+}
+
+.skAttendance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skAttendanceRow {
+  height: 40px;
+  border-radius: 8px;
 }
 
 .muted {
@@ -374,7 +484,6 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
-  color: #fff;
 }
 
 .attBreak {
@@ -389,23 +498,27 @@
 }
 
 .att_present {
-  background: var(--success-fg);
-  color: #fff;
+  background: var(--success-bg);
+  color: var(--success-fg);
+  border: 1px solid var(--success-bd);
 }
 
 .att_absent {
-  background: var(--danger-fg);
-  color: #fff;
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+  border: 1px solid var(--danger-bd);
 }
 
 .att_late {
-  background: var(--warning-fg);
-  color: #fff;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  border: 1px solid var(--warning-bd);
 }
 
 .att_excused {
-  background: var(--info);
-  color: #fff;
+  background: var(--info-bg);
+  color: var(--info-fg);
+  border: 1px solid var(--info-bd);
 }
 
 .att_missing {
