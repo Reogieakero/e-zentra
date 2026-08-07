@@ -22,7 +22,7 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
             <th className={styles.th}>Grade & Section</th>
             <th className={styles.th}>Gender</th>
             <th className={styles.th}>Contact Number</th>
-            <th className={styles.th}>Enrollment Status</th>
+            <th className={styles.th}>Account Status</th>
             <th className={styles.th}>SF10</th>
             <th className={styles.th}>Attendance</th>
             <th className={styles.th}>Risk Level</th>
@@ -47,7 +47,6 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
                     <div className={styles.studentName}>
                       {s.firstName} {s.lastName}
                     </div>
-                    <div className={styles.studentLrn}>{s.lrn}</div>
                   </div>
                 </div>
               </td>

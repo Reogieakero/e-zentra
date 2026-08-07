@@ -9,9 +9,9 @@ export function RiskBadge({ tone }: { tone: string | null }) {
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const tone = status === "active" ? "brand" : status === "pending" ? "warning" : "neutral";
-  const label = status.charAt(0).toUpperCase() + status.slice(1);
-  return <Badge tone={tone}>{label}</Badge>;
+  if (status === "active") return <Badge tone="brand">Active</Badge>;
+  if (status === "pending") return <Badge tone="warning">Pending</Badge>;
+  return <Badge tone="neutral">No Account</Badge>;
 }
 
 export function Sf10Badge({ status }: { status: string }) {
