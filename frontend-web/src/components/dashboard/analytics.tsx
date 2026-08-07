@@ -20,6 +20,7 @@ import { useTheme } from "@/components/theme-provider";
 import { CustomSelect } from "@/components/ui/select";
 import { MonthPicker } from "@/components/ui/month-picker";
 import { ThreeDOverlay } from "@/components/dashboard/three-d-bar-chart";
+import { ThreeDTrendOverlay } from "@/components/dashboard/three-d-trend-chart";
 import styles from "./analytics.module.css";
 
 interface TrendPoint {
@@ -81,6 +82,7 @@ type AttendanceView = "presentAbsent" | "lateExcused";
 export default function Analytics({ trend, sections, heatmap, schoolYear, month, onMonthChange }: AnalyticsProps) {
   const [view, setView] = useState<AttendanceView>("presentAbsent");
   const [chartMode, setChartMode] = useState<"2d" | "3d">("2d");
+  const [trendMode, setTrendMode] = useState<"2d" | "3d">("2d");
   const { theme } = useTheme();
   const dark = theme === "dark";
   const TOOLTIP_CURSOR = { stroke: dark ? "rgba(255,255,255,0.25)" : "#d1d5db" };
@@ -93,7 +95,10 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
     0
   );
 
-  const trendData = trend.map((t) => ({ day: t.label, rate: t.rate }));
+  const trendData = useMemo(
+    () => trend.map((t) => ({ day: t.label, rate: t.rate ?? 0 })),
+    [trend]
+  );
   const sectionData = useMemo(
     () =>
       sections.map((s) => ({
@@ -130,9 +135,23 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                 </h4>
                 <p className={styles.chartSubtitle}>Monday – Friday · current week</p>
               </div>
-              <Link href="/principal/reports/attendance" className={styles.link}>
-                Report <ChevronRight className={styles.linkChevron} />
-              </Link>
+              <div className={styles.chartCardActions}>
+                <CustomSelect
+                  id="trend-mode"
+                  value={trendMode}
+                  options={[
+                    { value: "2d", label: "2D" },
+                    { value: "3d", label: "3D" },
+                  ]}
+                  onChange={(v) => setTrendMode(v as "2d" | "3d")}
+                  className={styles.modeSelect}
+                  size="sm"
+                  showCheck={false}
+                />
+                <Link href="/principal/reports/attendance" className={styles.link}>
+                  Report <ChevronRight className={styles.linkChevron} />
+                </Link>
+              </div>
             </div>
 
             <div className={styles.chartBody}>
@@ -248,24 +267,18 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
             </div>
 
             <div className={styles.chartControls}>
-              <div className={styles.modeToggle} role="tablist" aria-label="Chart mode">
-                <button
-                  type="button"
-                  className={`${styles.modeBtn} ${chartMode === "2d" ? styles.modeBtnActive : ""}`}
-                  onClick={() => setChartMode("2d")}
-                  aria-pressed={chartMode === "2d"}
-                >
-                  2D
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.modeBtn} ${chartMode === "3d" ? styles.modeBtnActive : ""}`}
-                  onClick={() => setChartMode("3d")}
-                  aria-pressed={chartMode === "3d"}
-                >
-                  3D
-                </button>
-              </div>
+              <CustomSelect
+                id="section-mode"
+                value={chartMode}
+                options={[
+                  { value: "2d", label: "2D" },
+                  { value: "3d", label: "3D" },
+                ]}
+                onChange={(v) => setChartMode(v as "2d" | "3d")}
+                className={styles.modeSelect}
+                size="sm"
+                showCheck={false}
+              />
               <CustomSelect
                 id="section-view"
                 value={view}
@@ -323,6 +336,12 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
               data={sectionData}
               initialView={view}
               onClose={() => setChartMode("2d")}
+            />
+          )}
+          {trendMode === "3d" && (
+            <ThreeDTrendOverlay
+              data={trendData}
+              onClose={() => setTrendMode("2d")}
             />
           )}
 

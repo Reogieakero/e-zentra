@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { useTheme } from "@/components/theme-provider";
+import { CustomSelect } from "@/components/ui/select";
 import styles from "./three-d-bar-chart.module.css";
 
 export interface SectionBar {
@@ -19,6 +20,7 @@ type View = "presentAbsent" | "lateExcused";
 interface ThreeDBarChartProps {
   data: SectionBar[];
   view: View;
+  toolbar?: ReactNode;
 }
 
 interface TooltipState {
@@ -37,7 +39,7 @@ const METRIC_COLORS: Record<string, string> = {
 
 const MAX_BAR_H = 4;
 
-export default function ThreeDBarChart({ data, view }: ThreeDBarChartProps) {
+export default function ThreeDBarChart({ data, view, toolbar }: ThreeDBarChartProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<TooltipState | null>(null);
   const [autoRotate, setAutoRotate] = useState(false);
@@ -302,17 +304,20 @@ export default function ThreeDBarChart({ data, view }: ThreeDBarChartProps) {
   return (
     <div className={styles.wrap}>
       <div ref={mountRef} className={styles.canvas} />
-      <button
-        type="button"
-        className={`${styles.rotateBtn} ${autoRotate ? styles.rotateBtnActive : ""}`}
-        onClick={() => {
-          autoRotateRef.current = !autoRotateRef.current;
-          setAutoRotate(autoRotateRef.current);
-        }}
-        aria-pressed={autoRotate}
-      >
-        {autoRotate ? "Stop rotate" : "Auto-rotate"}
-      </button>
+      <div className={styles.toolbar}>
+        {toolbar}
+        <button
+          type="button"
+          className={`${styles.rotateBtn} ${autoRotate ? styles.rotateBtnActive : ""}`}
+          onClick={() => {
+            autoRotateRef.current = !autoRotateRef.current;
+            setAutoRotate(autoRotateRef.current);
+          }}
+          aria-pressed={autoRotate}
+        >
+          {autoRotate ? "Stop rotate" : "Auto-rotate"}
+        </button>
+      </div>
       {tip && (
         <div className={styles.tooltip} style={{ left: tip.x, top: tip.y }}>
           <span className={styles.tooltipTitle}>{tip.section}</span>
@@ -351,29 +356,28 @@ export function ThreeDOverlay({ data, initialView, onClose }: ThreeDOverlayProps
       <div className={styles.overlayCard} onClick={(e) => e.stopPropagation()}>
         <div className={styles.overlayHeader}>
           <h4>Section Performance — 3D View</h4>
-          <div className={styles.seg} role="tablist" aria-label="Metric">
-            <button
-              type="button"
-              className={`${styles.segBtn} ${view === "presentAbsent" ? styles.segBtnActive : ""}`}
-              onClick={() => setView("presentAbsent")}
-              aria-pressed={view === "presentAbsent"}
-            >
-              Present / Absent
-            </button>
-            <button
-              type="button"
-              className={`${styles.segBtn} ${view === "lateExcused" ? styles.segBtnActive : ""}`}
-              onClick={() => setView("lateExcused")}
-              aria-pressed={view === "lateExcused"}
-            >
-              Late / Excused
-            </button>
-          </div>
           <button type="button" className={styles.overlayClose} onClick={onClose} aria-label="Close 3D view">
             ×
           </button>
         </div>
-        <ThreeDBarChart data={data} view={view} />
+        <ThreeDBarChart
+          data={data}
+          view={view}
+          toolbar={
+            <CustomSelect
+              id="overlay-view"
+              value={view}
+              options={[
+                { value: "presentAbsent", label: "Present / Absent" },
+                { value: "lateExcused", label: "Late / Excused" },
+              ]}
+              onChange={(v) => setView(v as View)}
+              className={styles.overlayViewSelect}
+              size="sm"
+              showCheck={false}
+            />
+          }
+        />
         <p className={styles.overlayHint}>Drag to rotate · Scroll to zoom · Hover a bar for details</p>
       </div>
     </div>
