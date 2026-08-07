@@ -76,7 +76,14 @@ export default function StudentDrawer({ student, onClose }: StudentDrawerProps) 
                   <div className={styles.drawerName}>{student.fullName}</div>
                   <div className={styles.drawerBadges}>
                     <StatusBadge status={student.accountStatus} />
-                    {hasRiskData && <RiskBadge tone={riskLevel} />}
+                    {hasRiskData && (
+                      <RiskBadge
+                        tone={riskLevel}
+                        academicAvg={generalAverage}
+                        attendance={attendance}
+                        anecdotalCount={anecdotalCount}
+                      />
+                    )}
                   </div>
                 </div>
               </div>

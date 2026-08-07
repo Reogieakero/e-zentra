@@ -67,7 +67,12 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
                 <span className={styles.attendanceValue}>{s.attendance != null ? `${s.attendance}%` : "—"}</span>
               </td>
               <td className={styles.td}>
-                <RiskBadge tone={s.riskLevel ?? "neutral"} />
+                <RiskBadge
+                  tone={s.riskLevel ?? "neutral"}
+                  academicAvg={s.academicAvg}
+                  attendance={s.attendance}
+                  anecdotalCount={s.anecdotalCount}
+                />
               </td>
               <td className={`${styles.td} ${styles.tdRight}`}>
                 <button className={styles.viewLink} onClick={() => onSelect(s.studentId)}>

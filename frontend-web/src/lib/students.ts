@@ -17,6 +17,8 @@ export interface StudentRow {
   adviser: string | null;
   accountStatus: string;
   attendance: number | null;
+  academicAvg: number | null;
+  anecdotalCount: number;
   riskLevel: string | null;
   sf10: string;
   lastUpdated: string | null;
