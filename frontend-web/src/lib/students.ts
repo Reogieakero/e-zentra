@@ -44,6 +44,7 @@ export interface StudentsPageData {
   hasMore: boolean;
   stats: StudentStats;
   filters: {
+    activeYearId: string | null;
     years: Array<{ id: string; yearLabel: string }>;
     sections: Array<{ id: string; sectionName: string; gradeLevel: string; schoolYearId: string }>;
   };

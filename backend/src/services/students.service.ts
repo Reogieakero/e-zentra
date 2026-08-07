@@ -286,6 +286,7 @@ export async function listStudents(query: ListStudentsQuery) {
       atRiskModerate: atRisk.moderate,
     },
     filters: {
+      activeYearId: activeYear?.id ?? null,
       years: years.map((y) => ({ id: y.id, yearLabel: y.yearLabel })),
       sections: sections.map((s) => ({
         id: s.id,
