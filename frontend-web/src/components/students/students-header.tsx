@@ -21,10 +21,10 @@ export default function StudentsHeader() {
               <strong>Total Students</strong> — all enrolled student records in the system.
             </li>
             <li>
-              <strong>Active Students</strong> — the number of active student accounts in Zentra.
+              <strong>Active Zentra Students Account</strong> — the number of active student accounts in Zentra.
             </li>
             <li>
-              <strong>New Enrollees</strong> — the number of student accounts that are still pending approval.
+              <strong>Pending</strong> — the number of student accounts that are still pending approval.
             </li>
             <li>
               <strong>Graduated Students</strong> — all-time count of graduated students.
