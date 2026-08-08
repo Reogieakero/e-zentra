@@ -151,62 +151,37 @@ describe('Dashboard overview', () => {
     expect(res.body.data.admForApproval[0].studentId ?? res.body.data.admForApproval[0].studentName).toBeTruthy();
   });
 
-  it('excludes at-risk from past school years and inactive accounts', async () => {
+  it('excludes at-risk from past school years but counts pending-account students', async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const syPast = await seedSchoolYear(rk.user.id, 'TEST-PAST');
     const termPast = await seedTerm(syPast.id, 'junior_high', 'term_1', rk.user.id);
+    const pastSection = await seedSection({ gradeLevel: 'grade_9', schoolYearId: syPast.id, createdBy: rk.user.id });
 
     const studentC = await createUser({ role: 'student', gradeLevel: 'grade_9' });
-    await prisma.studentProfile.update({ where: { id: studentC }, data: { sectionId: section.id } });
-    await prisma.studentRiskAssessment.create({
+    await prisma.studentProfile.update({ where: { id: studentC }, data: { sectionId: pastSection.id } });
+    await prisma.anecdotalRecord.create({
       data: {
         studentId: studentC,
-        sectionId: section.id,
+        observerId: teacher.user.id,
+        sectionId: pastSection.id,
         termId: termPast.id,
-        academicRisk: true,
-        attendanceRisk: false,
-        behavioralRisk: false,
-        riskCount: 1,
-        riskLevel: 'high',
-      },
-    });
-    await prisma.attendanceRecord.create({
-      data: {
-        studentId: studentC,
-        sectionId: section.id,
-        termId: termPast.id,
-        attendanceDate: today,
-        session: 'morning',
-        status: 'present',
-        recordedBy: teacher.user.id,
+        observationDate: today,
+        incidentDescription: 'At-risk signal for a past school year.',
       },
     });
 
     const studentD = await createUser({ role: 'student', gradeLevel: 'grade_9' });
     await prisma.studentProfile.update({ where: { id: studentD }, data: { sectionId: section.id } });
-    await prisma.studentRiskAssessment.create({
+    await prisma.anecdotalRecord.create({
       data: {
         studentId: studentD,
+        observerId: teacher.user.id,
         sectionId: section.id,
         termId: term.id,
-        academicRisk: true,
-        attendanceRisk: false,
-        behavioralRisk: false,
-        riskCount: 1,
-        riskLevel: 'moderate',
-      },
-    });
-    await prisma.attendanceRecord.create({
-      data: {
-        studentId: studentD,
-        sectionId: section.id,
-        termId: term.id,
-        attendanceDate: today,
-        session: 'morning',
-        status: 'present',
-        recordedBy: teacher.user.id,
+        observationDate: today,
+        incidentDescription: 'At-risk signal for a pending-account student.',
       },
     });
     await prisma.user.update({ where: { id: studentD }, data: { accountStatus: 'pending' } });
@@ -216,8 +191,8 @@ describe('Dashboard overview', () => {
       .set(auth(principal.tokens.accessToken));
 
     expect(res.status).toBe(200);
-    expect(res.body.data.stats.atRiskCount).toBe(0);
-    expect(res.body.data.atRiskStudents).toEqual([]);
+    expect(res.body.data.stats.atRiskCount).toBe(1);
+    expect(res.body.data.atRiskStudents.map((s: { studentId: string }) => s.studentId)).toEqual([studentD]);
   });
 
   it('rejects students access', async () => {

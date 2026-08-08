@@ -130,7 +130,6 @@ async function getAtRiskStudents(schoolYearId: string | null) {
   const activeProfiles = await prisma.studentProfile.findMany({
     where: {
       section: { status: 'active', schoolYearId },
-      user: { accountStatus: 'active' },
     },
     select: { id: true, user: { select: { firstName: true, lastName: true } }, section: { select: { sectionName: true } } },
   });
