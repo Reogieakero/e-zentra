@@ -20,110 +20,115 @@ interface KpiCardConfig {
   title: string;
   icon: LucideIcon;
   flipEnabled?: boolean;
-  stats: KpiStatConfig[];
+  faces: KpiStatConfig[][];
 }
 
-function buildKpiCards(stats: DashboardStats, attendanceView: AttendanceView): KpiCardConfig[] {
-  const attendanceStats: KpiStatConfig[] =
-    attendanceView === "presentAbsent"
-      ? [
-          {
-            label: "Present",
-            value: stats.presentToday.toLocaleString(),
-            icon: UserCheck,
-            note: { text: `${stats.presentRate}% rate today` },
-            desc: "Learners marked present today; the % is present out of everyone logged today.",
-          },
-          {
-            label: "Absent",
-            value: stats.absentToday.toLocaleString(),
-            icon: UserX,
-            note: { icon: TrendingDown, text: "Today", strong: true },
-            desc: "Learners marked absent in today's attendance logs.",
-          },
-        ]
-      : [
-          {
-            label: "Late",
-            value: stats.lateToday.toLocaleString(),
-            icon: Clock,
-            note: { icon: TrendingDown, text: "Today", strong: true },
-            desc: "Learners marked late in today's attendance logs.",
-          },
-          {
-            label: "Excused",
-            value: stats.excusedToday.toLocaleString(),
-            icon: FileCheck2,
-            note: { text: "Today" },
-            desc: "Learners marked excused in today's attendance logs.",
-          },
-        ];
+function buildKpiCards(stats: DashboardStats): KpiCardConfig[] {
+  const attendanceStats: KpiStatConfig[] = [
+    {
+      label: "Present",
+      value: stats.presentToday.toLocaleString(),
+      icon: UserCheck,
+      note: { text: `${stats.presentRate}% rate today` },
+      desc: "Learners marked present today; the % is present out of everyone logged today.",
+    },
+    {
+      label: "Absent",
+      value: stats.absentToday.toLocaleString(),
+      icon: UserX,
+      note: { icon: TrendingDown, text: "Today", strong: true },
+      desc: "Learners marked absent in today's attendance logs.",
+    },
+  ];
+
+  const lateExcusedStats: KpiStatConfig[] = [
+    {
+      label: "Late",
+      value: stats.lateToday.toLocaleString(),
+      icon: Clock,
+      note: { icon: TrendingDown, text: "Today", strong: true },
+      desc: "Learners marked late in today's attendance logs.",
+    },
+    {
+      label: "Excused",
+      value: stats.excusedToday.toLocaleString(),
+      icon: FileCheck2,
+      note: { text: "Today" },
+      desc: "Learners marked excused in today's attendance logs.",
+    },
+  ];
 
   return [
     {
       title: "Enrollment Stats",
       icon: Users,
-      stats: [
-        {
-          label: "Total",
-          value: stats.totalStudents.toLocaleString(),
-          icon: Users,
-          note: { icon: TrendingUp, text: "Enrolled learners", strong: true },
-          desc: "Learners on the active school-year roster (assigned to an active section).",
-        },
-        {
-          label: "ADM",
-          value: stats.admActive.toLocaleString(),
-          icon: BookOpen,
-          note: { text: "Active profiles" },
-          desc: "ADM learner profiles currently in approved status.",
-        },
+      faces: [
+        [
+          {
+            label: "Total",
+            value: stats.totalStudents.toLocaleString(),
+            icon: Users,
+            note: { icon: TrendingUp, text: "Enrolled learners", strong: true },
+            desc: "Learners on the active school-year roster (assigned to an active section).",
+          },
+          {
+            label: "ADM",
+            value: stats.admActive.toLocaleString(),
+            icon: BookOpen,
+            note: { text: "Active profiles" },
+            desc: "ADM learner profiles currently in approved status.",
+          },
+        ],
       ],
     },
     {
       title: "Attendance",
       icon: CalendarX,
       flipEnabled: true,
-      stats: attendanceStats,
+      faces: [attendanceStats, lateExcusedStats],
     },
     {
       title: "Action Items",
       icon: AlertCircle,
-      stats: [
-        {
-          label: "Pending",
-          value: stats.pendingActions.toLocaleString(),
-          icon: Clock,
-          note: { text: "Needs review" },
-          desc: "Open record flags + submitted ADM awaiting approval + pending accounts.",
-        },
-        {
-          label: "At Risk",
-          value: stats.atRiskCount.toLocaleString(),
-          icon: AlertTriangle,
-          note: { text: "Follow-up" },
-          desc: "Unique learners with a risk assessment in the active year.",
-        },
+      faces: [
+        [
+          {
+            label: "Pending",
+            value: stats.pendingActions.toLocaleString(),
+            icon: Clock,
+            note: { text: "Needs review" },
+            desc: "Open record flags + submitted ADM awaiting approval + pending accounts.",
+          },
+          {
+            label: "At Risk",
+            value: stats.atRiskCount.toLocaleString(),
+            icon: AlertTriangle,
+            note: { text: "Follow-up" },
+            desc: "Unique learners with a risk assessment in the active year.",
+          },
+        ],
       ],
     },
     {
       title: "Documentation",
       icon: FileCheck2,
-      stats: [
-        {
-          label: "Anecdotal",
-          value: stats.anecdotalThisMonth.toLocaleString(),
-          icon: FileText,
-          note: { text: "This month" },
-          desc: "Anecdotal/behavior records created this month.",
-        },
-        {
-          label: "SF10",
-          value: stats.sf10Count.toLocaleString(),
-          icon: FolderOpen,
-          note: { icon: TrendingUp, text: "Ready / released", strong: true },
-          desc: "SF10 (Form 137) records marked ready or released.",
-        },
+      faces: [
+        [
+          {
+            label: "Anecdotal",
+            value: stats.anecdotalThisMonth.toLocaleString(),
+            icon: FileText,
+            note: { text: "This month" },
+            desc: "Anecdotal records created this month.",
+          },
+          {
+            label: "SF10",
+            value: stats.sf10Count.toLocaleString(),
+            icon: FolderOpen,
+            note: { icon: TrendingUp, text: "Ready / released", strong: true },
+            desc: "SF10 (Form 137) records marked ready or released.",
+          },
+        ],
       ],
     },
   ];
@@ -135,8 +140,31 @@ interface KpiCardsProps {
   onAttendanceViewChange: (view: AttendanceView) => void;
 }
 
+function StatTiles({ stats }: { stats: KpiStatConfig[] }) {
+  return (
+    <>
+      {stats.map((stat) => (
+        <Tooltip key={stat.label} label={stat.desc}>
+          <div className={styles.kpiStat}>
+            <div className={styles.kpiStatHeader}>
+              <span>{stat.label}</span>
+              <stat.icon className={styles.kpiStatIcon} />
+            </div>
+            <div className={styles.kpiValue}>{stat.value}</div>
+            <div className={`${styles.kpiNote} ${stat.note.strong ? styles.kpiNoteStrong : ""}`}>
+              {stat.note.icon && <stat.note.icon className={styles.kpiNoteIcon} />}
+              <span>{stat.note.text}</span>
+            </div>
+          </div>
+        </Tooltip>
+      ))}
+    </>
+  );
+}
+
 export default function KpiCards({ stats, attendanceView, onAttendanceViewChange }: KpiCardsProps) {
-  const cards = buildKpiCards(stats, attendanceView);
+  const cards = buildKpiCards(stats);
+  const flipped = attendanceView === "lateExcused";
 
   return (
     <div className={styles.kpiGrid}>
@@ -145,42 +173,45 @@ export default function KpiCards({ stats, attendanceView, onAttendanceViewChange
           <div className={styles.kpiCardHeader}>
             <span>{card.title}</span>
             <div className={styles.kpiCardActions}>
-              {card.flipEnabled && (
-                <button
-                  type="button"
-                  className={styles.kpiFlipButton}
+              {card.flipEnabled ? (
+                <a
+                  href="#flip"
+                  className={styles.kpiFlipLink}
                   aria-label="Flip attendance view"
-                  title={attendanceView === "presentAbsent" ? "Show Late / Excused" : "Show Present / Absent"}
-                  onClick={() =>
-                    onAttendanceViewChange(
-                      attendanceView === "presentAbsent" ? "lateExcused" : "presentAbsent"
-                    )
-                  }
+                  title={flipped ? "Show Present / Absent" : "Show Late / Excused"}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onAttendanceViewChange(flipped ? "presentAbsent" : "lateExcused");
+                  }}
                 >
                   <card.icon className={styles.kpiFlipIcon} />
                   <span>Flip</span>
-                </button>
+                </a>
+              ) : (
+                <card.icon className={styles.kpiCardIcon} />
               )}
-              {!card.flipEnabled && <card.icon className={styles.kpiCardIcon} />}
             </div>
           </div>
-          <div className={styles.kpiStats}>
-            {card.stats.map((stat) => (
-              <Tooltip key={stat.label} label={stat.desc}>
-                <div className={styles.kpiStat}>
-                  <div className={styles.kpiStatHeader}>
-                    <span>{stat.label}</span>
-                    <stat.icon className={styles.kpiStatIcon} />
-                  </div>
-                  <div className={styles.kpiValue}>{stat.value}</div>
-                  <div className={`${styles.kpiNote} ${stat.note.strong ? styles.kpiNoteStrong : ""}`}>
-                    {stat.note.icon && <stat.note.icon className={styles.kpiNoteIcon} />}
-                    <span>{stat.note.text}</span>
+          {card.flipEnabled ? (
+            <div className={`${styles.kpiFlip} ${flipped ? styles.kpiFlipFlipped : ""}`}>
+              <div className={styles.kpiFlipInner}>
+                <div className={`${styles.kpiFace} ${styles.kpiFaceFront}`}>
+                  <div className={styles.kpiStats}>
+                    <StatTiles stats={card.faces[0]} />
                   </div>
                 </div>
-              </Tooltip>
-            ))}
-          </div>
+                <div className={`${styles.kpiFace} ${styles.kpiFaceBack}`}>
+                  <div className={styles.kpiStats}>
+                    <StatTiles stats={card.faces[1]} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.kpiStats}>
+              <StatTiles stats={card.faces[0]} />
+            </div>
+          )}
         </div>
       ))}
     </div>
