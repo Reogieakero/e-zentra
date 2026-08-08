@@ -53,13 +53,12 @@ function buildWhere(query: ListStudentsQuery): Prisma.StudentProfileWhereInput {
 }
 
 async function loadAtRiskStats(where: Prisma.StudentProfileWhereInput) {
-  // Mirror the dashboard's live risk scope: only students in active sections
-  // with active accounts (dashboard.service getAtRiskStudents).
+  // Risk scope: any enrolled student in an active section of the active school
+  // year, regardless of account status (dashboard.service getAtRiskStudents).
   const activeWhere: Prisma.StudentProfileWhereInput = {
     AND: [
       where,
       { section: { status: 'active' } },
-      { user: { accountStatus: 'active' } },
     ],
   };
   const profiles = await prisma.studentProfile.findMany({
