@@ -35,9 +35,36 @@
   color: var(--brand-primary);
 }
 
-.kpiAttendanceSelect {
-  width: 160px;
-  min-width: 0;
+.kpiCardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpiFlipButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--chart-bg);
+  color: var(--foreground);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.kpiFlipButton:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.kpiFlipIcon {
+  width: 12px;
+  height: 12px;
+  color: var(--brand-primary);
 }
 
 .kpiStats {

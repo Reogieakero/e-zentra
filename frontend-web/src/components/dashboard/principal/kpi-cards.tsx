@@ -2,7 +2,6 @@
 
 import type { LucideIcon } from "lucide-react";
 import { AlertCircle, AlertTriangle, BookOpen, CalendarX, Clock, FileCheck2, FileText, FolderOpen, TrendingDown, TrendingUp, UserCheck, Users, UserX } from "lucide-react";
-import { CustomSelect } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { DashboardStats } from "@/lib/dashboard";
 import styles from "./kpi-cards.module.css";
@@ -20,7 +19,7 @@ interface KpiStatConfig {
 interface KpiCardConfig {
   title: string;
   icon: LucideIcon;
-  showViewSelect?: boolean;
+  flipEnabled?: boolean;
   stats: KpiStatConfig[];
 }
 
@@ -84,7 +83,7 @@ function buildKpiCards(stats: DashboardStats, attendanceView: AttendanceView): K
     {
       title: "Attendance",
       icon: CalendarX,
-      showViewSelect: true,
+      flipEnabled: true,
       stats: attendanceStats,
     },
     {
@@ -145,22 +144,25 @@ export default function KpiCards({ stats, attendanceView, onAttendanceViewChange
         <div key={card.title} className={styles.kpiCard}>
           <div className={styles.kpiCardHeader}>
             <span>{card.title}</span>
-            {card.showViewSelect ? (
-              <CustomSelect
-                id="kpi-attendance-view"
-                value={attendanceView}
-                options={[
-                  { value: "presentAbsent", label: "Present / Absent" },
-                  { value: "lateExcused", label: "Late / Excused" },
-                ]}
-                onChange={(v) => onAttendanceViewChange(v as AttendanceView)}
-                size="sm"
-                showCheck={false}
-                className={styles.kpiAttendanceSelect}
-              />
-            ) : (
-              <card.icon className={styles.kpiCardIcon} />
-            )}
+            <div className={styles.kpiCardActions}>
+              {card.flipEnabled && (
+                <button
+                  type="button"
+                  className={styles.kpiFlipButton}
+                  aria-label="Flip attendance view"
+                  title={attendanceView === "presentAbsent" ? "Show Late / Excused" : "Show Present / Absent"}
+                  onClick={() =>
+                    onAttendanceViewChange(
+                      attendanceView === "presentAbsent" ? "lateExcused" : "presentAbsent"
+                    )
+                  }
+                >
+                  <card.icon className={styles.kpiFlipIcon} />
+                  <span>Flip</span>
+                </button>
+              )}
+              {!card.flipEnabled && <card.icon className={styles.kpiCardIcon} />}
+            </div>
           </div>
           <div className={styles.kpiStats}>
             {card.stats.map((stat) => (
