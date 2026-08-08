@@ -5,6 +5,11 @@ import { writeAudit } from './audit.service';
 import { notifyStudentAndParents } from './notification.service';
 import { serializeForOutput } from '../middleware/errorHandler';
 import { parseOffsetPagination } from '../utils/pagination';
+import { invalidateByPattern } from './cache.service';
+
+async function invalidateSf10Cache(): Promise<void> {
+  await invalidateByPattern('dashboard:sf10-summary');
+}
 
 export interface CreateReportCardInput {
   studentId: string;
@@ -45,6 +50,7 @@ export async function createReportCard(actorId: string, actorRole: import('@pris
     const { enqueueReportCardOcr } = await import('./ocr.service');
     await enqueueReportCardOcr({ actorId, kind: 'report-card', fileUrl: input.fileUrl, reportCardId: card.id });
   }
+  await invalidateSf10Cache();
 
   return { data: serializeForOutput(card) };
 }
@@ -63,6 +69,7 @@ export async function markReportCardReady(actorId: string, actorRole: import('@p
     data: { status: 'ready', managedBy: actorId },
   });
   await writeAudit({ actorId, action: 'READY', tableName: 'report_cards', recordId: id, newValue: { status: 'ready' } as unknown as Prisma.InputJsonValue });
+  await invalidateSf10Cache();
   return { data: serializeForOutput(updated) };
 }
 
@@ -86,6 +93,7 @@ export async function releaseReportCard(actorId: string, actorRole: import('@pri
     title: 'Report card released',
     message: 'Your report card is now available.',
   });
+  await invalidateSf10Cache();
   return { data: serializeForOutput(updated) };
 }
 
@@ -151,6 +159,7 @@ export async function generateReportCardsForTerm(actorId: string, actorRole: imp
         message: 'Your report card for this term has been generated and is ready.',
       });
     }
+    await invalidateSf10Cache();
   }
   return { data: serializeForOutput(created), created: created.length };
 }
