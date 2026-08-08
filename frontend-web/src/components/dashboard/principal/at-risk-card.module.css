@@ -34,10 +34,35 @@
   font-weight: 600;
 }
 
+.badgeStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .badgeDanger {
   color: var(--danger-fg);
   background: var(--danger-bg);
   border: 1px solid var(--danger-bd);
+}
+
+.badgeHigh {
+  color: var(--danger-fg);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-bd);
+}
+
+.badgeModerate {
+  color: var(--warning-fg);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-bd);
 }
 
 .atRiskList {
@@ -70,8 +95,8 @@
 }
 
 .atRiskItemModerate {
-  background: var(--success-bg-soft);
-  border-color: var(--success-bd-soft);
+  background: var(--warning-bg);
+  border-color: var(--warning-bd);
 }
 
 .atRiskItemLow {
@@ -109,8 +134,8 @@
 }
 
 .avatarModerate {
-  background: var(--success-bg-soft);
-  color: var(--success-fg);
+  background: var(--warning-bg);
+  color: var(--warning-fg);
 }
 
 .avatarLow {
@@ -136,7 +161,7 @@
 
 .atRiskDetail {
   display: flex;
-  gap: 20px;
+  gap: 12px;
   width: 100%;
   padding-top: 10px;
   border-top: 1px solid var(--border);
@@ -147,6 +172,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .atRiskDetailLabel {
@@ -171,7 +197,7 @@
 }
 
 .atRiskDetailValueModerate {
-  color: var(--success-fg);
+  color: var(--warning-fg);
 }
 
 .atRiskDetailValueLow {

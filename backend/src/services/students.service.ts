@@ -27,6 +27,18 @@ function attendanceRate(present: number, total: number): number | null {
   return Math.round((present / total) * 1000) / 10;
 }
 
+function recentSchoolDays(count: number): string[] {
+  const days: string[] = [];
+  const cursor = new Date();
+  cursor.setUTCHours(0, 0, 0, 0);
+  while (days.length < count) {
+    const dow = cursor.getUTCDay();
+    if (dow !== 0 && dow !== 6) days.unshift(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return days;
+}
+
 function buildWhere(query: ListStudentsQuery): Prisma.StudentProfileWhereInput {
   const where: Prisma.StudentProfileWhereInput = {
     ...(query.grade ? { gradeLevel: query.grade } : {}),
@@ -392,10 +404,13 @@ export async function getStudentDetail(id: string) {
     else bucket.afternoon = r.status;
     daySlots.set(key, bucket);
   }
-  const recentAttendance = Array.from(daySlots.entries())
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .slice(0, 7)
-    .map(([date, slots]) => ({ date, morning: slots.morning, afternoon: slots.afternoon }));
+  const recentAttendance = recentSchoolDays(7)
+    .reverse()
+    .map((date) => ({
+      date,
+      morning: daySlots.get(date)?.morning ?? null,
+      afternoon: daySlots.get(date)?.afternoon ?? null,
+    }));
 
   const academicRecord: AcademicTerm[] = [];
   for (const term of academicTerms) {

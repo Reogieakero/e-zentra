@@ -25,6 +25,8 @@ export default function AtRiskCard({ students, count, term, schoolYear }: AtRisk
   const { index, setIndex } = useRiskCarousel(students.length);
   const current = students.length > 0 ? students[index % students.length] : undefined;
   const tone = current ? riskTone(current.riskLevel) : "low";
+  const highCount = students.filter((s) => s.riskLevel === "high").length;
+  const moderateCount = students.filter((s) => s.riskLevel === "moderate").length;
 
   return (
     <div className={styles.atRiskCard}>
@@ -38,7 +40,13 @@ export default function AtRiskCard({ students, count, term, schoolYear }: AtRisk
             </p>
           ) : null}
         </div>
-        <span className={`${styles.badge} ${styles.badgeDanger}`}>{count} Students</span>
+        <div className={styles.badgeStack}>
+          <span className={`${styles.badge} ${styles.badgeDanger}`}>{count} Students</span>
+          <div className={styles.badgeRow}>
+            <span className={`${styles.badge} ${styles.badgeHigh}`}>{highCount} High</span>
+            <span className={`${styles.badge} ${styles.badgeModerate}`}>{moderateCount} Moderate</span>
+          </div>
+        </div>
       </div>
 
       <div className={styles.atRiskList}>
@@ -57,18 +65,22 @@ export default function AtRiskCard({ students, count, term, schoolYear }: AtRisk
               </div>
               <div className={styles.atRiskDetail}>
                 <div className={styles.atRiskDetailCol}>
+                  <span className={styles.atRiskDetailLabel}>Academics</span>
+                  <span className={styles.atRiskDetailValue}>{current.academicAvg ?? "—"}%</span>
+                </div>
+                <div className={styles.atRiskDetailCol}>
                   <span className={styles.atRiskDetailLabel}>Attendance</span>
                   <span className={styles.atRiskDetailValue}>{current.attendanceRate ?? 0}%</span>
+                </div>
+                <div className={styles.atRiskDetailCol}>
+                  <span className={styles.atRiskDetailLabel}>Behavior</span>
+                  <span className={styles.atRiskDetailValue}>{current.anecdoteCount}</span>
                 </div>
                 <div className={styles.atRiskDetailCol}>
                   <span className={styles.atRiskDetailLabel}>Level</span>
                   <span className={`${styles.atRiskDetailValue} ${styles[`atRiskDetailValue${capitalize(tone)}`]}`}>
                     {capitalize(current.riskLevel)}
                   </span>
-                </div>
-                <div className={styles.atRiskDetailCol}>
-                  <span className={styles.atRiskDetailLabel}>Section</span>
-                  <span className={styles.atRiskDetailValue}>{current.sectionName ?? "No section"}</span>
                 </div>
               </div>
             </div>
