@@ -40,7 +40,7 @@ export async function getSubject(id: string) {
 }
 
 export async function createSubject(actorId: string, actorRole: import('@prisma/client').Role, input: CreateSubjectInput) {
-  
+
   assertGradeBandOwnership(actorRole, input.gradeLevel);
 
   const existing = await prisma.subject.findUnique({ where: { subjectCode: input.subjectCode } });

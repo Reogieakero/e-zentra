@@ -92,7 +92,7 @@
   color: var(--muted-foreground);
 }
 
-/* dark card */
+
 .card {
   background: #111827;
   border-radius: var(--radius-lg);

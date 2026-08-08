@@ -36,7 +36,7 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
               <td className={styles.td}>
                 <div className={styles.studentCell}>
                   {s.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+
                     <img src={s.photoUrl} alt={s.firstName} className={styles.avatar} />
                   ) : (
                     <div className={styles.avatar}>{initials(s.firstName, s.lastName)}</div>

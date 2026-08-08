@@ -319,7 +319,7 @@ export const openApiSpec = {
       },
     },
 
-    
+
     '/school-years': {
       get: {
         tags: ['Academic Structure'],
@@ -460,7 +460,7 @@ export const openApiSpec = {
       },
     },
 
-    
+
     '/anecdotal-records': {
       get: {
         tags: ['Anecdotal & Referrals'],
@@ -526,7 +526,7 @@ export const openApiSpec = {
       },
     },
 
-    
+
     '/health-records': {
       get: {
         tags: ['Health & Home Visitation'],
@@ -583,7 +583,7 @@ export const openApiSpec = {
       },
     },
 
-    
+
     '/adm-profiles': {
       get: {
         tags: ['ADM Process'],
@@ -652,7 +652,7 @@ export const openApiSpec = {
       },
     },
 
-    
+
     '/grade-components': {
       get: {
         tags: ['Attendance & Grading'],
@@ -730,7 +730,7 @@ export const openApiSpec = {
       },
     },
 
-    
+
     '/risk-assessments': {
       get: {
         tags: ['Risk & Oversight'],
@@ -914,7 +914,7 @@ export const openApiSpec = {
       },
     },
 
-    
+
     '/sections': {
       get: {
         tags: ['Sections'],

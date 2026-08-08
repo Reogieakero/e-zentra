@@ -13,7 +13,7 @@
   padding: 0 24px;
 }
 
-/* ---------- header ---------- */
+
 .header {
   position: sticky;
   top: 0;
@@ -85,7 +85,7 @@
   border-color: var(--foreground);
 }
 
-/* ---------- hero ---------- */
+
 .hero {
   padding: 96px 0 72px;
 }
@@ -154,7 +154,7 @@
   }
 }
 
-/* ---------- sections ---------- */
+
 .section {
   padding: 40px 0 80px;
 }
@@ -196,7 +196,7 @@
   color: var(--muted-foreground);
 }
 
-/* ---------- footer ---------- */
+
 .footer {
   border-top: 1px solid var(--border);
   padding: 28px 0;
@@ -213,7 +213,7 @@
   color: var(--muted-foreground);
 }
 
-/* ---------- responsive ---------- */
+
 @media (max-width: 900px) {
   .grid3 {
     grid-template-columns: 1fr 1fr;

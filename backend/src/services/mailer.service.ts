@@ -24,11 +24,7 @@ export interface MailInput {
   html: string;
 }
 
-/**
- * Sends an email when SMTP is configured. Returns true when the email was
- * delivered, and false when SMTP is not configured or delivery failed (callers
- * can fall back to surfacing the content directly in development).
- */
+
 export async function sendMail(input: MailInput): Promise<boolean> {
   const transport = getTransporter();
   if (!transport) {

@@ -23,7 +23,7 @@
   outline-offset: 2px;
 }
 
-/* sizes */
+
 .sm {
   height: 24px;
   padding: 0 12px;
@@ -38,7 +38,7 @@
   gap: 6px;
 }
 
-/* variants */
+
 .primary {
   background: var(--brand-gradient);
   color: #fff;

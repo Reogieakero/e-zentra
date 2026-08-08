@@ -3,7 +3,7 @@ import { loadAttendanceReport } from './attendance.report.service';
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.1';
 const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS ?? 90000);
-// Feature gate: disabled by default. Set AI_RECOMMENDATIONS_ENABLED=true to enable.
+
 const AI_ENABLED = process.env.AI_RECOMMENDATIONS_ENABLED === 'true';
 
 export interface AiRecommendationResult {

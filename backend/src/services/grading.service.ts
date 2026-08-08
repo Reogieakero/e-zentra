@@ -61,7 +61,7 @@ export async function setGradeComponents(
     throw ApiError.validation(`Grade component weights must sum to 100 (got ${sum})`);
   }
 
-  
+
   const rows = await prisma.$transaction(async (tx) => {
     await tx.gradeComponent.deleteMany({ where: { subjectId, termId } });
     await tx.gradeComponent.createMany({

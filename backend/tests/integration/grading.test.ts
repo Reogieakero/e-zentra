@@ -78,7 +78,7 @@ describe('Grading', () => {
     expect(grade.status).toBe(201);
     expect(grade.body.data.score).toBe(40);
 
-    
+
     const otherTeacher = await loginAs('teacher', { email: `teacher.other.${Date.now()}@test.edu` });
     const forbidden = await request(app)
       .post('/api/v1/student-grades')

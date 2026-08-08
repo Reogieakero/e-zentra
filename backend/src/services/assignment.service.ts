@@ -17,7 +17,7 @@ export interface AssignTeacherInput {
 export async function assignTeacher(actorId: string, actorRole: import('@prisma/client').Role, input: AssignTeacherInput) {
   const section = await prisma.section.findUnique({ where: { id: input.sectionId } });
   if (!section) throw ApiError.notFound('Section not found');
-  
+
   assertGradeBandOwnership(actorRole, section.gradeLevel);
 
   const teacher = await prisma.user.findUnique({ where: { id: input.teacherId } });

@@ -1,7 +1,7 @@
--- Zentra data dictionary triggers
--- 1. grade_components: enforce SUM(weight_percentage) = 100 per (subject_id, term_id)
--- 2. referrals: status auto-completes to 'completed' when a linked health_records /
---    home_visitation_records / adm_learner_profiles row is inserted.
+
+
+
+
 
 CREATE OR REPLACE FUNCTION enforce_grade_component_weights()
 RETURNS TRIGGER AS $$
@@ -44,7 +44,7 @@ CREATE TRIGGER trg_grade_component_weights
   AFTER INSERT OR UPDATE OR DELETE ON grade_components
   FOR EACH ROW EXECUTE FUNCTION enforce_grade_component_weights();
 
--- ---------------------------------------------------------------------------
+
 
 CREATE OR REPLACE FUNCTION auto_complete_referral()
 RETURNS TRIGGER AS $$

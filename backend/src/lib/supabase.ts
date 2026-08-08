@@ -16,10 +16,7 @@ export function getSupabase(): SupabaseClient {
 
 let storageClient: SupabaseClient | null = null;
 
-/**
- * Client used for object storage (uploads). Uses the service role key so
- * bucket operations bypass RLS; only ever call this from the backend.
- */
+
 export function getSupabaseStorage(): SupabaseClient {
   if (!config.supabase.url || !config.storage.serviceRoleKey) {
     throw ApiError.notFound('Supabase storage is not configured');

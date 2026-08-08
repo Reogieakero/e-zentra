@@ -45,14 +45,14 @@ describe('Academic structure', () => {
       });
     expect(termRes.status).toBe(201);
 
-    
+
     const deniedTransition = await request(app)
       .post(`/api/v1/terms/${termRes.body.data.id}/transition`)
       .set(auth(registrar.tokens.accessToken))
       .send({ to: 'active' });
     expect(deniedTransition.status).toBe(403);
 
-    
+
     const transition = await request(app)
       .post(`/api/v1/terms/${termRes.body.data.id}/transition`)
       .set(auth(rk.tokens.accessToken))

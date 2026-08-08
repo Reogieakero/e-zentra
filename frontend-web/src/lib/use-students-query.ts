@@ -57,8 +57,8 @@ export function useStudentsQueryState() {
     const activeYearId = data?.filters?.activeYearId;
     if (activeYearId) {
       schoolYearInitialized.current = true;
-      // Sync once: default the year filter to the active school year after the first load.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
+
       setQuery((q) => ({ ...q, schoolYearId: activeYearId, page: 1 }));
     }
   }, [data?.filters?.activeYearId]);

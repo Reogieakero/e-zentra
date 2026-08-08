@@ -97,11 +97,11 @@ describe('Case records (anecdotal, referral, health, home visit, ADM)', () => {
       });
     expect(health.status).toBe(201);
 
-    
+
     const after = await prisma.referral.findUnique({ where: { id: referral.id } });
     expect(after?.status).toBe('completed');
 
-    
+
     const denied = await request(app)
       .post('/api/v1/health-records')
       .set(auth(gc.tokens.accessToken))
@@ -190,7 +190,7 @@ describe('Case records (anecdotal, referral, health, home visit, ADM)', () => {
     expect(submitted.status).toBe(200);
     expect(submitted.body.data.status).toBe('submitted');
 
-    
+
     const earlyModule = await request(app)
       .post(`/api/v1/adm-profiles/${profile.body.data.id}/modules`)
       .set(auth(adm.tokens.accessToken))
