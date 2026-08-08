@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, TrendingUp } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import type { ReportSection } from "@/lib/dashboard";
 import { CustomSelect } from "@/components/ui/select";
 import { InfoDialog } from "@/components/ui/info-dialog";
-import { GRADE_OPTIONS } from "./report-config";
+import { GRADE_OPTIONS } from "@/constants/grades";
 import styles from "./report-header.module.css";
 
 interface ReportHeaderProps {

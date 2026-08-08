@@ -1,10 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { STORAGE_KEY } from "@/constants/storage";
 
 export type Theme = "light" | "dark";
-
-const STORAGE_KEY = "zentra.theme";
 
 interface ThemeContextValue {
   theme: Theme;

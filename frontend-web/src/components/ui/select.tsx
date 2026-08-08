@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { useClickOutside } from "@/lib/use-click-outside";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import styles from "./select.module.css";
 
 export interface SelectOption {

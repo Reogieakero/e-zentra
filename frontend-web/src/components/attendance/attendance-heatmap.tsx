@@ -2,12 +2,13 @@
 
 import { useMemo, useRef } from "react";
 import { CalendarDays } from "lucide-react";
+import { SCHOOL_WEEKDAYS } from "@/constants/dates";
 import type { HeatmapCell } from "@/lib/dashboard";
 import styles from "./attendance-heatmap.module.css";
 
 const HEAT_LEVELS = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const WEEKDAYS = SCHOOL_WEEKDAYS;
 
 export function AttendanceHeatmap({ cells }: { cells: HeatmapCell[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);

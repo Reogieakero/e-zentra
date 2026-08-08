@@ -1,3 +1,5 @@
+import { TOKENS_KEY, USER_KEY } from "@/constants/storage";
+
 export type Portal = "student" | "parent" | "staff";
 
 export interface AuthTokens {
@@ -34,9 +36,6 @@ export interface LoginResponse {
 export interface RegisterResponse {
   user: PublicUser;
 }
-
-const TOKENS_KEY = "zentra.tokens";
-const USER_KEY = "zentra.user";
 
 export function getTokens(): AuthTokens | null {
   if (typeof window === "undefined") return null;

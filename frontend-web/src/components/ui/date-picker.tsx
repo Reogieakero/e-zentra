@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useClickOutside } from "@/lib/use-click-outside";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import { WEEKDAY_ABBREV } from "@/constants/dates";
 import styles from "./date-picker.module.css";
 
 interface DatePickerProps {
@@ -16,7 +17,7 @@ interface DatePickerProps {
   className?: string;
 }
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAYS = WEEKDAY_ABBREV;
 
 function toISO(d: Date): string {
   const year = d.getFullYear();
