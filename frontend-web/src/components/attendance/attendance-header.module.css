@@ -1,0 +1,98 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.headerTitleWrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  line-height: 1.1;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.filterSelect {
+  min-width: 150px;
+}
+
+.modalIntro {
+  color: var(--muted-foreground);
+}
+
+.modalSection {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 12px 0 4px;
+}
+
+.modalList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skTitle {
+  width: 160px;
+  height: 22px;
+}
+
+.skSubtitle {
+  width: 260px;
+  height: 12px;
+  margin-top: 8px;
+}
+
+.skSelect {
+  width: 150px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.skSelectWide {
+  width: 190px;
+  height: 32px;
+  border-radius: 8px;
+}

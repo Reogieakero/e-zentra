@@ -173,9 +173,8 @@ export function ResetPasswordForm() {
           }),
         }
       );
-    } catch {
-      // sileo.promise already surfaced the error toast
-    } finally {
+} catch {
+      } finally {
       setSubmitting(false);
     }
   }

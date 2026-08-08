@@ -50,7 +50,16 @@ export default function DashboardPage() {
         </div>
 
         <Analytics
-          trend={data.dailyTrend.map((t) => ({ label: t.label, rate: t.rate }))}
+          trend={data.dailyTrend.map((t) => ({
+            label: t.label,
+            day: t.day,
+            present: t.present,
+            absent: t.absent,
+            late: t.late,
+            excused: t.excused,
+            notLogged: t.notLogged,
+            rate: t.rate,
+          }))}
           sections={data.sectionAttendance.map((s) => ({
             sectionName: s.sectionName,
             rate: s.rate,

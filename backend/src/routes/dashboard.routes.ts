@@ -41,7 +41,10 @@ router.get(
   '/dashboard/attendance/summary',
   requireRole(...STAFF_VIEW_ROLES),
   asyncHandler(async (req, res) => {
-    const result = await getAttendanceSummary();
+    const view = req.query.view === 'daily' ? 'daily' : 'monthly';
+    const grade = GRADE_LEVELS.includes(String(req.query.grade)) ? String(req.query.grade) : undefined;
+    const section = typeof req.query.section === 'string' ? req.query.section : undefined;
+    const result = await getAttendanceSummary(view, grade, section);
     res.json(result);
   })
 );

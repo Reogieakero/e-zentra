@@ -8,20 +8,33 @@ import styles from "./three-d-bar-chart.module.css";
 
 export interface TrendBar {
   day: string;
-  rate: number;
+  label?: string;
+  present?: number;
+  absent?: number;
+  late?: number;
+  excused?: number;
+  notLogged?: number;
 }
+
+const STATUSES = [
+  { key: "present", name: "Present", hex: "#16a34a", three: 0x16a34a, glow: 0xe8fff0 },
+  { key: "absent", name: "Absent", hex: "#ef4444", three: 0xef4444, glow: 0xffe7e7 },
+  { key: "late", name: "Late", hex: "#f59e0b", three: 0xf59e0b, glow: 0xfff2d9 },
+  { key: "excused", name: "Excused", hex: "#3b82f6", three: 0x3b82f6, glow: 0xe0eeff },
+  { key: "notLogged", name: "Not logged", hex: "#94a3b8", three: 0x94a3b8, glow: 0xeef1f6 },
+] as const;
 
 const MAX_H = 4;
 const ROT_STEP = 0.008;
 const DRAW_DUR = 1700;
 const MARK_DUR = 420;
 const RING_DUR = 650;
+const Z_SPREAD = 0.9;
 
 interface TooltipState {
   x: number;
   y: number;
-  day: string;
-  value: number;
+  dayIdx: number;
 }
 
 interface Props {
@@ -74,6 +87,17 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
     const pairStep = 2.3;
     const total = Math.max(n * pairStep, 6);
     const startX = n === 1 ? 0 : -((n - 1) * pairStep) / 2;
+
+    let maxVal = 0;
+    data.forEach((d) => {
+      STATUSES.forEach((s) => {
+        const v = d[s.key] ?? 0;
+        if (v > maxVal) maxVal = v;
+      });
+    });
+    if (maxVal <= 0) maxVal = 1;
+
+    const zOffset = (si: number) => (si - (STATUSES.length - 1) / 2) * Z_SPREAD;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
@@ -145,120 +169,88 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
       return sprite;
     };
 
-    const makeBadge = (text: string, color: string, scale: [number, number]) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 256;
-      canvas.height = 88;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const radius = 22;
-        ctx.beginPath();
-        ctx.moveTo(radius, 0);
-        ctx.arcTo(canvas.width - radius, 0, canvas.width - radius, canvas.height, radius);
-        ctx.arcTo(canvas.width - radius, canvas.height, radius, canvas.height, radius);
-        ctx.arcTo(0, canvas.height, 0, radius, radius);
-        ctx.arcTo(0, 0, radius, 0, radius);
-        ctx.closePath();
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        ctx.font = "800 42px Inter, system-ui, sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = "#0b1220";
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
-      }
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.minFilter = THREE.LinearFilter;
-      const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true });
-      const sprite = new THREE.Sprite(material);
-      sprite.scale.set(scale[0], scale[1], 1);
-      labelCleanup.push({ texture, material });
-      return sprite;
-    };
+    const yFor = (v: number) => (Math.max(v, 0) / maxVal) * MAX_H;
 
-    [0, 25, 50, 75, 100].forEach((v) => {
-      const sprite = makeSprite(`${v}%`, labelColor, [0.8, 0.22]);
-      sprite.position.set(startX - 1.2, (v / 100) * MAX_H, 0.6);
+    [0, 25, 50, 75, 100].forEach((pct) => {
+      const count = Math.round(maxVal * (pct / 100));
+      const sprite = makeSprite(`${count}`, labelColor, [0.8, 0.22]);
+      sprite.position.set(startX - 1.2, (pct / 100) * MAX_H, 0.6);
       scene.add(sprite);
     });
 
-    const points = data.map((d, i) => ({
-      x: n === 1 ? 0 : startX + i * pairStep,
-      y: (Math.max(d.rate, 0) / 100) * MAX_H,
-      day: d.day,
-      rate: d.rate,
-    }));
-
-    const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(p.x, p.y, 0)));
-
     const cleaner: Array<() => void> = [];
-
-    const tubeMat = new THREE.ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      uniforms: { uProgress: { value: grewRef.current ? 1 : 0 }, uColor: { value: new THREE.Color(0x4ade80) }, uGlow: { value: new THREE.Color(0xeafff2) } },
-    });
-    const tubeGeo = new THREE.TubeGeometry(curve, 90, 0.14, 10, false);
-    const tube = new THREE.Mesh(tubeGeo, tubeMat);
-    scene.add(tube);
-    cleaner.push(() => {
-      tubeGeo.dispose();
-      tubeMat.dispose();
-    });
-
-    const rateColor = (rate: number) =>
-      rate >= 80 ? "#22c55e" : rate >= 60 ? "#f59e0b" : "#ef4444";
-
+    const tubes: THREE.Mesh[] = [];
     const markers: THREE.Mesh[] = [];
-    const rings: THREE.Mesh[] = [];
-    const ringMaterials: THREE.MeshBasicMaterial[] = [];
-    const ringActivated: number[] = [];
+    const markerRecs: Array<{ ring: THREE.Mesh; ringMat: THREE.MeshBasicMaterial; activated: number; dayIdx: number }> = [];
 
-    points.forEach((p) => {
-      const markerGeo = new THREE.SphereGeometry(0.2, 20, 20);
-      const markerMat = new THREE.MeshStandardMaterial({
-        color: rateColor(p.rate),
-        roughness: 0.35,
-        metalness: 0.2,
-        emissive: rateColor(p.rate),
-        emissiveIntensity: 0.55,
+    STATUSES.forEach((status, si) => {
+      const points = data.map((d, i) => ({
+        x: n === 1 ? 0 : startX + i * pairStep,
+        y: yFor(d[status.key] ?? 0),
+        z: zOffset(si),
+        day: d.label ?? d.day,
+        dayIdx: i,
+      }));
+
+      const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(p.x, p.y, p.z)));
+
+      const tubeMat = new THREE.ShaderMaterial({
+        vertexShader: VERT,
+        fragmentShader: FRAG,
+        uniforms: {
+          uProgress: { value: grewRef.current ? 1 : 0 },
+          uColor: { value: new THREE.Color(status.three) },
+          uGlow: { value: new THREE.Color(status.glow) },
+        },
       });
-      const marker = new THREE.Mesh(markerGeo, markerMat);
-      marker.position.set(p.x, p.y, 0);
-      marker.userData = { day: p.day, value: p.rate };
-      marker.scale.setScalar(grewRef.current ? 1 : 0.001);
-      scene.add(marker);
-      markers.push(marker);
+      const tubeGeo = new THREE.TubeGeometry(curve, 90, 0.14, 10, false);
+      const tube = new THREE.Mesh(tubeGeo, tubeMat);
+      scene.add(tube);
+      tubes.push(tube);
       cleaner.push(() => {
-        markerGeo.dispose();
-        markerMat.dispose();
+        tubeGeo.dispose();
+        tubeMat.dispose();
       });
 
-      const ringGeo = new THREE.TorusGeometry(0.34, 0.03, 8, 40);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.set(p.x, p.y, 0);
-      ring.scale.setScalar(0.01);
-      scene.add(ring);
-      rings.push(ring);
-      ringMaterials.push(ringMat);
-      ringActivated.push(0);
-      cleaner.push(() => {
-        ringGeo.dispose();
-        ringMat.dispose();
-      });
+      points.forEach((p) => {
+        const markerGeo = new THREE.SphereGeometry(0.2, 20, 20);
+        const markerMat = new THREE.MeshStandardMaterial({
+          color: status.three,
+          roughness: 0.35,
+          metalness: 0.2,
+          emissive: status.three,
+          emissiveIntensity: 0.55,
+        });
+        const marker = new THREE.Mesh(markerGeo, markerMat);
+        marker.position.set(p.x, p.y, p.z);
+        marker.userData = { dayIdx: p.dayIdx };
+        marker.scale.setScalar(grewRef.current ? 1 : 0.001);
+        scene.add(marker);
+        markers.push(marker);
+        cleaner.push(() => {
+          markerGeo.dispose();
+          markerMat.dispose();
+        });
 
-      const dayLabel = makeSprite(p.day, labelColor, [Math.max(0.9, p.day.length * 0.22), 0.3]);
-      dayLabel.position.set(p.x, -0.24, 0.55);
+        const ringGeo = new THREE.TorusGeometry(0.34, 0.03, 8, 40);
+        const ringMat = new THREE.MeshBasicMaterial({ color: status.three, transparent: true, opacity: 0, depthWrite: false });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.set(p.x, p.y, p.z);
+        ring.scale.setScalar(0.01);
+        scene.add(ring);
+        markerRecs.push({ ring, ringMat, activated: 0, dayIdx: p.dayIdx });
+        cleaner.push(() => {
+          ringGeo.dispose();
+          ringMat.dispose();
+        });
+      });
+    });
+
+    data.forEach((d, i) => {
+      const text = d.label ?? d.day;
+      const dayLabel = makeSprite(text, labelColor, [Math.max(0.9, text.length * 0.22), 0.3]);
+      dayLabel.position.set(n === 1 ? 0 : startX + i * pairStep, -0.24, 0.55);
       scene.add(dayLabel);
-      const valLabel = makeBadge(`${Math.round(p.rate)}%`, rateColor(p.rate), [1.25, 0.44]);
-      valLabel.position.set(p.x, p.y + 0.62, 0.55);
-      scene.add(valLabel);
     });
 
     const raycaster = new THREE.Raycaster();
@@ -273,7 +265,7 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
       const hit = raycaster.intersectObjects(markers)[0];
       if (hit) {
         const mesh = hit.object as THREE.Mesh;
-        const ud = mesh.userData as { day: string; value: number };
+        const dayIdx = mesh.userData.dayIdx as number;
         if (hoveredRef.current !== mesh) {
           if (hoveredRef.current) {
             (hoveredRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.55;
@@ -283,7 +275,7 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
         }
         (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.4;
         mesh.scale.setScalar(1.35);
-        setTip({ x: ev.clientX, y: ev.clientY, day: ud.day, value: Math.round(ud.value) });
+        setTip({ x: ev.clientX, y: ev.clientY, dayIdx });
       } else {
         if (hoveredRef.current) {
           (hoveredRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.55;
@@ -318,36 +310,43 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
 
     let raf = 0;
     const entStart = performance.now();
-    const THRESHOLD = (i: number) => (i + 1) / n;
+    const THRESHOLD = (i: number) => (i + 1) / data.length;
 
     const frame = () => {
       raf = requestAnimationFrame(frame);
       const elapsed = performance.now() - entStart;
       const drawT = grewRef.current ? 1 : Math.min(1, elapsed / DRAW_DUR);
-      tubeMat.uniforms.uProgress.value = drawT;
+      tubes.forEach((t) => {
+        (t.material as THREE.ShaderMaterial).uniforms.uProgress.value = drawT;
+      });
       if (!grewRef.current) {
         markers.forEach((m, i) => {
-          const reached = drawT >= THRESHOLD(i);
+          const dayIdx = m.userData.dayIdx as number;
+          const reached = drawT >= THRESHOLD(dayIdx);
           if (reached) {
-            const local = Math.max(0, elapsed - THRESHOLD(i) * DRAW_DUR);
+            const local = Math.max(0, elapsed - THRESHOLD(dayIdx) * DRAW_DUR);
             const t = Math.min(1, local / MARK_DUR);
             m.scale.setScalar(Math.max(0.001, 1 - Math.pow(1 - t, 3)));
-            if (ringActivated[i] === 0 && m.scale.x >= 0.9) ringActivated[i] = elapsed;
+            const rec = markerRecs[i];
+            if (rec.activated === 0 && m.scale.x >= 0.9) rec.activated = elapsed;
           } else {
             m.scale.setScalar(0.001);
           }
-          if (ringActivated[i] > 0) {
-            const age = elapsed - ringActivated[i];
+          const rec = markerRecs[i];
+          if (rec.activated > 0) {
+            const age = elapsed - rec.activated;
             const rt = Math.min(1, age / RING_DUR);
-            rings[i].scale.setScalar(0.3 + 1.7 * rt);
-            ringMaterials[i].opacity = Math.max(0, 1 - rt);
+            rec.ring.scale.setScalar(0.3 + 1.7 * rt);
+            rec.ringMat.opacity = Math.max(0, 1 - rt);
           }
         });
 
         if (drawT >= 1) {
           grewRef.current = true;
-          rings.forEach((r) => r.scale.setScalar(0.01));
-          ringMaterials.forEach((rm) => (rm.opacity = 0));
+          markerRecs.forEach((rec) => {
+            rec.ring.scale.setScalar(0.01);
+            rec.ringMat.opacity = 0;
+          });
         }
       }
       if (autoRotateRef.current) {
@@ -396,6 +395,8 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
     return <div className={styles.empty}>No trend data to display.</div>;
   }
 
+  const tipDay = tip ? data[tip.dayIdx] : null;
+
   return (
     <div className={styles.wrap}>
       <div ref={mountRef} className={styles.canvas} />
@@ -413,14 +414,16 @@ export default function ThreeDTrendChart({ data, toolbar }: Props) {
           {autoRotate ? "Stop rotate" : "Auto-rotate"}
         </button>
       </div>
-      {tip && (
+      {tip && tipDay && (
         <div className={styles.tooltip} style={{ left: tip.x, top: tip.y }}>
-          <span className={styles.tooltipTitle}>{tip.day}</span>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipDot} style={{ background: "#22c55e" }} />
-            <span className={styles.tooltipName}>Attendance</span>
-            <span className={styles.tooltipValue}>{tip.value}%</span>
-          </div>
+          <span className={styles.tooltipTitle}>{tipDay.label ?? tipDay.day}</span>
+          {STATUSES.map((status) => (
+            <div key={status.key} className={styles.tooltipRow}>
+              <span className={styles.tooltipDot} style={{ background: status.hex }} />
+              <span className={styles.tooltipName}>{status.name}</span>
+              <span className={styles.tooltipValue}>{((tipDay?.[status.key] ?? 0) as number).toLocaleString()}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

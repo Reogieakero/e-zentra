@@ -1,0 +1,72 @@
+.statGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.statCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.statHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.statLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.statIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--brand-primary);
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.statSub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+
+.statSubGood {
+  color: var(--success);
+}
+
+.statSubWarn {
+  color: var(--warning);
+}
+
+.statSubDanger {
+  color: var(--danger);
+}
+
+@media (min-width: 640px) {
+  .statGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .statGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

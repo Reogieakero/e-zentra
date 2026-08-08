@@ -9,7 +9,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -25,6 +24,12 @@ import styles from "./analytics.module.css";
 
 interface TrendPoint {
   label: string;
+  day: string;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  notLogged: number;
   rate: number | null;
 }
 
@@ -55,6 +60,42 @@ interface ChartTooltipProps {
   active?: boolean;
   payload?: ChartTooltipEntry[];
   label?: string | number;
+}
+
+const STATUS_KEYS: Array<{ key: "present" | "absent" | "late" | "excused" | "notLogged"; name: string; color: string }> = [
+  { key: "present", name: "Present", color: "#16a34a" },
+  { key: "absent", name: "Absent", color: "#ef4444" },
+  { key: "late", name: "Late", color: "#f59e0b" },
+  { key: "excused", name: "Excused", color: "#3b82f6" },
+  { key: "notLogged", name: "Not logged", color: "#94a3b8" },
+];
+
+function TrendTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: Record<string, unknown> }>;
+  label?: string | number;
+}) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload ?? {};
+  return (
+    <div className={styles.chartTooltip}>
+      <span className={styles.chartTooltipLabel}>{String(p.label ?? label ?? "")}</span>
+      {STATUS_KEYS.map(({ key, name, color }) => {
+        const v = p[key];
+        return (
+          <div key={key} className={styles.chartTooltipRow}>
+            <span className={styles.chartTooltipDot} style={{ background: color }} />
+            <span className={styles.chartTooltipName}>{name}</span>
+            <span className={styles.chartTooltipValue}>{typeof v === "number" ? v.toLocaleString() : "—"}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
@@ -96,7 +137,17 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
   );
 
   const trendData = useMemo(
-    () => trend.map((t) => ({ day: t.label, rate: t.rate ?? 0 })),
+    () =>
+      trend.map((t) => ({
+        day: t.label,
+        label: t.label,
+        rate: t.rate ?? 0,
+        present: t.present,
+        absent: t.absent,
+        late: t.late,
+        excused: t.excused,
+        notLogged: t.notLogged,
+      })),
     [trend]
   );
   const sectionData = useMemo(
@@ -133,7 +184,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                   <TrendingUp className={styles.chartTitleIcon} />
                   Daily Attendance Trend
                 </h4>
-                <p className={styles.chartSubtitle}>Monday – Friday · current week</p>
+                <p className={styles.chartSubtitle}>Monday – Friday · current week · status counts</p>
               </div>
               <div className={styles.chartCardActions}>
                 <CustomSelect
@@ -158,10 +209,12 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
-                    </linearGradient>
+                    {STATUS_KEYS.map(({ key, name, color }) => (
+                      <linearGradient key={key} id={`trendGradient-${name}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.18" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0" />
+                      </linearGradient>
+                    ))}
                   </defs>
                   <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -171,32 +224,32 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                     tickLine={false}
                     interval={0}
                   />
-                  <YAxis hide domain={[0, 100]} />
-                  <Tooltip cursor={TOOLTIP_CURSOR} content={<ChartTooltip />} />
-                  <ReferenceLine y={95} stroke="#86efac" strokeDasharray="4 2" />
-                  <Area
-                    type="monotone"
-                    dataKey="rate"
-                    name="Rate"
-                    stroke="#16a34a"
-                    strokeWidth={2.5}
-                    fill="url(#trendGradient)"
-                    dot={{ r: 3.5, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2 }}
-                    activeDot={{ r: 5, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2.5 }}
-                  />
+                  <YAxis hide />
+                  <Tooltip cursor={TOOLTIP_CURSOR} content={<TrendTooltip />} />
+                  {STATUS_KEYS.map(({ key, name, color }) => (
+                    <Area
+                      key={key}
+                      type="monotone"
+                      dataKey={key}
+                      name={name}
+                      stroke={color}
+                      strokeWidth={2}
+                      fill={`url(#trendGradient-${name})`}
+                      dot={{ r: 2, fill: "#ffffff", stroke: color, strokeWidth: 1.5 }}
+                      activeDot={{ r: 4, fill: "#ffffff", stroke: color, strokeWidth: 2 }}
+                    />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
             <div className={styles.legend}>
-              <span className={styles.legendItem}>
-                <span className={`${styles.legendDot} ${styles.legendDotSolid}`} />
-                Daily Rate
-              </span>
-              <span className={styles.legendItem}>
-                <span className={`${styles.legendDot} ${styles.legendDotLine}`} />
-                95% Target
-              </span>
+              {STATUS_KEYS.map(({ key, name, color }) => (
+                <span key={key} className={styles.legendItem}>
+                  <span className={styles.legendDot} style={{ background: color }} />
+                  {name}
+                </span>
+              ))}
             </div>
           </div>
 

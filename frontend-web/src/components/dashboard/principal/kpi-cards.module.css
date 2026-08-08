@@ -74,19 +74,14 @@
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.kpiFlipFlipped .kpiFlipInner {
-  transform: rotateY(180deg);
-}
-
 .kpiFace {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
-.kpiFaceBack {
+.kpiFaceRotate {
   position: absolute;
   inset: 0;
-  transform: rotateY(180deg);
 }
 
 .kpiStats {

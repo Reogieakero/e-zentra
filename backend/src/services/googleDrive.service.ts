@@ -217,7 +217,6 @@ export async function revokeDriveAccess(userId: string): Promise<void> {
     try {
       await revokeToken(decryptToken(link.refreshTokenEnc));
     } catch {
-      /* ignore on revocation */
     }
     await prisma.googleDriveLink.delete({ where: { userId } });
   }

@@ -61,7 +61,7 @@ async function loadDashboardOverview(month?: string) {
     pendingAccounts,
   ] = await Promise.all([
     countEnrolledStudents(activeYear?.id ?? null),
-    prisma.attendanceRecord.findMany({ where: { attendanceDate: today }, select: { status: true } }),
+    prisma.attendanceRecord.findMany({ where: { attendanceDate: today }, select: { status: true, studentId: true } }),
     prisma.anecdotalRecord.count({ where: { createdAt: { gte: monthStart } } }),
     prisma.reportCard.count({ where: { status: { in: ['ready', 'released'] } } }),
     prisma.admLearnerProfile.count({ where: { status: 'approved' } }),
@@ -75,6 +75,9 @@ async function loadDashboardOverview(month?: string) {
     return acc;
   }, {});
 
+  const loggedTodayDistinct = new Set(todayAttendance.map((r) => r.studentId)).size;
+  const notLoggedToday = Math.max(0, totalStudents - loggedTodayDistinct);
+
   const todayTotal = todayAttendance.length;
   const presentToday = statusCounts[AttendanceStatus.present] ?? 0;
   const absentToday = statusCounts[AttendanceStatus.absent] ?? 0;
@@ -87,7 +90,7 @@ async function loadDashboardOverview(month?: string) {
     countAtRiskStudents(activeYear?.id ?? null),
     getAdmForApproval(),
     getSectionAttendance(monthFilter),
-    getDailyTrend(today),
+    getDailyTrend(today, totalStudents),
     getSectionHeatmap(),
   ]);
 
@@ -99,6 +102,7 @@ async function loadDashboardOverview(month?: string) {
         absentToday,
         lateToday,
         excusedToday,
+        notLoggedToday,
         todayTotal,
         presentRate,
         anecdotalThisMonth,
@@ -329,7 +333,7 @@ async function getSectionHeatmap() {
   });
 }
 
-async function getDailyTrend(today: Date) {
+async function getDailyTrend(today: Date, totalStudents: number) {
   const dow = today.getDay();
   const monday = new Date(today);
   monday.setDate(today.getDate() - ((dow + 6) % 7));
@@ -344,25 +348,55 @@ async function getDailyTrend(today: Date) {
 
   const records = await prisma.attendanceRecord.findMany({
     where: { attendanceDate: { gte: days[0], lte: days[HEATMAP_DAYS.length - 1] } },
-    select: { attendanceDate: true, status: true },
+    select: { attendanceDate: true, status: true, studentId: true },
   });
 
-  const byDate = new Map<string, { present: number; total: number }>();
+  const byDate = new Map<
+    string,
+    { present: number; absent: number; late: number; excused: number; students: Set<string> }
+  >();
   for (const r of records) {
     const key = r.attendanceDate.toISOString().slice(0, 10);
-    const bucket = byDate.get(key) ?? { present: 0, total: 0 };
-    bucket.total += 1;
-    if (r.status === AttendanceStatus.present) bucket.present += 1;
-    byDate.set(key, bucket);
+    let bucket = byDate.get(key);
+    if (!bucket) {
+      bucket = { present: 0, absent: 0, late: 0, excused: 0, students: new Set() };
+      byDate.set(key, bucket);
+    }
+    switch (r.status) {
+      case AttendanceStatus.present:
+        bucket.present += 1;
+        break;
+      case AttendanceStatus.absent:
+        bucket.absent += 1;
+        break;
+      case AttendanceStatus.late:
+        bucket.late += 1;
+        break;
+      case AttendanceStatus.excused:
+        bucket.excused += 1;
+        break;
+    }
+    bucket.students.add(r.studentId);
   }
 
   return days.map((d, i) => {
     const key = d.toISOString().slice(0, 10);
     const bucket = byDate.get(key);
+    const present = bucket?.present ?? 0;
+    const absent = bucket?.absent ?? 0;
+    const late = bucket?.late ?? 0;
+    const excused = bucket?.excused ?? 0;
+    const total = present + absent + late + excused;
+    const logged = bucket?.students.size ?? 0;
     return {
       day: HEATMAP_DAYS[i],
       label: `${shortDate(d)} - ${HEATMAP_DAYS[i]}`,
-      rate: bucket && bucket.total > 0 ? Math.round((bucket.present / bucket.total) * 1000) / 10 : null,
+      present,
+      absent,
+      late,
+      excused,
+      notLogged: Math.max(0, totalStudents - logged),
+      rate: total > 0 ? Math.round((present / total) * 1000) / 10 : null,
     };
   });
 }

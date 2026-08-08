@@ -6,26 +6,22 @@ import { redis } from './lib/redis';
 import { startEscalationJob } from './jobs/flagEscalation';
 import { startOcrWorker } from './services/ocr.service';
 import { startBackupJob } from './jobs/backupJob';
-
 const app = createApp();
-
 const server = app.listen(config.port, () => {
-  logger.info(`Zentra API listening on http://localhost:${config.port}`);
-  logger.info(`OpenAPI docs at http://localhost:${config.port}/api-docs`);
-  startEscalationJob();
-  startOcrWorker();
-  startBackupJob();
+    logger.info(`Zentra API listening on http://localhost:${config.port}`);
+    logger.info(`OpenAPI docs at http://localhost:${config.port}/api-docs`);
+    startEscalationJob();
+    startOcrWorker();
+    startBackupJob();
 });
-
 async function shutdown(signal: string) {
-  logger.info(`Received ${signal}, shutting down`);
-  server.close(async () => {
-    await prisma.$disconnect();
-    redis.disconnect();
-    process.exit(0);
-  });
-  setTimeout(() => process.exit(1), 10000).unref();
+    logger.info(`Received ${signal}, shutting down`);
+    server.close(async () => {
+        await prisma.$disconnect();
+        redis.disconnect();
+        process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10000).unref();
 }
-
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
