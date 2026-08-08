@@ -1,17 +1,8 @@
 import { InfoDialog } from "@/components/ui/info-dialog";
-import { CustomSelect, type SelectOption } from "@/components/ui/select";
+import { CustomSelect } from "@/components/ui/select";
+import { GRADE_OPTIONS } from "@/constants/grades";
 import type { ReportSection } from "@/lib/dashboard";
 import styles from "./attendance-header.module.css";
-
-const GRADE_OPTIONS: SelectOption[] = [
-  { value: "all", label: "All Grades" },
-  { value: "grade_7", label: "Grade 7" },
-  { value: "grade_8", label: "Grade 8" },
-  { value: "grade_9", label: "Grade 9" },
-  { value: "grade_10", label: "Grade 10" },
-  { value: "grade_11", label: "Grade 11" },
-  { value: "grade_12", label: "Grade 12" },
-];
 
 export function AttendanceHeader({
   view,

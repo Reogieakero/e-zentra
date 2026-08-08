@@ -1,3 +1,5 @@
+import { GOOGLE_SIGNUP_KEY } from "@/constants/storage";
+
 export interface GoogleIdentity {
   accessToken: string;
   email: string;
@@ -5,7 +7,7 @@ export interface GoogleIdentity {
   avatarUrl: string | null;
 }
 
-const KEY = "zentra.google.signup";
+const KEY = GOOGLE_SIGNUP_KEY;
 
 export function getGoogleIdentity(): GoogleIdentity | null {
   if (typeof window === "undefined") return null;

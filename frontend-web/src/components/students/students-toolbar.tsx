@@ -1,17 +1,8 @@
 import { CustomSelect } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
-import type { StudentsQuery } from "@/lib/use-students-query";
+import { GRADE_OPTIONS } from "@/constants/grades";
+import type { StudentsQuery } from "@/hooks/use-students-query";
 import styles from "./students-toolbar.module.css";
-
-export const GRADE_OPTIONS = [
-  { value: "all", label: "All Grades" },
-  { value: "grade_7", label: "Grade 7" },
-  { value: "grade_8", label: "Grade 8" },
-  { value: "grade_9", label: "Grade 9" },
-  { value: "grade_10", label: "Grade 10" },
-  { value: "grade_11", label: "Grade 11" },
-  { value: "grade_12", label: "Grade 12" },
-];
 
 interface StudentsToolbarProps {
   search: string;

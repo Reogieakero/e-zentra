@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell, ChevronDown, LogOut, Menu, Moon, Sun, User } from "lucide-react";
 import { api } from "@/lib/api";
 import { clearSession, getTokens, getUser } from "@/lib/auth";
-import { useClickOutside } from "@/lib/use-click-outside";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { useTheme, type Theme } from "@/components/theme-provider";
 import { SearchInput } from "@/components/ui/search-input";
 import styles from "./topbar.module.css";

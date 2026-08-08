@@ -7,7 +7,7 @@ import StudentsTable from "@/components/students/students-table";
 import StudentsPagination from "@/components/students/students-pagination";
 import { StudentsEmpty, StudentsError, StudentsTableLoading } from "@/components/students/students-states";
 import StudentDrawer from "@/components/students/students-drawer";
-import { useStudentsQueryState } from "@/lib/use-students-query";
+import { useStudentsQueryState } from "@/hooks/use-students-query";
 import styles from "./students.module.css";
 
 export default function StudentsPage() {

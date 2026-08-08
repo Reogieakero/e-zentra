@@ -8,37 +8,25 @@ import { AttendanceHeatmap, AttendanceHeatmapLoading } from "@/components/attend
 import { AttendanceListsRow, AttendanceListsRowLoading } from "@/components/attendance/attendance-lists-row";
 import { AttendanceTopSections, AttendanceTopSectionsLoading } from "@/components/attendance/attendance-top-sections";
 import { AttendancePageError } from "@/components/attendance/attendance-error";
+import { FILTER_KEYS, storedFilter } from "@/constants/storage";
 import styles from "./attendance.module.css";
 
-const FILTER_KEYS = {
-  view: "zentra.attendance-summary.view",
-  grade: "zentra.attendance-summary.grade",
-  section: "zentra.attendance-summary.section",
-} as const;
-
-const storedFilter = (key: string) => {
-  if (typeof window === "undefined") return "";
-  try {
-    return window.localStorage.getItem(key) ?? "";
-  } catch {
-    return "";
-  }
-};
+const SUMMARY_FILTER_KEYS = FILTER_KEYS.attendanceSummary;
 
 export default function AttendanceHomePage() {
   const [view, setView] = useState<"monthly" | "daily">(
-    () => (storedFilter(FILTER_KEYS.view) === "daily" ? "daily" : "monthly"),
+    () => (storedFilter(SUMMARY_FILTER_KEYS.view) === "daily" ? "daily" : "monthly"),
   );
-  const [grade, setGrade] = useState(() => storedFilter(FILTER_KEYS.grade) || "all");
-  const [section, setSection] = useState(() => storedFilter(FILTER_KEYS.section));
+  const [grade, setGrade] = useState(() => storedFilter(SUMMARY_FILTER_KEYS.grade) || "all");
+  const [section, setSection] = useState(() => storedFilter(SUMMARY_FILTER_KEYS.section));
   const { data: sectionOptions, isLoading: sectionsLoading } = useSectionsByGrade(grade);
   const { data, error, refresh } = useAttendanceSummary(view, grade, section);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(FILTER_KEYS.view, view);
-      window.localStorage.setItem(FILTER_KEYS.grade, grade);
-      window.localStorage.setItem(FILTER_KEYS.section, section);
+      window.localStorage.setItem(SUMMARY_FILTER_KEYS.view, view);
+      window.localStorage.setItem(SUMMARY_FILTER_KEYS.grade, grade);
+      window.localStorage.setItem(SUMMARY_FILTER_KEYS.section, section);
     } catch {
 
     }

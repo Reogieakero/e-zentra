@@ -1,7 +1,7 @@
 "use client";
 
 import type { AtRiskStudent } from "@/lib/dashboard";
-import { useRiskCarousel } from "@/lib/use-risk-carousel";
+import { useRiskCarousel } from "@/hooks/use-risk-carousel";
 import styles from "./at-risk-card.module.css";
 
 interface AtRiskCardProps {

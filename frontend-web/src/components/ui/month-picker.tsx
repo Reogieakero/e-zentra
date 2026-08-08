@@ -2,23 +2,9 @@
 
 import { useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
-import { useClickOutside } from "@/lib/use-click-outside";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import { MONTHS } from "@/constants/dates";
 import styles from "./month-picker.module.css";
-
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 interface MonthPickerProps {
   id?: string;
