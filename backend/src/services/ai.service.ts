@@ -1,4 +1,4 @@
-import { loadAttendanceReport } from './dashboard.service';
+import { loadAttendanceReport } from './attendance.report.service';
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.1';

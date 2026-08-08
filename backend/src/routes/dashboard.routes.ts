@@ -5,11 +5,13 @@ import { requireRole, STAFF_VIEW_ROLES } from '../middleware/authorize';
 import { GradeLevel } from '@prisma/client';
 import {
   getDashboardOverview,
-  getAttendanceReport,
-  listSectionsByGrade,
-  getAttendanceSummary,
-  getSf10Summary,
 } from '../services/dashboard.service';
+import {
+  getAttendanceReport,
+  getAttendanceSummary,
+  listSectionsByGrade,
+} from '../services/attendance.report.service';
+import { getSf10Summary } from '../services/sf10.service';
 import { getAiRecommendations } from '../services/ai.service';
 import { Sf10ListQuery, Sf10Sort } from '../types/sf10';
 
