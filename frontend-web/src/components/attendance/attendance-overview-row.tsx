@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useRef, useEffect } from "react";
 import {
   Area,
   AreaChart,
@@ -7,7 +8,6 @@ import {
   Cell,
   Pie,
   PieChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip as ChartTip,
   XAxis,
@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { useTheme } from "@/components/theme-provider";
 import type { MonthlyTrendPoint, TodayAttendance } from "@/lib/dashboard";
-import styles from "./attendance.module.css";
+import styles from "./attendance-overview-row.module.css";
 
 const DONUT_COLORS = {
   present: "#16a34a",
@@ -24,12 +24,57 @@ const DONUT_COLORS = {
   excused: "#38bdf8",
 };
 
+const STATUS_COLORS = {
+  present: "#16a34a",
+  absent: "#ef4444",
+  late: "#f59e0b",
+  excused: "#3b82f6",
+};
+
+const STATUS_KEYS: Array<{ key: "present" | "absent" | "late" | "excused" | "notLogged"; name: string; color: string }> = [
+  { key: "present", name: "Present", color: STATUS_COLORS.present },
+  { key: "absent", name: "Absent", color: STATUS_COLORS.absent },
+  { key: "late", name: "Late", color: STATUS_COLORS.late },
+  { key: "excused", name: "Excused", color: STATUS_COLORS.excused },
+  { key: "notLogged", name: "Not logged", color: "#94a3b8" },
+];
+
+function TrendTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: Record<string, unknown> }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload ?? {};
+  return (
+    <div className={styles.tooltip}>
+      <span className={styles.tooltipLabel}>{String(p.full ?? label ?? "")}</span>
+      {STATUS_KEYS.map(({ key, name, color }) => {
+        const v = p[key];
+        return (
+          <div key={key} className={styles.tooltipRow}>
+            <span className={styles.tooltipDot} style={{ background: color }} />
+            <span>{name}</span>
+            <span className={styles.tooltipValue}>{typeof v === "number" ? v.toLocaleString() : "—"}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AttendanceOverviewRow({
   today,
   monthlyTrend,
+  view = "monthly",
 }: {
   today: TodayAttendance;
   monthlyTrend: MonthlyTrendPoint[];
+  view?: "monthly" | "daily";
 }) {
   const { theme } = useTheme();
   const dark = theme === "dark";
@@ -49,7 +94,27 @@ export function AttendanceOverviewRow({
       ? donutData
       : [{ name: "No records", value: 1, color: "rgba(255,255,255,0.06)" }];
 
-  const trendData = monthlyTrend.map((p) => ({ label: p.label, rate: p.rate ?? 0 }));
+  const trendData = useMemo(
+    () =>
+      monthlyTrend.map((p) => ({
+        name: p.label,
+        full: p.full ?? p.label,
+        total: p.total ?? 0,
+        present: p.present ?? 0,
+        absent: p.absent ?? 0,
+        late: p.late ?? 0,
+        excused: p.excused ?? 0,
+        notLogged: p.notLogged ?? 0,
+      })),
+    [monthlyTrend],
+  );
+  const chartMinWidth = trendData.length * 48;
+  const chartScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = chartScrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [trendData]);
 
   return (
     <div className={styles.overviewGrid}>
@@ -101,55 +166,68 @@ export function AttendanceOverviewRow({
       <section className={styles.card}>
         <div className={styles.cardHeader}>
           <div>
-            <h4 className={styles.cardTitle}>Attendance Analytics</h4>
-            <p className={styles.cardSubtitle}>Monthly attendance rate trend</p>
+            <h4 className={styles.cardTitle}>
+              {view === "daily" ? "Daily" : "Monthly"} Status Breakdown
+            </h4>
+            <p className={styles.cardSubtitle}>
+              {view === "daily" ? "Daily" : "Monthly"} count of present, absent, late, excused, and not-logged students
+            </p>
           </div>
-          <span className={`${styles.sectionHint} ${styles.chartHint}`}>Hover to view exact %</span>
+          <span className={`${styles.sectionHint} ${styles.chartHint}`}>Hover to view exact counts</span>
         </div>
 
-        <div className={styles.chartBox}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="attendanceTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#16a34a" stopOpacity={0.22} />
-                  <stop offset="100%" stopColor="#16a34a" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: tickFill }}
-                axisLine={false}
-                tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis hide domain={[0, 100]} />
-              <ChartTip cursor={cursor} />
-              <ReferenceLine y={95} stroke="#86efac" strokeDasharray="4 2" />
-              <Area
-                type="monotone"
-                dataKey="rate"
-                name="Rate"
-                stroke="#16a34a"
-                strokeWidth={2.5}
-                fill="url(#attendanceTrendGradient)"
-                dot={{ r: 3, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2 }}
-                activeDot={{ r: 5, fill: "#ffffff", stroke: "#16a34a", strokeWidth: 2.5 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className={styles.chartScroll} ref={chartScrollRef}>
+          <div className={styles.chartCanvas} style={{ minWidth: `max(100%, ${chartMinWidth}px)` }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 12, right: 12, left: 12, bottom: 0 }}>
+                <defs>
+                  {STATUS_KEYS.map(({ key, name, color }) => (
+                    <linearGradient key={key} id={`attendanceTrendGradient-${name}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={color} stopOpacity={0.18} />
+                      <stop offset="100%" stopColor={color} stopOpacity={0} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10, fill: tickFill }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={view === "daily" ? Math.max(Math.ceil(trendData.length / 12) - 1, 0) : 0}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: tickFill }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={30}
+                />
+                <ChartTip cursor={cursor} content={<TrendTooltip />} />
+                {STATUS_KEYS.map(({ key, name, color }) => (
+                  <Area
+                    key={key}
+                    type="monotone"
+                    dataKey={key}
+                    name={name}
+                    stroke={color}
+                    strokeWidth={2}
+                    fill={`url(#attendanceTrendGradient-${name})`}
+                    dot={{ r: 2, fill: "#ffffff", stroke: color, strokeWidth: 1.5 }}
+                    activeDot={{ r: 4, fill: "#ffffff", stroke: color, strokeWidth: 2 }}
+                  />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className={styles.legend}>
-          <span className={styles.legendItem}>
-            <span className={`${styles.legendDot} ${styles.legendDotSolid}`} />
-            Attendance Rate
-          </span>
-          <span className={styles.legendItem}>
-            <span className={`${styles.legendDot} ${styles.legendDotLine}`} />
-            95% Target
-          </span>
+          {STATUS_KEYS.map(({ key, name, color }) => (
+            <span key={key} className={styles.legendItem}>
+              <span className={styles.legendDot} style={{ background: color }} />
+              {name}
+            </span>
+          ))}
         </div>
       </section>
     </div>

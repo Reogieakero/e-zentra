@@ -2,7 +2,7 @@
 
 import { Trophy, Flower2 } from "lucide-react";
 import type { TopSection } from "@/lib/dashboard";
-import styles from "./attendance.module.css";
+import styles from "./attendance-top-sections.module.css";
 
 export function AttendanceTopSections({ sections }: { sections: TopSection[] }) {
   const ranked = sections.map((s, i) => ({ ...s, rank: i + 1 }));

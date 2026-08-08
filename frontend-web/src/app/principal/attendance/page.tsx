@@ -1,6 +1,7 @@
 "use client";
 
-import { useAttendanceSummary } from "@/lib/dashboard";
+import { useEffect, useState } from "react";
+import { useAttendanceSummary, useSectionsByGrade } from "@/lib/dashboard";
 import { AttendanceHeader, AttendanceHeaderLoading } from "@/components/attendance/attendance-header";
 import { AttendanceOverviewRow, AttendanceOverviewRowLoading } from "@/components/attendance/attendance-overview-row";
 import { AttendanceHeatmap, AttendanceHeatmapLoading } from "@/components/attendance/attendance-heatmap";
@@ -9,10 +10,51 @@ import { AttendanceTopSections, AttendanceTopSectionsLoading } from "@/component
 import { AttendancePageError } from "@/components/attendance/attendance-error";
 import styles from "./attendance.module.css";
 
-export default function AttendanceHomePage() {
-  const { data, error, refresh, isLoading } = useAttendanceSummary();
+const FILTER_KEYS = {
+  view: "zentra.attendance-summary.view",
+  grade: "zentra.attendance-summary.grade",
+  section: "zentra.attendance-summary.section",
+} as const;
 
-  if (isLoading && !data) {
+const storedFilter = (key: string) => {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+};
+
+export default function AttendanceHomePage() {
+  const [view, setView] = useState<"monthly" | "daily">(
+    () => (storedFilter(FILTER_KEYS.view) === "daily" ? "daily" : "monthly"),
+  );
+  const [grade, setGrade] = useState(() => storedFilter(FILTER_KEYS.grade) || "all");
+  const [section, setSection] = useState(() => storedFilter(FILTER_KEYS.section));
+  const { data: sectionOptions, isLoading: sectionsLoading } = useSectionsByGrade(grade);
+  const { data, error, refresh } = useAttendanceSummary(view, grade, section);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FILTER_KEYS.view, view);
+      window.localStorage.setItem(FILTER_KEYS.grade, grade);
+      window.localStorage.setItem(FILTER_KEYS.section, section);
+    } catch {
+
+    }
+  }, [view, grade, section]);
+
+  const changeGrade = (next: string) => {
+    setGrade(next);
+    setSection("");
+  };
+  const changeSection = (next: string) => {
+    setSection(next);
+  };
+
+  const loading = !data && !error;
+
+  if (loading) {
     return (
       <div className={styles.page}>
         <AttendanceHeaderLoading />
@@ -30,8 +72,17 @@ export default function AttendanceHomePage() {
 
   return (
     <div className={styles.page}>
-      <AttendanceHeader schoolYear={data.schoolYear} totalEnrolled={data.totalEnrolled} />
-      <AttendanceOverviewRow today={data.today} monthlyTrend={data.monthlyTrend} />
+      <AttendanceHeader
+        view={view}
+        onViewChange={setView}
+        grade={grade}
+        onGradeChange={changeGrade}
+        section={section}
+        onSectionChange={changeSection}
+        sectionOptions={sectionOptions ?? []}
+        sectionsLoading={sectionsLoading}
+      />
+      <AttendanceOverviewRow today={data.today} monthlyTrend={data.monthlyTrend} view={view} />
       <AttendanceHeatmap cells={data.heatmap} />
       <AttendanceListsRow perfect={data.perfectAttendance} low={data.lowAttendance} />
       <AttendanceTopSections sections={data.topSections} />

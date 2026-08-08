@@ -6,7 +6,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import type { DashboardStats } from "@/lib/dashboard";
 import styles from "./kpi-cards.module.css";
 
-export type AttendanceView = "presentAbsent" | "lateExcused";
+export type AttendanceView = "presentAbsent" | "lateExcused" | "notLogged";
 
 interface KpiStatConfig {
   label: string;
@@ -58,6 +58,14 @@ function buildKpiCards(stats: DashboardStats): KpiCardConfig[] {
     },
   ];
 
+  const notLoggedStat: KpiStatConfig = {
+    label: "Not Logged",
+    value: stats.notLoggedToday.toLocaleString(),
+    icon: CalendarX,
+    note: { text: `${stats.totalStudents.toLocaleString()} enrolled` },
+    desc: "Enrolled learners with no attendance record logged today.",
+  };
+
   return [
     {
       title: "Enrollment Stats",
@@ -85,7 +93,7 @@ function buildKpiCards(stats: DashboardStats): KpiCardConfig[] {
       title: "Attendance",
       icon: CalendarX,
       flipEnabled: true,
-      faces: [attendanceStats, lateExcusedStats],
+      faces: [attendanceStats, lateExcusedStats, [notLoggedStat]],
     },
     {
       title: "Action Items",
@@ -164,7 +172,13 @@ function StatTiles({ stats }: { stats: KpiStatConfig[] }) {
 
 export default function KpiCards({ stats, attendanceView, onAttendanceViewChange }: KpiCardsProps) {
   const cards = buildKpiCards(stats);
-  const flipped = attendanceView === "lateExcused";
+  const faceIndex = attendanceView === "notLogged" ? 2 : attendanceView === "lateExcused" ? 1 : 0;
+  const flipTitle =
+    attendanceView === "notLogged"
+      ? "Show Present / Absent"
+      : attendanceView === "presentAbsent"
+        ? "Show Late / Excused"
+        : "Show Present / Absent";
 
   return (
     <div className={styles.kpiGrid}>
@@ -174,37 +188,57 @@ export default function KpiCards({ stats, attendanceView, onAttendanceViewChange
             <span>{card.title}</span>
             <div className={styles.kpiCardActions}>
               {card.flipEnabled ? (
-                <a
-                  href="#flip"
-                  className={styles.kpiFlipLink}
-                  aria-label="Flip attendance view"
-                  title={flipped ? "Show Present / Absent" : "Show Late / Excused"}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onAttendanceViewChange(flipped ? "presentAbsent" : "lateExcused");
-                  }}
-                >
-                  <card.icon className={styles.kpiFlipIcon} />
-                  <span>Flip</span>
-                </a>
+                <>
+                  <a
+                    href="#flip"
+                    className={styles.kpiFlipLink}
+                    aria-label="Flip attendance view"
+                    title={flipTitle}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onAttendanceViewChange(
+                        attendanceView === "presentAbsent" ? "lateExcused" : "presentAbsent"
+                      );
+                    }}
+                  >
+                    <card.icon className={styles.kpiFlipIcon} />
+                    <span>Flip</span>
+                  </a>
+                  <a
+                    href="#not-logged"
+                    className={styles.kpiFlipLink}
+                    aria-label="Show Not Logged card"
+                    title="Show Not Logged nested card"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onAttendanceViewChange(attendanceView === "notLogged" ? "presentAbsent" : "notLogged");
+                    }}
+                  >
+                    <span>Not logged</span>
+                  </a>
+                </>
               ) : (
                 <card.icon className={styles.kpiCardIcon} />
               )}
             </div>
           </div>
           {card.flipEnabled ? (
-            <div className={`${styles.kpiFlip} ${flipped ? styles.kpiFlipFlipped : ""}`}>
-              <div className={styles.kpiFlipInner}>
-                <div className={`${styles.kpiFace} ${styles.kpiFaceFront}`}>
-                  <div className={styles.kpiStats}>
-                    <StatTiles stats={card.faces[0]} />
+            <div className={styles.kpiFlip}>
+              <div
+                className={styles.kpiFlipInner}
+                style={{ transform: `rotateY(${-faceIndex * 120}deg)` }}
+              >
+                {card.faces.map((face, i) => (
+                  <div
+                    key={i}
+                    className={`${styles.kpiFace} ${i === 0 ? styles.kpiFaceFront : styles.kpiFaceRotate}`}
+                    style={{ transform: i === 0 ? undefined : `rotateY(${i * 120}deg)` }}
+                  >
+                    <div className={styles.kpiStats}>
+                      <StatTiles stats={face} />
+                    </div>
                   </div>
-                </div>
-                <div className={`${styles.kpiFace} ${styles.kpiFaceBack}`}>
-                  <div className={styles.kpiStats}>
-                    <StatTiles stats={card.faces[1]} />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           ) : (

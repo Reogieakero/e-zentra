@@ -250,7 +250,6 @@ export function SignupForm() {
       );
       router.refresh();
     } catch {
-      // sileo.promise already surfaced the error toast
     } finally {
       setSubmitting(false);
     }

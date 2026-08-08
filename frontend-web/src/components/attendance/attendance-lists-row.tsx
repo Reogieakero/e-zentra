@@ -2,7 +2,7 @@
 
 import { BadgeCheck, AlertTriangle } from "lucide-react";
 import type { LowAttendanceRow, PerfectAttendanceRow } from "@/lib/dashboard";
-import styles from "./attendance.module.css";
+import styles from "./attendance-lists-row.module.css";
 
 export function AttendanceListsRow({
   perfect,

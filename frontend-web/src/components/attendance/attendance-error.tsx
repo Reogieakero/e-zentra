@@ -1,6 +1,6 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { ApiClientError } from "@/lib/api";
-import styles from "./attendance.module.css";
+import styles from "./attendance-error.module.css";
 
 export function AttendancePageError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const message = error instanceof ApiClientError ? error.message : "Could not load the attendance page. Please try again.";

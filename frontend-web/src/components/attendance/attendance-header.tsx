@@ -1,14 +1,40 @@
-import { CalendarCheck2 } from "lucide-react";
 import { InfoDialog } from "@/components/ui/info-dialog";
-import styles from "./attendance.module.css";
+import { CustomSelect, type SelectOption } from "@/components/ui/select";
+import type { ReportSection } from "@/lib/dashboard";
+import styles from "./attendance-header.module.css";
 
-export function AttendanceHeader({ schoolYear, totalEnrolled }: { schoolYear: string | null; totalEnrolled: number }) {
+const GRADE_OPTIONS: SelectOption[] = [
+  { value: "all", label: "All Grades" },
+  { value: "grade_7", label: "Grade 7" },
+  { value: "grade_8", label: "Grade 8" },
+  { value: "grade_9", label: "Grade 9" },
+  { value: "grade_10", label: "Grade 10" },
+  { value: "grade_11", label: "Grade 11" },
+  { value: "grade_12", label: "Grade 12" },
+];
+
+export function AttendanceHeader({
+  view,
+  onViewChange,
+  grade,
+  onGradeChange,
+  section,
+  onSectionChange,
+  sectionOptions,
+  sectionsLoading,
+}: {
+  view: "monthly" | "daily";
+  onViewChange: (view: "monthly" | "daily") => void;
+  grade: string;
+  onGradeChange: (grade: string) => void;
+  section: string;
+  onSectionChange: (section: string) => void;
+  sectionOptions: ReportSection[];
+  sectionsLoading: boolean;
+}) {
   return (
     <div className={styles.header}>
       <div className={styles.headerTitleWrap}>
-        <div className={styles.titleIconWrap}>
-          <CalendarCheck2 className={styles.titleIcon} />
-        </div>
         <div>
           <h1 className={styles.title}>Attendance</h1>
           <p className={styles.subtitle}>
@@ -18,17 +44,57 @@ export function AttendanceHeader({ schoolYear, totalEnrolled }: { schoolYear: st
       </div>
 
       <div className={styles.headerControls}>
-        {schoolYear && (
-          <span className={styles.yearBadge}>
-            Year: {schoolYear}
-            <span className={styles.yearBadgeMeta}>{totalEnrolled.toLocaleString()} enrolled</span>
-          </span>
-        )}
+        <CustomSelect
+          id="attendance-granularity"
+          value={view}
+          options={[
+            { value: "monthly", label: "Monthly" },
+            { value: "daily", label: "Daily" },
+          ]}
+          onChange={(v) => onViewChange(v as "monthly" | "daily")}
+          className={styles.filterSelect}
+          size="sm"
+          showCheck={false}
+        />
+        <CustomSelect
+          id="attendance-grade"
+          value={grade}
+          options={GRADE_OPTIONS}
+          onChange={onGradeChange}
+          className={styles.filterSelect}
+          size="sm"
+          showCheck={false}
+        />
+        <CustomSelect
+          id="attendance-section"
+          value={section}
+          options={[
+            { value: "", label: "All Sections" },
+            ...sectionOptions.map((s) => ({ value: s.id, label: s.sectionName })),
+          ]}
+          onChange={onSectionChange}
+          className={styles.filterSelect}
+          size="sm"
+          showCheck={false}
+          placeholder={sectionsLoading ? "Loading…" : grade === "all" ? "Pick a grade first" : "Select a section"}
+        />
         <InfoDialog title="Attendance — What You See" bare>
           <p className={styles.modalIntro}>
             This page aggregates live attendance records for the active school year. Every figure is computed only
             from attendance that was actually logged.
           </p>
+          <h3 className={styles.modalSection}>Filters</h3>
+          <ul className={styles.modalList}>
+            <li>
+              <strong>View</strong> — switch the trend chart between monthly and daily attendance rate.
+            </li>
+            <li>
+              <strong>Grade</strong> — zoom into a single grade level or keep it school-wide.
+            </li>
+            <li>
+              <strong>Section</strong> — narrow down to one section once a grade is picked.
+            </li>
+          </ul>
           <h3 className={styles.modalSection}>Attendance Overview</h3>
           <ul className={styles.modalList}>
             <li>
@@ -36,12 +102,12 @@ export function AttendanceHeader({ schoolYear, totalEnrolled }: { schoolYear: st
               absent, and excused, with the present rate in the middle.
             </li>
             <li>
-              <strong>Monthly trend</strong> — school-wide present rate per month across the school year, compared
+              <strong>Trend</strong> — present rate per month (or per day) across the school year, compared
               against the 95% target line.
             </li>
           </ul>
           <h3 className={styles.modalSection}>Daily Attendance Heatmap</h3>
-          <p>School-wide attendance rate for every school day (Mon&ndash;Fri) this year. Deeper green = higher rate.</p>
+          <p>Attendance rate for every school day (Mon&ndash;Fri) this year. Deeper green = higher rate.</p>
           <h3 className={styles.modalSection}>Perfect &amp; low attendance</h3>
           <ul className={styles.modalList}>
             <li>
@@ -63,13 +129,16 @@ export function AttendanceHeaderLoading() {
   return (
     <div className={styles.header}>
       <div className={styles.headerTitleWrap}>
-        <div className={`${styles.skeleton} ${styles.skTitleIcon}`} />
         <div>
           <div className={`${styles.skeleton} ${styles.skTitle}`} />
           <div className={`${styles.skeleton} ${styles.skSubtitle}`} />
         </div>
       </div>
-      <div className={`${styles.skeleton} ${styles.skBadge}`} />
+      <div className={styles.headerControls}>
+        <div className={`${styles.skeleton} ${styles.skSelect}`} />
+        <div className={`${styles.skeleton} ${styles.skSelect}`} />
+        <div className={`${styles.skeleton} ${styles.skSelectWide}`} />
+      </div>
     </div>
   );
 }

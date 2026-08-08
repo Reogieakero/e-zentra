@@ -163,9 +163,8 @@ export function GoogleSignupForm({ identity, onComplete }: GoogleSignupFormProps
         }
       );
       onComplete();
-    } catch {
-      // sileo.promise already surfaced the error toast
-    } finally {
+} catch {
+      } finally {
       setSubmitting(false);
     }
   }
@@ -175,7 +174,7 @@ export function GoogleSignupForm({ identity, onComplete }: GoogleSignupFormProps
       <div className={gstyles.identityCard}>
         <div className={gstyles.avatar}>
           {identity.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+
             <img src={identity.avatarUrl} alt="" width={40} height={40} />
           ) : (
             <span>{initials(identity.name)}</span>

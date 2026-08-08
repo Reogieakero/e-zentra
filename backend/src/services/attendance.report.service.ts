@@ -1,4 +1,4 @@
-import { AttendanceStatus, GradeLevel } from '@prisma/client';
+import { AttendanceStatus, GradeLevel, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { cacheKey, getCached } from './cache.service';
 import {
@@ -7,9 +7,7 @@ import {
   MONTH_LONG,
   WEEKDAYS,
   addStatus,
-  countEnrolledStudents,
   dayKey,
-  monthKey,
   rateOf,
   round1,
 } from '../lib/school';
@@ -82,16 +80,32 @@ export async function loadAttendanceReport(
     ? { section: { gradeLevel: gradeLevel as GradeLevel } }
     : {};
 
-  const [records, enrollmentTotal, activeTerm] = await Promise.all([
-    prisma.attendanceRecord.findMany({
-      where: {
-        term: { schoolYearId: activeYear.id },
-        attendanceDate: { gte: start, lt: endExclusive },
-        ...sectionFilter,
-      },
-      select: { status: true, attendanceDate: true, section: { select: { gradeLevel: true } } },
-    }),
-    countEnrolledStudents(activeYear.id),
+  const enrollmentScope: Prisma.StudentProfileWhereInput = sectionId
+    ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
+    : gradeLevel
+    ? { section: { status: 'active', schoolYearId: activeYear.id, gradeLevel: gradeLevel as GradeLevel } }
+    : { section: { status: 'active', schoolYearId: activeYear.id } };
+
+  const [{ records, scopedEnrolled }, activeTerm] = await Promise.all([
+    (async () => {
+      const [records, scopedEnrolled] = await Promise.all([
+        prisma.attendanceRecord.findMany({
+          where: {
+            term: { schoolYearId: activeYear.id },
+            attendanceDate: { gte: start, lt: endExclusive },
+            ...sectionFilter,
+          },
+          select: {
+            status: true,
+            attendanceDate: true,
+            studentId: true,
+            section: { select: { gradeLevel: true } },
+          },
+        }),
+        prisma.studentProfile.count({ where: enrollmentScope }),
+      ]);
+      return { records, scopedEnrolled };
+    })(),
     prisma.term.findFirst({
       where: { schoolYearId: activeYear.id, status: 'active' },
       orderBy: { startDate: 'asc' },
@@ -99,17 +113,24 @@ export async function loadAttendanceReport(
     }),
   ]);
 
-  const bucketKey = view === 'monthly' ? monthKey : dayKey;
-  const byBucket = new Map<string, { present: number; absent: number; late: number; excused: number }>();
+  const byDay = new Map<string, { present: number; absent: number; late: number; excused: number }>();
+  const byDayStudents = new Map<string, Set<string>>();
   const byGrade = new Map<string, { present: number; absent: number; late: number; excused: number }>();
   for (const r of records) {
-    const bKey = bucketKey(r.attendanceDate);
-    let bb = byBucket.get(bKey);
-    if (!bb) {
-      bb = { present: 0, absent: 0, late: 0, excused: 0 };
-      byBucket.set(bKey, bb);
+    const dKey = dayKey(r.attendanceDate);
+    let db = byDay.get(dKey);
+    if (!db) {
+      db = { present: 0, absent: 0, late: 0, excused: 0 };
+      byDay.set(dKey, db);
     }
-    addStatus(bb, r.status);
+    addStatus(db, r.status);
+
+    let dStudents = byDayStudents.get(dKey);
+    if (!dStudents) {
+      dStudents = new Set();
+      byDayStudents.set(dKey, dStudents);
+    }
+    dStudents.add(r.studentId);
 
     let gb = byGrade.get(r.section.gradeLevel);
     if (!gb) {
@@ -124,7 +145,11 @@ export async function loadAttendanceReport(
   tomorrow.setDate(tomorrow.getDate() + 1);
   const seriesEnd = tomorrow < endExclusive ? tomorrow : endExclusive;
 
-  const series = view === 'monthly' ? buildMonthlySeries(byBucket) : buildDailySeries(byBucket, start, seriesEnd);
+  const dailyTrend = buildDailySeries(byDay, start, seriesEnd).map((s) => {
+    const loggedStudents = byDayStudents.get(s.key)?.size ?? 0;
+    return { ...s, notLogged: Math.max(0, scopedEnrolled - loggedStudents) };
+  });
+  const series = view === 'monthly' ? buildMonthlySeriesFromDaily(dailyTrend) : dailyTrend;
 
   const tracked = series.filter((s) => s.rate !== null);
   const rates = tracked.map((s) => s.rate as number);
@@ -180,7 +205,7 @@ export async function loadAttendanceReport(
     term: activeTerm?.termLabel ?? null,
     targetRate: target,
     granularity: view,
-    enrollmentTotal,
+    enrollmentTotal: scopedEnrolled,
     series,
     statBlocks: {
       averageRate,
@@ -194,34 +219,68 @@ export async function loadAttendanceReport(
   };
 }
 
-function monthlyOrder(a: string, b: string): number {
-  return a.localeCompare(b);
-}
-
-function dailyOrder(a: string, b: string): number {
-  return a.localeCompare(b);
-}
-
-function buildMonthlySeries(byMonth: Map<string, { present: number; absent: number; late: number; excused: number }>) {
-  const keys = Array.from(byMonth.keys()).sort(monthlyOrder);
-  return keys.map((mKey) => {
-    const [year, monthNum] = mKey.split('-').map(Number);
-    const counts = byMonth.get(mKey);
-    const total = counts ? counts.present + counts.absent + counts.late + counts.excused : 0;
-    return {
-      key: mKey,
-      shortLabel: MONTH_LONG[monthNum - 1].slice(0, 3),
-      label: `${MONTH_LONG[monthNum - 1]} ${year}`,
-      year,
-      month: monthNum,
-      total,
-      present: counts?.present ?? 0,
-      absent: counts?.absent ?? 0,
-      late: counts?.late ?? 0,
-      excused: counts?.excused ?? 0,
-      rate: total > 0 ? rateOf(counts!) : null,
-    };
-  });
+function buildMonthlySeriesFromDaily(
+  daily: Array<{
+    key: string;
+    shortLabel: string;
+    label: string;
+    year: number;
+    month: number;
+    total: number;
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+    notLogged: number;
+    rate: number | null;
+  }>,
+) {
+  const byMonth = new Map<
+    string,
+    {
+      days: number;
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+      notLogged: number;
+    }
+  >();
+  for (const d of daily) {
+    if (d.total === 0) continue;
+    const mKey = `${d.year}-${String(d.month).padStart(2, '0')}`;
+    let agg = byMonth.get(mKey);
+    if (!agg) {
+      agg = { days: 0, present: 0, absent: 0, late: 0, excused: 0, notLogged: 0 };
+      byMonth.set(mKey, agg);
+    }
+    agg.days += 1;
+    agg.present += d.present;
+    agg.absent += d.absent;
+    agg.late += d.late;
+    agg.excused += d.excused;
+    agg.notLogged += d.notLogged;
+  }
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([mKey, agg]) => {
+      const [year, monthNum] = mKey.split('-').map(Number);
+      const total = agg.present + agg.absent + agg.late + agg.excused;
+      return {
+        key: mKey,
+        shortLabel: MONTH_LONG[monthNum - 1].slice(0, 3),
+        label: `${MONTH_LONG[monthNum - 1]} ${year}`,
+        year,
+        month: monthNum,
+        total,
+        present: agg.present,
+        absent: agg.absent,
+        late: agg.late,
+        excused: agg.excused,
+        notLogged: agg.notLogged,
+        rate: total > 0 ? Math.round((agg.present / total) * 10) / 10 : null,
+      };
+    });
 }
 
 function buildDailySeries(
@@ -236,7 +295,7 @@ function buildDailySeries(
     if (dow !== 0 && dow !== 6) keys.push(dayKey(cur));
     cur.setDate(cur.getDate() + 1);
   }
-  keys.sort(dailyOrder);
+  keys.sort((a, b) => a.localeCompare(b));
   return keys.map((dKey) => {
     const counts = byDay.get(dKey);
     const total = counts ? counts.present + counts.absent + counts.late + counts.excused : 0;
@@ -305,14 +364,22 @@ function buildReportInsights(
   return out;
 }
 
-export async function getAttendanceSummary() {
-  const key = cacheKey('dashboard', 'attendance-summary');
+export async function getAttendanceSummary(
+  view: 'monthly' | 'daily' = 'monthly',
+  gradeLevel?: string,
+  sectionId?: string
+) {
+  const key = cacheKey('dashboard', `attendance-summary:${view}:${gradeLevel ?? 'all'}:${sectionId ?? 'all'}`);
   return getCached<{ data: unknown }>(key, DASHBOARD_CACHE_TTL, async () => ({
-    data: await loadAttendanceSummary(),
+    data: await loadAttendanceSummary(view, gradeLevel, sectionId),
   }));
 }
 
-async function loadAttendanceSummary() {
+async function loadAttendanceSummary(
+  view: 'monthly' | 'daily' = 'monthly',
+  gradeLevel?: string,
+  sectionId?: string
+) {
   const activeYear = await prisma.schoolYear.findFirst({
     where: { status: 'active' },
     select: { id: true, yearLabel: true, startDate: true, endDate: true },
@@ -340,28 +407,51 @@ async function loadAttendanceSummary() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [records, enrolledStudents] = await Promise.all([
-    prisma.attendanceRecord.findMany({
-      where: {
-        term: { schoolYearId: activeYear.id },
-        attendanceDate: { gte: start, lt: endExclusive },
-      },
-      select: {
-        status: true,
-        attendanceDate: true,
-        studentId: true,
-        sectionId: true,
-        student: { select: { firstName: true, lastName: true, profilePhotoUrl: true } },
-        section: { select: { sectionName: true, gradeLevel: true } },
-      },
-    }),
-    countEnrolledStudents(activeYear.id),
+  const tomorrow = new Date();
+  tomorrow.setHours(0, 0, 0, 0);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const seriesEnd = tomorrow < endExclusive ? tomorrow : endExclusive;
+
+  const sectionFilter = sectionId
+    ? { sectionId }
+    : gradeLevel
+    ? { section: { gradeLevel: gradeLevel as GradeLevel } }
+    : {};
+
+  const enrollmentScope: Prisma.StudentProfileWhereInput = sectionId
+    ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
+    : gradeLevel
+    ? { section: { status: 'active', schoolYearId: activeYear.id, gradeLevel: gradeLevel as GradeLevel } }
+    : { section: { status: 'active', schoolYearId: activeYear.id } };
+
+  const [{ records, scopedEnrolled }] = await Promise.all([
+    (async () => {
+      const [records, scopedEnrolled] = await Promise.all([
+        prisma.attendanceRecord.findMany({
+          where: {
+            term: { schoolYearId: activeYear.id },
+            attendanceDate: { gte: start, lt: endExclusive },
+            ...sectionFilter,
+          },
+          select: {
+            status: true,
+            attendanceDate: true,
+            studentId: true,
+            sectionId: true,
+            student: { select: { firstName: true, lastName: true, profilePhotoUrl: true } },
+            section: { select: { sectionName: true, gradeLevel: true } },
+          },
+        }),
+        prisma.studentProfile.count({ where: enrollmentScope }),
+      ]);
+      return { records, scopedEnrolled };
+    })(),
   ]);
 
   const todayKey = dayKey(today);
   const todayCounts = { present: 0, absent: 0, late: 0, excused: 0 };
-  const byMonth = new Map<string, { present: number; absent: number; late: number; excused: number }>();
   const byDay = new Map<string, { present: number; absent: number; late: number; excused: number }>();
+  const byDayStudents = new Map<string, Set<string>>();
   const bySection = new Map<
     string,
     { sectionName: string; gradeLevel: string; counts: { present: number; absent: number; late: number; excused: number }; students: Set<string> }
@@ -378,21 +468,20 @@ async function loadAttendanceSummary() {
   >();
 
   for (const r of records) {
-    const mKey = monthKey(r.attendanceDate);
     const dKey = dayKey(r.attendanceDate);
-    let mb = byMonth.get(mKey);
-    if (!mb) {
-      mb = { present: 0, absent: 0, late: 0, excused: 0 };
-      byMonth.set(mKey, mb);
-    }
-    addStatus(mb, r.status);
-
     let db = byDay.get(dKey);
     if (!db) {
       db = { present: 0, absent: 0, late: 0, excused: 0 };
       byDay.set(dKey, db);
     }
     addStatus(db, r.status);
+
+    let dStudents = byDayStudents.get(dKey);
+    if (!dStudents) {
+      dStudents = new Set();
+      byDayStudents.set(dKey, dStudents);
+    }
+    dStudents.add(r.studentId);
 
     if (dKey === todayKey) addStatus(todayCounts, r.status);
 
@@ -420,9 +509,24 @@ async function loadAttendanceSummary() {
     }
   }
 
-  const monthlyTrend = buildMonthlySeries(byMonth)
-    .filter((s) => s.rate !== null)
-    .map((s) => ({ key: s.key, label: s.shortLabel, rate: s.rate }));
+  const dailyTrend = buildDailySeries(byDay, start, seriesEnd).map((s) => {
+    const loggedStudents = byDayStudents.get(s.key)?.size ?? 0;
+    return { ...s, notLogged: Math.max(0, scopedEnrolled - loggedStudents) };
+  });
+
+  const trend = view === 'daily' ? dailyTrend : buildMonthlySeriesFromDaily(dailyTrend);
+  const monthlyTrend = trend.map((s) => ({
+    key: s.key,
+    label: s.shortLabel,
+    full: s.label,
+    total: s.total,
+    rate: s.rate,
+    present: s.present,
+    absent: s.absent,
+    late: s.late,
+    excused: s.excused,
+    notLogged: s.notLogged,
+  }));
 
   const heatmap = buildSchoolYearHeatmap(byDay, start, endExclusive, today);
 
@@ -436,7 +540,7 @@ async function loadAttendanceSummary() {
 
   return {
     schoolYear: activeYear.yearLabel,
-    totalEnrolled: enrolledStudents,
+    totalEnrolled: scopedEnrolled,
     today: {
       total: todayTotal,
       present: totals.present,

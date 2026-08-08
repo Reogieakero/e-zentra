@@ -1,0 +1,255 @@
+.sideCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardTitleIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--brand-primary);
+}
+
+.gradeList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gradeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.gradeLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.gradeName {
+  color: var(--muted-foreground);
+}
+
+.gradeRate {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.gradeRateWarn {
+  color: var(--warning-fg);
+}
+
+.gradeTrack {
+  height: 6px;
+  background: var(--muted);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.gradeFill {
+  height: 100%;
+  background: var(--brand-gradient);
+  border-radius: 9999px;
+}
+
+.gradeFillWarn {
+  background: rgba(245, 158, 11, 0.8);
+}
+
+.emptyText {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.insights {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insights .cardTitle {
+  color: #f9fafb;
+}
+
+.insightList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.insightItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #9ca3af;
+}
+
+.insightDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.aiHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.aiBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: 1px solid var(--success-bd);
+  border-radius: 8px;
+  background: var(--success-bg-soft);
+  color: var(--success-fg, var(--brand-primary));
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.aiBtn:hover:not(:disabled) {
+  background: var(--success-bg-hover, var(--brand-weak));
+}
+
+.aiBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aiLoading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+.aiSpinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: aiSpin 0.8s linear infinite;
+}
+
+.aiBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aiSummary {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.aiList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.aiItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+.aiIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--success-bg);
+  border: 1px solid var(--success-bd);
+  color: var(--success-fg, var(--brand-primary));
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.aiError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--warning-fg, var(--foreground));
+}
+
+.aiErrorIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--warning);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.aiEmpty {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+@keyframes aiSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

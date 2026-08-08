@@ -53,7 +53,7 @@ export function LoginForm({ portal, endpoint }: LoginFormProps) {
       setUser(data.user);
       router.push(data.user.role === "principal" ? "/principal/dashboard" : "/");
     } catch {
-      // sileo.promise already surfaced the error toast
+
     } finally {
       setSubmitting(false);
     }

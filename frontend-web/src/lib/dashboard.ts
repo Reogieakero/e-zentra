@@ -8,6 +8,7 @@ export interface DashboardStats {
   absentToday: number;
   lateToday: number;
   excusedToday: number;
+  notLoggedToday: number;
   totalToday: number;
   presentRate: number;
   anecdotalThisMonth: number;
@@ -54,6 +55,11 @@ export interface SectionAttendance {
 export interface DailyTrend {
   day: string;
   label: string;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  notLogged: number;
   rate: number | null;
 }
 
@@ -125,6 +131,7 @@ export interface ReportSeriesPoint {
   absent: number;
   late: number;
   excused: number;
+  notLogged: number;
   rate: number | null;
 }
 
@@ -199,7 +206,7 @@ export function useAttendanceReport(view: "monthly" | "daily", grade: string = "
 
 export function useSectionsByGrade(grade: string) {
   const userId = getUser()?.id ?? "anon";
-  const enabled = grade && grade !== "all";
+  const enabled = Boolean(grade && grade !== "all");
   const key = enabled ? ["/dashboard/attendance/sections", userId, grade] : null;
   const { data, error, isLoading } = useSWR<ReportSection[]>(
     key,
@@ -233,7 +240,14 @@ export interface TodayAttendance {
 export interface MonthlyTrendPoint {
   key: string;
   label: string;
+  full?: string;
+  total?: number;
   rate: number | null;
+  present?: number;
+  absent?: number;
+  late?: number;
+  excused?: number;
+  notLogged?: number;
 }
 
 export interface HeatmapCell {
@@ -280,19 +294,32 @@ export interface AttendanceSummary {
   topSections: TopSection[];
 }
 
-export async function fetchAttendanceSummary(): Promise<AttendanceSummary> {
+export async function fetchAttendanceSummary(
+  view: "monthly" | "daily" = "monthly",
+  grade: string = "all",
+  section: string = ""
+): Promise<AttendanceSummary> {
   const token = getTokens()?.accessToken;
   if (!token) throw new Error("Missing access token");
-  const { data } = await api<{ data: AttendanceSummary }>(`/dashboard/attendance/summary`, { token });
+  const params = new URLSearchParams({ view });
+  if (grade && grade !== "all") params.set("grade", grade);
+  if (section) params.set("section", section);
+  const { data } = await api<{ data: AttendanceSummary }>(
+    `/dashboard/attendance/summary?${params.toString()}`,
+    { token }
+  );
   return data;
 }
 
-export function useAttendanceSummary() {
+export function useAttendanceSummary(view: "monthly" | "daily" = "monthly", grade: string = "all", section: string = "") {
   const userId = getUser()?.id ?? "anon";
-  const key = userId === "anon" ? null : ["/dashboard/attendance/summary", userId];
+  const key =
+    userId === "anon"
+      ? null
+      : ["/dashboard/attendance/summary", userId, view, grade, section];
   const { data, error, isLoading, isValidating, mutate } = useSWR<AttendanceSummary>(
     key,
-    () => fetchAttendanceSummary(),
+    () => fetchAttendanceSummary(view, grade, section),
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,

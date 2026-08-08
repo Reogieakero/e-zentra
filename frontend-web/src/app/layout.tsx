@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Inter } from "next/font/google";
 import { Toaster } from "sileo";
 import { SessionExpiry } from "@/components/session-expiry";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeInitScript } from "@/components/theme-init";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,13 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body>
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("zentra.theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`,
-          }}
-        />
+        <ThemeInitScript />
         <ThemeProvider>
           <Toaster position="top-right" theme="dark" />
           <SessionExpiry />
