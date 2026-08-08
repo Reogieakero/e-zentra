@@ -7,6 +7,11 @@
     gap 0.55s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.dashboardGrid.dashboardGridWide {
+  grid-template-columns: 0fr 1fr;
+  gap: 0;
+}
+
 .leftRail {
   display: flex;
   flex-direction: column;
@@ -21,13 +26,12 @@
   pointer-events: none;
 }
 
-.dashboardGridWide {
-  grid-template-columns: 0fr 12fr;
-  gap: 0;
-}
-
 @media (min-width: 1024px) {
   .dashboardGrid {
     grid-template-columns: 3fr 9fr;
+  }
+
+  .dashboardGrid.dashboardGridWide {
+    grid-template-columns: 0fr 1fr;
   }
 }

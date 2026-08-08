@@ -259,34 +259,34 @@
 
 .heatmapCard {
   align-items: stretch;
-  background: #111827;
-  border-color: #1f2937;
+  background: var(--chart-bg);
+  border-color: var(--chart-bd);
 }
 
 .heatmapCard .chartCardHeader {
-  border-bottom-color: #1f2937;
+  border-bottom-color: var(--chart-bd-soft);
 }
 
 .heatmapCard .chartTitle {
-  color: #f9fafb;
+  color: var(--foreground);
 }
 
 .heatmapCard .chartSubtitle {
-  color: #9ca3af;
+  color: var(--muted-foreground);
 }
 
 .heatmapCard .heatmapDays,
 .heatmapCard .heatmapScale,
 .heatmapCard .heatmapFooter {
-  color: #94a3b8;
+  color: var(--muted-foreground);
 }
 
 .heatmapCard .heatmapLabel {
-  color: #d1d5db;
+  color: var(--foreground);
 }
 
 .heatmapCard .heatCell {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--muted);
 }
 
 .heatmapCard .heat1 {
@@ -317,10 +317,10 @@
   font-size: 10px;
   font-weight: 600;
   color: var(--brand-primary);
-  background: #ecfdf5;
+  background: var(--success-bg-soft);
   padding: 2px 8px;
   border-radius: 4px;
-  border: 1px solid #d1fae5;
+  border: 1px solid var(--success-bd-soft);
   white-space: nowrap;
 }
 
@@ -339,7 +339,7 @@
   gap: 6px;
   font-size: 9px;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--muted-foreground);
   text-align: right;
   padding-top: 2px;
 }
@@ -403,7 +403,7 @@
   transform-origin: top right;
   font-size: 9px;
   font-weight: 600;
-  color: #4b5563;
+  color: var(--muted-foreground);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -424,7 +424,7 @@
   align-items: center;
   gap: 3px;
   font-size: 9px;
-  color: #9ca3af;
+  color: var(--muted-foreground);
 }
 
 .heatmapScaleCell {
@@ -449,7 +449,7 @@
 }
 
 .barHint {
-  color: #9ca3af;
+  color: var(--muted-foreground);
 }
 
 .panelFooter {

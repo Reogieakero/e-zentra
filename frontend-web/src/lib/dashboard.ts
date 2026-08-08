@@ -313,3 +313,85 @@ export async function fetchAiRecommendations(
   if (!token) throw new Error("Missing access token");
   return api<AiRecommendationResult>(`/dashboard/attendance/report/ai-recommendations?${params.toString()}`, { token });
 }
+
+export type Sf10StatusCode = "complete" | "pending" | "missing";
+
+export interface Sf10Folder {
+  gradeLevel: string;
+  label: string;
+  count: number;
+}
+
+export interface Sf10SummaryCounts {
+  total: number;
+  complete: number;
+  pending: number;
+  missing: number;
+  completePercent: number;
+}
+
+export interface Sf10Record {
+  studentId: string;
+  lrn: string;
+  fullName: string;
+  gradeLabel: string;
+  sectionName: string | null;
+  schoolYear: string;
+  status: Sf10StatusCode;
+  fileName: string;
+  fileUrl: string | null;
+  fileSizeBytes: number | null;
+  handledBy: string | null;
+  lastUpdated: string;
+}
+
+export interface Sf10Summary {
+  schoolYear: string | null;
+  folders: Sf10Folder[];
+  counts: Sf10SummaryCounts;
+  records: Sf10Record[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface Sf10Params {
+  search?: string;
+  grade?: string;
+  status?: Sf10StatusCode;
+  year?: string;
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function fetchSf10Summary(params: Sf10Params): Promise<Sf10Summary> {
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.grade) qs.set("grade", params.grade);
+  if (params.status) qs.set("status", params.status);
+  if (params.year) qs.set("year", params.year);
+  if (params.sort) qs.set("sort", params.sort);
+  if (params.page) qs.set("page", String(params.page));
+  if (params.pageSize) qs.set("pageSize", String(params.pageSize));
+  const qstr = qs.toString();
+  const { data } = await api<{ data: Sf10Summary }>(`/dashboard/sf10/summary${qstr ? `?${qstr}` : ""}`, { token });
+  return data;
+}
+
+export function useSf10Summary(params: Sf10Params) {
+  const userId = getUser()?.id ?? "anon";
+  const key = userId === "anon" ? null : ["/dashboard/sf10/summary", userId, params];
+  const { data, error, isLoading, isValidating, mutate } = useSWR<Sf10Summary>(
+    key,
+    () => fetchSf10Summary(params),
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      keepPreviousData: true,
+    }
+  );
+  return { data, error: error ?? null, isLoading, isValidating, refresh: () => mutate() };
+}

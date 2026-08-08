@@ -18,7 +18,7 @@ const mainNav = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/principal/dashboard" },
   { key: "students", label: "Students", icon: Users, href: "/principal/students" },
   { key: "attendance", label: "Attendance", icon: CalendarCheck2, href: "/principal/attendance" },
-  { key: "sf10", label: "SF10 Records", icon: FileText, href: "#" },
+  { key: "sf10", label: "SF10 Records", icon: FileText, href: "/principal/sf10" },
   { key: "anecdotal", label: "Anecdotal", icon: FileText, href: "#" },
   { key: "adm", label: "ADM", icon: BookOpen, href: "#" },
 ];
