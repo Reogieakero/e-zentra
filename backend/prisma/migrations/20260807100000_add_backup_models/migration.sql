@@ -1,10 +1,10 @@
--- CreateEnum
+
 CREATE TYPE "BackupKind" AS ENUM ('manual', 'automatic');
 
--- CreateEnum
+
 CREATE TYPE "BackupStatus" AS ENUM ('running', 'succeeded', 'failed');
 
--- CreateTable
+
 CREATE TABLE "google_drive_links" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE "google_drive_links" (
     CONSTRAINT "google_drive_links_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+
 CREATE TABLE "backup_jobs" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "kind" "BackupKind" NOT NULL DEFAULT 'manual',
@@ -35,14 +35,14 @@ CREATE TABLE "backup_jobs" (
     CONSTRAINT "backup_jobs_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
+
 CREATE UNIQUE INDEX "google_drive_links_user_id_key" ON "google_drive_links"("user_id");
 
--- CreateIndex
+
 CREATE INDEX "backup_jobs_status_created_at_idx" ON "backup_jobs"("status", "created_at");
 
--- AddForeignKey
+
 ALTER TABLE "google_drive_links" ADD CONSTRAINT "google_drive_links_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+
 ALTER TABLE "backup_jobs" ADD CONSTRAINT "backup_jobs_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

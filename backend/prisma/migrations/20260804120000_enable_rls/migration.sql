@@ -1,16 +1,16 @@
--- Enable Row Level Security on every business table.
---
--- Background: the API backend connects as the table owner ("postgres"), which
--- bypasses RLS by default, so application-level authorization (authenticate /
--- authorize middleware) continues to govern all access from the API.
---
--- What RLS now blocks: every other role — notably Supabase's built-in "anon" and
--- "authenticated" roles used by PostgREST. With the publishable (anon) key being
--- public by design, RLS with no policies for those roles closes the REST API
--- data-exposure hole (previously any anon request could read every row).
---
--- No policies are created: with RLS on and zero policies, anon/authenticated see
--- no rows, and INSERT/UPDATE/DELETE are rejected. The owner (backend) is exempt.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "student_profiles" ENABLE ROW LEVEL SECURITY;

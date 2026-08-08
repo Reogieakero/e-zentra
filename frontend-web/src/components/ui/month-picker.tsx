@@ -23,7 +23,7 @@ const MONTHS = [
 interface MonthPickerProps {
   id?: string;
   label?: React.ReactNode;
-  /** "YYYY-MM" or empty string for "All time" */
+
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;

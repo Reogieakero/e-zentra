@@ -99,7 +99,7 @@ export default function StudentDrawer({ student, onClose }: StudentDrawerProps) 
             <>
               <div className={styles.drawerProfile}>
                 {student.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img src={student.photoUrl} alt={student.fullName} className={styles.drawerAvatar} />
                 ) : (
                   <div className={styles.drawerAvatar}>

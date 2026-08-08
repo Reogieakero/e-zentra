@@ -39,7 +39,7 @@ export function ForgotPasswordForm() {
         body: { email, portal },
       });
 
-      // The email belongs to a different role than the page you're on.
+
       if (data.mismatch) {
         sileo.error({
           title: "Wrong account type",

@@ -270,7 +270,7 @@ async function seedDemoData(
   const counselor = await prisma.user.findUniqueOrThrow({ where: { email: 'counselor@zentra.edu' } });
   const nurse = await prisma.user.findUniqueOrThrow({ where: { email: 'nurse@zentra.edu' } });
 
-  
+
   let studentProfiles = await prisma.studentProfile.findMany();
   const sectionIdFor = new Map(studentProfiles.map((sp) => [sp.id, sp.sectionId]));
   for (const sp of studentProfiles) {
@@ -287,7 +287,7 @@ async function seedDemoData(
   const isShs = (sid: string) => studentInfo.get(sid)!.gradeLevel === 'grade_11' || studentInfo.get(sid)!.gradeLevel === 'grade_12';
   const termFor = (sid: string) => (isShs(sid) ? termMap.get('senior_high-1')! : termMap.get('junior_high-1')!);
 
-  
+
   for (let i = 0; i < parents.length; i++) {
     const student = pick(students, i);
     const existing = await prisma.parentStudentLink.findUnique({
@@ -300,7 +300,7 @@ async function seedDemoData(
     }
   }
 
-  
+
   for (let start = 2017; start <= 2025; start++) {
     const label = `${start}-${start + 1}`;
     const exists = await prisma.schoolYear.findUnique({ where: { yearLabel: label } });
@@ -317,7 +317,7 @@ async function seedDemoData(
     }
   }
 
-  
+
   const lastSy = await prisma.schoolYear.findUniqueOrThrow({ where: { yearLabel: '2025-2026' } });
   const termLabelOf: Record<number, string> = { 1: '1st Trimester', 2: '2nd Trimester', 3: '3rd Trimester' };
   for (const band of ['junior_high', 'senior_high'] as const) {
@@ -342,7 +342,7 @@ async function seedDemoData(
     }
   }
 
-  
+
   const altSections: Record<GradeLevel, string> = {
     grade_7: 'Apollo', grade_8: 'Bayan', grade_9: 'Cebu', grade_10: 'Davao', grade_11: 'Eagle', grade_12: 'Fuego',
   };
@@ -365,7 +365,7 @@ async function seedDemoData(
     }
   }
 
-  
+
   const sectionIds = [...sectionsByGrade.values()].map((s) => s.id);
   const sy2627 = await prisma.schoolYear.findUniqueOrThrow({ where: { yearLabel: '2026-2027' } });
   for (const grade of ['grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12'] as GradeLevel[]) {
@@ -393,7 +393,7 @@ async function seedDemoData(
     }
   }
 
-  
+
   const jhsTerm1 = termMap.get('junior_high-1')!;
   const shsTerm1 = termMap.get('senior_high-1')!;
   for (const grade of ['grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12'] as GradeLevel[]) {
@@ -413,7 +413,7 @@ async function seedDemoData(
     }
   }
 
-  
+
   if ((await prisma.refreshToken.count()) < 10) {
     await prisma.refreshToken.createMany({
       data: await Promise.all(
@@ -426,7 +426,7 @@ async function seedDemoData(
     });
   }
 
-  
+
   await prisma.adviserAccessRequest.createMany({
     data: Array.from({ length: 12 }, (_, i) => ({
       adviserId: pick(teachers, i).id,
@@ -438,7 +438,7 @@ async function seedDemoData(
     })),
   });
 
-  
+
   const anecdotalCreated = await prisma.anecdotalRecord.createManyAndReturn({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -459,7 +459,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.anecdotalRecordFollowup.createMany({
     data: Array.from({ length: 12 }, (_, i) => ({
       anecdotalRecordId: pick(anecdotalCreated, i).id,
@@ -469,7 +469,7 @@ async function seedDemoData(
     })),
   });
 
-  
+
   const referralCreated = await prisma.referral.createManyAndReturn({
     data: Array.from({ length: 12 }, (_, i) => ({
       anecdotalRecordId: pick(anecdotalCreated, i).id,
@@ -480,7 +480,7 @@ async function seedDemoData(
     })),
   });
 
-  
+
   await prisma.healthRecord.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -504,7 +504,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.homeVisitationRecord.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -538,7 +538,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.admLearnerProfile.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -563,7 +563,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   const admProfiles = await prisma.admLearnerProfile.findMany();
   await prisma.admParentMeeting.createMany({
     data: Array.from({ length: 12 }, (_, i) => ({
@@ -579,7 +579,7 @@ async function seedDemoData(
     })),
   });
 
-  
+
   await prisma.admModule.createMany({
     data: Array.from({ length: 12 }, (_, i) => ({
       admLearnerProfileId: pick(admProfiles, i).id,
@@ -593,7 +593,7 @@ async function seedDemoData(
     })),
   });
 
-  
+
   await prisma.attendanceRecord.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -610,7 +610,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   const mathSubjects = await prisma.subject.findMany({ where: { subjectCode: { startsWith: 'MAT-' } } });
   const gradeNumOf = (code: string) => Number(code.split('-')[1]);
   const assessmentsCreated = await prisma.assessment.createManyAndReturn({
@@ -631,7 +631,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.studentGrade.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const assessment = pick(assessmentsCreated, i);
@@ -646,7 +646,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.finalGrade.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -673,7 +673,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.studentRiskAssessment.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -694,7 +694,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.recordFlag.createMany({
     data: Array.from({ length: 12 }, (_, i) => ({
       sourceTable: pick(['anecdotal_records', 'attendance_records', 'referrals'] as const, i),
@@ -707,7 +707,7 @@ async function seedDemoData(
     })),
   });
 
-  
+
   await prisma.auditLog.createMany({
     data: Array.from({ length: 12 }, (_, i) => ({
       actorId: pick([principal, registrar, recordKeeper, adm], i).id,
@@ -718,7 +718,7 @@ async function seedDemoData(
     })),
   });
 
-  
+
   await prisma.studentReflection.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -732,7 +732,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.reportCard.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
@@ -750,7 +750,7 @@ async function seedDemoData(
     }),
   });
 
-  
+
   await prisma.notification.createMany({
     data: Array.from({ length: 12 }, (_, i) => ({
       recipientId: pick(students, i).id,
@@ -810,14 +810,9 @@ async function seedDemoData(
   for (const [name, count] of counts) console.log(`  ${name.padEnd(30)} ${count}`);
 }
 
-/**
- * Tops up the operational tables (password reset tokens, OCR jobs, report card
- * extractions) so every table ends up with at least 10 demo rows. Each block is
- * guarded by its own count so re-runs are idempotent and independent of the
- * seedDemoData skip guard.
- */
+
 async function seedOperationalTables() {
-  // 1. Password reset tokens — inert, already-expired demo tokens.
+
   const resetCount = await prisma.passwordResetToken.count();
   if (resetCount < 12) {
     const users = await prisma.user.findMany({
@@ -837,7 +832,7 @@ async function seedOperationalTables() {
     await prisma.passwordResetToken.createMany({ data });
   }
 
-  // 2. OCR jobs — one per existing report card (max 12).
+
   const reportCards = await prisma.reportCard.findMany({ select: { id: true }, take: 12 });
   const ocrCount = await prisma.ocrJob.count();
   if (reportCards.length > 0 && ocrCount < reportCards.length) {
@@ -869,7 +864,7 @@ async function seedOperationalTables() {
     }
   }
 
-  // 3. Report card extractions — one per succeeded/partial OCR job.
+
   const jobs = await prisma.ocrJob.findMany({
     where: { status: { in: ['succeeded', 'partial'] } },
     select: { id: true, reportCardId: true },

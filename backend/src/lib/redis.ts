@@ -2,7 +2,7 @@ import Redis from 'ioredis';
 import { config } from '../config/env';
 
 declare global {
-  
+
   var __redis: Redis | undefined;
 }
 

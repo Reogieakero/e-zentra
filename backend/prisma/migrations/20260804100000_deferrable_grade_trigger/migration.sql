@@ -1,7 +1,7 @@
--- Make grade component weight enforcement DEFERRABLE so a subject/term's
--- component set can be replaced atomically within one transaction.
--- The invariant "SUM(weight_percentage) = 100 per (subject_id, term_id)" is
--- validated at COMMIT, which allows delete+createMany replacement flows.
+
+
+
+
 
 CREATE OR REPLACE FUNCTION enforce_grade_component_weights()
 RETURNS TRIGGER AS $$

@@ -243,7 +243,7 @@ describe('Auth flow', () => {
       return;
     }
 
-    // With real Supabase credentials the endpoints are live; an invalid token is rejected.
+
     expect(urlRes.status).not.toBe(404);
     expect(cb.status).not.toBe(404);
   });
@@ -308,18 +308,18 @@ describe('Auth flow', () => {
   it('password reset: requests a dev link, verifies it, and changes the password', async () => {
     const { email } = await registerAndApproveStudent({ gradeLevel: 'grade_9', approverRole: 'record_keeper' });
 
-    // Old password works before the reset.
+
     const before = await request(app).post('/api/v1/auth/login').send({ email, password: 'Test@1234' });
     expect(before.status).toBe(200);
 
     const req = await request(app).post('/api/v1/auth/password-reset/request').send({ email });
     expect(req.status).toBe(200);
     if (config.smtp.enabled) {
-      // With SMTP configured the link is emailed, not returned.
+
       expect(req.body.data.devResetUrl).toBeNull();
       return;
     }
-    // Dev fallback returns the reset link on screen.
+
     const devUrl: string = req.body.data.devResetUrl;
     const token = new URL(devUrl).searchParams.get('token');
     expect(token).toBeTruthy();
@@ -333,7 +333,7 @@ describe('Auth flow', () => {
       .send({ token, newPassword: 'NewPass@123' });
     expect(confirm.status).toBe(204);
 
-    // Old password no longer works; new password does.
+
     const oldLogin = await request(app).post('/api/v1/auth/login').send({ email, password: 'Test@1234' });
     expect(oldLogin.status).toBe(401);
     const newLogin = await request(app).post('/api/v1/auth/login').send({ email, password: 'NewPass@123' });
@@ -354,7 +354,7 @@ describe('Auth flow', () => {
     const { studentId, email } = await registerAndApproveStudent({ gradeLevel: 'grade_9', approverRole: 'record_keeper' });
     const { prisma } = require('../../src/lib/prisma');
 
-    // Matching portal (student) issues a reset; no role mismatch reported.
+
     const ok = await request(app).post('/api/v1/auth/password-reset/request').send({ email, portal: 'student' });
     expect(ok.status).toBe(200);
     expect(ok.body.data.mismatch).toBeNull();
@@ -364,8 +364,8 @@ describe('Auth flow', () => {
       expect(ok.body.data.devResetUrl).toBeTruthy();
     }
 
-    // Mismatched portal (parent / staff) reports the account's real role
-    // (so the UI can tell the user they used the wrong page) without issuing a reset.
+
+
     for (const portal of ['parent', 'staff']) {
       const before = await prisma.passwordResetToken.count({ where: { userId: studentId, usedAt: null } });
       const mismatch = await request(app).post('/api/v1/auth/password-reset/request').send({ email, portal });

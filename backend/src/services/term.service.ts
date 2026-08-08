@@ -81,7 +81,7 @@ export async function transitionTermStatus(actorId: string, actorRole: import('@
   const term = await prisma.term.findUnique({ where: { id: termId } });
   if (!term) throw ApiError.notFound('Term not found');
 
-  
+
   assertGradeBandOwnershipForBand(actorRole, term.gradeBand);
 
   const updated = await prisma.term.update({

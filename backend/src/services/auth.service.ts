@@ -57,11 +57,7 @@ export interface RegisterTeacherInput {
   dateHired?: string;
 }
 
-/**
- * Overrides applied on top of a register input. Used when provisioning the
- * account via a social provider (e.g. Google), where the account email and
- * name come from the provider and no usable password is set.
- */
+
 export interface RegisterOpts {
   email?: string;
   password?: string;
@@ -445,10 +441,7 @@ export async function login(email: string, password: string) {
   return { user: publicUser, tokens: await issueTokens(user.id) };
 }
 
-/**
- * Like login(), but enforces that the account's role matches the portal
- * the user signed in from (student / parent / any staff member).
- */
+
 export async function loginForPortal(email: string, password: string, portal: 'student' | 'parent' | 'staff') {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) throw ApiError.unauthorized('Invalid email or password');
@@ -629,15 +622,7 @@ If you didn't request this, you can safely ignore this email and your password w
   return { subject, text, html };
 }
 
-/**
- * Starts a password reset for the given email. Always resolves successfully
- * (regardless of whether the account exists) to avoid account enumeration.
- * When a portal is supplied, the account's role must match it; a mismatch is
- * reported back (mismatch = the account's actual portal) so callers can tell
- * the user they used the wrong portal, while unknown emails stay generic.
- * Stores a hashed, single-use, time-limited token and either emails the reset
- * link (when SMTP is configured) or returns it as a dev fallback.
- */
+
 export async function requestPasswordReset(email: string, portal?: ResetPortal) {
   const normalized = email.toLowerCase();
   const user = await prisma.user.findUnique({ where: { email: normalized } });
@@ -657,7 +642,7 @@ export async function requestPasswordReset(email: string, portal?: ResetPortal) 
     return { delivered: false, devResetUrl: null, mismatch: actual };
   }
 
-  // Invalidate any outstanding reset tokens for this user.
+
   await prisma.passwordResetToken.updateMany({
     where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
     data: { expiresAt: new Date() },
@@ -675,10 +660,7 @@ export async function requestPasswordReset(email: string, portal?: ResetPortal) 
   return { delivered, devResetUrl: delivered ? null : resetUrl, mismatch: null };
 }
 
-/**
- * Validates a raw reset token and returns the linked account email. Throws if
- * the token is unknown, already used, or expired.
- */
+
 export async function verifyPasswordResetToken(raw: string) {
   const token = await prisma.passwordResetToken.findUnique({ where: { tokenHash: sha256(raw) } });
   if (!token) throw ApiError.badRequest('This password reset link is invalid or has expired');
@@ -690,10 +672,7 @@ export async function verifyPasswordResetToken(raw: string) {
   return { email: user.email };
 }
 
-/**
- * Completes a password reset: sets the new password (argon2), marks the token
- * used, and revokes all existing sessions for the account.
- */
+
 export async function confirmPasswordReset(raw: string, newPassword: string) {
   const token = await prisma.passwordResetToken.findUnique({ where: { tokenHash: sha256(raw) } });
   if (!token) throw ApiError.badRequest('This password reset link is invalid or has expired');
@@ -727,10 +706,7 @@ export async function getMe(userId: string) {
   return { user };
 }
 
-/**
- * Returns the Supabase Google sign-in URL. The frontend sends the resulting
- * session/access token to {@link authenticateGoogleToken} to finish login.
- */
+
 export async function getGoogleAuthUrl(redirectTo: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -741,11 +717,7 @@ export async function getGoogleAuthUrl(redirectTo: string) {
   return { url: data.url };
 }
 
-/**
- * Resolves a Supabase Google access token to a Google identity (email, name,
- * avatar). Used both to authenticate existing accounts and to bootstrap a
- * Google-based signup.
- */
+
 export interface GoogleIdentity {
   email: string;
   name: string;
@@ -773,17 +745,7 @@ async function resolveGoogleIdentity(accessToken: string): Promise<GoogleIdentit
   return { email: sbUser.email.toLowerCase(), name, avatarUrl };
 }
 
-/**
- * Completes a Google sign-in performed on the client via Supabase.
- *
- * - When the Google email matches an existing Zentra account, verifies the
- *   portal (in login mode) and active status, then issues Zentra tokens.
- * - When no account matches, returns the Google identity so the frontend can
- *   continue with a Google-based signup (profile completion).
- *
- * `mode` distinguishes a login attempt from a signup attempt. In signup mode
- * an existing account simply signs the user in (portal checks skipped).
- */
+
 export async function authenticateGoogleToken(
   accessToken: string,
   portal: 'student' | 'parent' | 'staff' | undefined,
@@ -838,11 +800,7 @@ export interface GoogleRegisterInput {
   dateHired?: string;
 }
 
-/**
- * Creates a Zentra account linked to a Google identity. The account has no
- * usable password (a random hash is stored so email/password login cannot
- * succeed) and is created as `pending` until an administrator approves it.
- */
+
 export async function registerGoogleAccount(input: GoogleRegisterInput) {
   const identity = await resolveGoogleIdentity(input.accessToken);
   const existing = await prisma.user.findUnique({ where: { email: identity.email } });

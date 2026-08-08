@@ -1,5 +1,5 @@
--- OCR pipeline: per-card OCR status, job tracking, and staged extractions.
--- Extractions are staging data only; verified data is written to final_grades on approval.
+
+
 
 CREATE TYPE "OcrStatus" AS ENUM ('not_applicable', 'queued', 'processing', 'passed', 'partial', 'failed');
 CREATE TYPE "OcrJobStatus" AS ENUM ('queued', 'processing', 'succeeded', 'partial', 'failed');

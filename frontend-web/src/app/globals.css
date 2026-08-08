@@ -1,5 +1,5 @@
 :root {
-  /* Brand palette */
+
   --brand-primary: #16a34a;
   --brand-secondary: #22c55e;
   --brand-light: #86efac;
@@ -9,7 +9,7 @@
   --dot-grid: rgba(134, 239, 172, 0.5);
   --dot-grid-page: #d1fae5;
 
-  /* Neutrals */
+
   --background: #ffffff;
   --foreground: #111827;
   --muted: #f9fafb;
@@ -19,13 +19,13 @@
   --card: #ffffff;
   --accent: #09090b;
 
-  /* Semantic */
+
   --success: #16a34a;
   --danger: #dc2626;
   --warning: #d97706;
   --info: #0284c7;
 
-  /* Tinted surfaces (state chips, nested tiles) */
+
   --success-bg: #a7f3d0;
   --success-bd: #34d399;
   --success-bg-soft: #ecfdf5;
@@ -45,29 +45,29 @@
   --info-bd: #bae6fd;
   --info-fg: #0284c7;
 
-  /* Chart containers / light tiles */
+
   --chart-bg: rgba(249, 250, 251, 0.4);
   --chart-bd: rgba(229, 231, 235, 0.8);
   --chart-bd-soft: rgba(229, 231, 235, 0.6);
 
-  /* Skeleton shimmer */
+
   --skel-1: #f3f4f6;
   --skel-2: #e5e7eb;
 
-  /* Radius */
+
   --radius-sm: 8px;
   --radius: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Shadows */
+
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 6px 16px -6px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 16px 40px -12px rgba(0, 0, 0, 0.18);
 
-  /* Type */
+
   --font-sans: var(--font-inter), "Inter", system-ui, -apple-system,
     "Segoe UI", sans-serif;
 }
@@ -91,7 +91,7 @@ html[data-theme="dark"] {
   --shadow-md: 0 6px 16px -6px rgba(0, 0, 0, 0.65);
   --shadow-lg: 0 16px 40px -12px rgba(0, 0, 0, 0.75);
 
-  /* Tinted surfaces (dark) */
+
   --success-bg: rgba(16, 185, 129, 0.16);
   --success-bd: rgba(16, 185, 129, 0.4);
   --success-bg-soft: rgba(16, 185, 129, 0.14);
@@ -111,12 +111,12 @@ html[data-theme="dark"] {
   --info-bd: rgba(2, 132, 199, 0.35);
   --info-fg: #38bdf8;
 
-  /* Chart containers / light tiles (dark) */
+
   --chart-bg: var(--card);
   --chart-bd: var(--border);
   --chart-bd-soft: var(--border);
 
-  /* Skeleton shimmer (dark) */
+
   --skel-1: #2a2a2a;
   --skel-2: #363636;
 }

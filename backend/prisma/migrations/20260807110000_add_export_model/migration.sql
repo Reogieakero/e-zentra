@@ -1,7 +1,7 @@
--- CreateEnum
+
 CREATE TYPE "ExportStatus" AS ENUM ('running', 'succeeded', 'failed');
 
--- CreateTable
+
 CREATE TABLE "export_jobs" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
@@ -16,8 +16,8 @@ CREATE TABLE "export_jobs" (
     CONSTRAINT "export_jobs_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
+
 CREATE INDEX "export_jobs_user_id_created_at_idx" ON "export_jobs"("user_id", "created_at");
 
--- AddForeignKey
+
 ALTER TABLE "export_jobs" ADD CONSTRAINT "export_jobs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
