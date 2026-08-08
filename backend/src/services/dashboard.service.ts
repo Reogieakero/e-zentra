@@ -190,6 +190,8 @@ async function getAtRiskStudents(schoolYearId: string | null) {
         sectionName: p.section?.sectionName ?? null,
         riskLevel,
         attendanceRate,
+        academicAvg: academicAvgMap.get(p.id) ?? null,
+        anecdoteCount: anecdoteCountMap.get(p.id) ?? 0,
       };
     })
     .filter((s) => s.riskLevel === 'high' || s.riskLevel === 'moderate')

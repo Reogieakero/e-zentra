@@ -25,6 +25,8 @@ export interface AtRiskStudent {
   sectionName: string | null;
   riskLevel: "high" | "moderate" | "low";
   attendanceRate: number | null;
+  academicAvg: number | null;
+  anecdoteCount: number;
 }
 
 export interface AdmApproval {
