@@ -166,6 +166,12 @@ enum RecordFlagStatus {
   resolved
 }
 
+enum AdviserAlertStatus {
+  pending
+  acknowledged
+  commented
+}
+
 enum ReportCardSource {
   system_generated
   scanned_upload
@@ -318,11 +324,14 @@ model User {
   healthStudents          HealthRecord[]               @relation("HealthStudent")
   homeVisitStudents       HomeVisitationRecord[]       @relation("HomeVisitStudent")
   admStudents             AdmLearnerProfile[]          @relation("AdmStudent")
-  attendanceStudents      AttendanceRecord[]           @relation("AttendanceStudent")
+attendanceStudents      AttendanceRecord[]           @relation("AttendanceStudent")
   gradeStudents           StudentGrade[]               @relation("StudentGradeStudent")
   finalGradeStudents      FinalGrade[]                 @relation("FinalGradeStudent")
   riskStudents            StudentRiskAssessment[]      @relation("RiskStudent")
   reportCardStudents      ReportCard[]                 @relation("ReportCardStudent")
+  adviserAlertsAdvised    AdviserAlert[]               @relation("AdviserAlertAdviser")
+  adviserAlertsIssued     AdviserAlert[]               @relation("AdviserAlertIssuedBy")
+  adviserAlertsStudents   AdviserAlert[]               @relation("AdviserAlertStudent")
   ocrJobs                 OcrJob[]                     @relation("OcrJobActor")
   ocrExtractionReviews    ReportCardExtraction[]       @relation("ExtractionReviewedBy")
   googleDriveLink         GoogleDriveLink?
@@ -492,6 +501,7 @@ model SchoolYear {
   terms     Term[]
   sections  Section[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
+  adviserAlerts AdviserAlert[]
 
   @@map("school_years")
 }
@@ -555,6 +565,7 @@ model Section {
   assessments         Assessment[]
   finalGrades         FinalGrade[]
   riskAssessments     StudentRiskAssessment[]
+  adviserAlerts       AdviserAlert[]
 
   @@index([schoolYearId])
   @@index([adviserId])
@@ -616,6 +627,34 @@ model AdviserAccessRequest {
 
   @@index([sectionId])
   @@map("adviser_access_requests")
+}
+
+
+model AdviserAlert {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId     String             @map("student_id") @db.Uuid
+  student       User               @relation("AdviserAlertStudent", fields: [studentId], references: [id])
+  sectionId     String             @map("section_id") @db.Uuid
+  section       Section            @relation(fields: [sectionId], references: [id])
+  adviserId     String             @map("adviser_id") @db.Uuid
+  adviser       User               @relation("AdviserAlertAdviser", fields: [adviserId], references: [id])
+  schoolYearId  String             @map("school_year_id") @db.Uuid
+  schoolYear    SchoolYear         @relation(fields: [schoolYearId], references: [id])
+  status        AdviserAlertStatus @default(pending)
+  note          String?            @db.Text
+  rate          Int
+  tone          String             @db.VarChar(10)
+  issuedById    String             @map("issued_by_id") @db.Uuid
+  issuedBy      User               @relation("AdviserAlertIssuedBy", fields: [issuedById], references: [id])
+  acknowledgedAt DateTime?         @map("acknowledged_at") @db.Timestamptz(3)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([studentId, schoolYearId])
+  @@index([sectionId])
+  @@index([adviserId])
+  @@index([schoolYearId])
+  @@map("adviser_alerts")
 }
 
 

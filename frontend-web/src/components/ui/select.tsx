@@ -20,9 +20,10 @@ interface SelectProps {
   className?: string;
   size?: "default" | "sm";
   showCheck?: boolean;
+  disabled?: boolean;
 }
 
-export function CustomSelect({ id, label, value, options, placeholder = "Select…", onChange, className, size = "default", showCheck = true }: SelectProps) {
+export function CustomSelect({ id, label, value, options, placeholder = "Select…", onChange, className, size = "default", showCheck = true, disabled = false }: SelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
@@ -38,11 +39,15 @@ export function CustomSelect({ id, label, value, options, placeholder = "Select�
       ) : null}
       <button
         type="button"
-        className={`${styles.trigger} ${size === "sm" ? styles.triggerSm : ""} ${open ? styles.triggerOpen : ""}`}
+        className={`${styles.trigger} ${size === "sm" ? styles.triggerSm : ""} ${open ? styles.triggerOpen : ""} ${disabled ? styles.triggerDisabled : ""}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-labelledby={id ? `${id}-label` : undefined}
-        onClick={() => setOpen((o) => !o)}
+        aria-disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((o) => !o);
+        }}
       >
         <span className={selected ? styles.value : styles.placeholder}>{selected?.label ?? placeholder}</span>
         <ChevronDown size={16} className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} aria-hidden />

@@ -8,6 +8,7 @@ export const app = createApp();
 
 const TABLES = [
   'notifications',
+  'adviser_alerts',
   'report_cards',
   'student_reflections',
   'audit_log',

@@ -51,6 +51,17 @@
   text-overflow: ellipsis;
 }
 
+.triggerDisabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: var(--muted);
+  border-color: var(--border);
+}
+
+.triggerDisabled:hover {
+  border-color: var(--border-strong);
+}
+
 .triggerOpen {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 3px var(--brand-weak);
