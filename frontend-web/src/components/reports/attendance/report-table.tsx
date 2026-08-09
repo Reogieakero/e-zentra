@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Target } from "lucide-react";
+import { Target } from "lucide-react";
 import type { ReportSeriesPoint } from "@/lib/dashboard";
 import { fmt, PAGE_SIZE } from "./report-config";
+import { TablePagination } from "@/components/ui/table-pagination";
 import styles from "./report-table.module.css";
 
 function vsTone(diff: number): "good" | "warn" | "danger" {
@@ -87,29 +88,12 @@ export default function ReportTable({ rows, targetRate, enrollmentTotal, isDaily
       </div>
 
       {isDaily && (
-        <div className={styles.tableFooter}>
-          <span className={styles.paginationInfo}>
-            {rows.length === 0 ? "No school days logged" : `Showing ${from}–${to} of ${rows.length} school days`}
-          </span>
-          <button
-            type="button"
-            className={styles.pageBtn}
-            disabled={page === 0 || Math.min(pageCount, rows.length) === 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            aria-label="Previous page"
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <button
-            type="button"
-            className={styles.pageBtn}
-            disabled={page >= pageCount - 1 || rows.length === 0}
-            onClick={() => setPage((p) => p + 1)}
-            aria-label="Next page"
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
+        <TablePagination
+          page={page}
+          pageCount={pageCount}
+          info={rows.length === 0 ? "No school days logged" : `Showing ${from}–${to} of ${rows.length} school days`}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

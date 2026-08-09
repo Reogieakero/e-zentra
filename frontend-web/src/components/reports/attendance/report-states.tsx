@@ -29,7 +29,7 @@ export function ReportLoading() {
       </div>
 
       <div className={styles.skKpiGrid}>
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
       </div>

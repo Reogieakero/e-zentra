@@ -72,6 +72,8 @@ export default function AttendanceReportPage() {
         statBlocks={data.statBlocks}
         targetRate={data.targetRate}
         isDaily={isDaily}
+        enrollmentTotal={data.enrollmentTotal}
+        hasSection={Boolean(section)}
       />
 
       <ReportTrendChart series={data.series} isDaily={isDaily} />

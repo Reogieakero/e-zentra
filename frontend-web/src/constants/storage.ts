@@ -6,11 +6,14 @@ export const USER_KEY = "zentra.user";
 
 export const GOOGLE_SIGNUP_KEY = "zentra.google.signup";
 
+export const ATTENDANCE_COACH_KEY = "zentra.attendance-summary.coach";
+
 export const FILTER_KEYS = {
   attendanceSummary: {
     view: "zentra.attendance-summary.view",
     grade: "zentra.attendance-summary.grade",
     section: "zentra.attendance-summary.section",
+    date: "zentra.attendance-summary.date",
   },
   attendanceReport: {
     view: "zentra.attendance-report.view",

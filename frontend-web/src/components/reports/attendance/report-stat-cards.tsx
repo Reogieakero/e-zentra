@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Crown, Percent, Target, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Crown, Percent, Target, Users, type LucideIcon } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { ReportStatBlocks } from "@/lib/dashboard";
 import { fmt } from "./report-config";
@@ -40,9 +40,11 @@ interface ReportStatCardsProps {
   statBlocks: ReportStatBlocks;
   targetRate: number;
   isDaily: boolean;
+  enrollmentTotal: number;
+  hasSection: boolean;
 }
 
-export default function ReportStatCards({ statBlocks: sb, targetRate, isDaily }: ReportStatCardsProps) {
+export default function ReportStatCards({ statBlocks: sb, targetRate, isDaily, enrollmentTotal, hasSection }: ReportStatCardsProps) {
   const periodName = isDaily ? "Day" : "Month";
   const periodsName = isDaily ? "Days" : "Months";
   const above = sb.periodsAboveTarget;
@@ -53,7 +55,7 @@ export default function ReportStatCards({ statBlocks: sb, targetRate, isDaily }:
   const bestValue = bestLabel ? `${bestLabel} · ${fmt(sb.bestPeriod!.rate)}` : "—";
 
   return (
-    <div className={styles.statGrid}>
+    <div className={`${styles.statGrid} ${hasSection ? styles.statGridWide : ""}`}>
       <StatCard
         icon={Percent}
         label="Average Rate"
@@ -85,6 +87,15 @@ export default function ReportStatCards({ statBlocks: sb, targetRate, isDaily }:
         subTone={avgAbove ? "good" : "warn"}
         hint={`How many of the tracked ${periodName.toLowerCase()}s met or exceeded the ${targetRate}% attendance target.`}
       />
+      {hasSection ? (
+        <StatCard
+          icon={Users}
+          label="Students"
+          value={enrollmentTotal.toLocaleString()}
+          sub="enrolled in section"
+          hint="Number of actively enrolled students in the currently selected section."
+        />
+      ) : null}
     </div>
   );
 }

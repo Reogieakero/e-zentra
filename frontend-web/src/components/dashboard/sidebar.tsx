@@ -8,10 +8,10 @@ import {
   Settings,
   User,
   Users,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CloseButton } from "@/components/ui/close-button";
 import styles from "./sidebar.module.css";
 
 const mainNav = [
@@ -48,9 +48,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             </div>
             <span className={styles.brandName}>Zentra</span>
           </div>
-          <button onClick={onClose} className={styles.closeBtn} aria-label="Close sidebar">
-            <X className={styles.closeIcon} />
-          </button>
+          <CloseButton onClose={onClose} label="Close sidebar" className={styles.closeBtn} />
         </div>
 
         <nav className={styles.nav}>

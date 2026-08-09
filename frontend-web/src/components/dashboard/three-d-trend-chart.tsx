@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { useTheme } from "@/components/theme-provider";
+import { CloseButton } from "@/components/ui/close-button";
 import styles from "./three-d-bar-chart.module.css";
 
 export interface TrendBar {
@@ -450,9 +451,7 @@ export function ThreeDTrendOverlay({ data, onClose, title }: ThreeDTrendOverlayP
       <div className={styles.overlayCard} onClick={(e) => e.stopPropagation()}>
         <div className={styles.overlayHeader}>
           <h4>{title ?? "Daily Attendance Trend — 3D View"}</h4>
-          <button type="button" className={styles.overlayClose} onClick={onClose} aria-label="Close 3D view">
-            ×
-          </button>
+          <CloseButton onClose={onClose} label="Close 3D view" />
         </div>
         <ThreeDTrendChart data={data} />
         <p className={styles.overlayHint}>Drag to rotate · Scroll to zoom · Hover a marker for details</p>

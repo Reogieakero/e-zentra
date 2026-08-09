@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { Download, FileText, Users, Pencil, Printer, X } from "lucide-react";
+import { Download, FileText, Users, Pencil, Printer } from "lucide-react";
 import type { Sf10Record } from "@/lib/dashboard";
 import { Sf10StatusPill } from "./sf10-records";
+import { CloseButton } from "@/components/ui/close-button";
 import styles from "./sf10-preview.module.css";
 
 function formatBytes(bytes: number | null): string {
@@ -36,9 +37,7 @@ export function Sf10Preview({ record, onClose }: { record: Sf10Record; onClose: 
       <aside className={styles.drawer}>
         <div className={styles.header}>
           <h3 className={styles.title}>SF10 Preview</h3>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close preview">
-            <X className={styles.closeIcon} />
-          </button>
+          <CloseButton onClose={onClose} label="Close preview" />
         </div>
 
         <div className={styles.body}>

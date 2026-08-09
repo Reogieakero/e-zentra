@@ -5,9 +5,11 @@ import {
   DASHBOARD_CACHE_TTL,
   GRADE_LABELS,
   MONTH_LONG,
+  MONTH_SHORT,
   WEEKDAYS,
   addStatus,
   dayKey,
+  monthKey,
   rateOf,
   round1,
 } from '../lib/school';
@@ -367,18 +369,232 @@ function buildReportInsights(
 export async function getAttendanceSummary(
   view: 'monthly' | 'daily' = 'monthly',
   gradeLevel?: string,
-  sectionId?: string
+  sectionId?: string,
+  date?: string
 ) {
-  const key = cacheKey('dashboard', `attendance-summary:${view}:${gradeLevel ?? 'all'}:${sectionId ?? 'all'}`);
+  const key = cacheKey('dashboard', `attendance-summary:${view}:${gradeLevel ?? 'all'}:${sectionId ?? 'all'}:${date ?? 'today'}`);
   return getCached<{ data: unknown }>(key, DASHBOARD_CACHE_TTL, async () => ({
-    data: await loadAttendanceSummary(view, gradeLevel, sectionId),
+    data: await loadAttendanceSummary(view, gradeLevel, sectionId, date),
   }));
+}
+
+export interface SectionRosterStudent {
+  studentId: string;
+  lrn: string;
+  firstName: string;
+  lastName: string;
+  photoUrl: string | null;
+  gradeLabel: string;
+  sectionName: string | null;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  notLogged: number;
+  total: number;
+  rate: number | null;
+}
+
+export async function getSectionRoster(sectionId: string) {
+  const activeYear = await prisma.schoolYear.findFirst({
+    where: { status: 'active' },
+    select: { id: true, startDate: true, endDate: true },
+  });
+  if (!activeYear) return [];
+
+  const start = new Date(activeYear.startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(activeYear.endDate);
+  end.setHours(0, 0, 0, 0);
+  const endExclusive = new Date(end);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const seriesEnd = today < endExclusive ? today : endExclusive;
+
+  let schoolDays = 0;
+  const cursor = new Date(start);
+  while (cursor < seriesEnd) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) schoolDays += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const [students, rows, daysRows] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } },
+      select: {
+        id: true,
+        lrn: true,
+        gradeLevel: true,
+        section: { select: { sectionName: true } },
+        user: { select: { firstName: true, lastName: true, profilePhotoUrl: true } },
+      },
+      orderBy: [{ user: { lastName: 'asc' } }, { user: { firstName: 'asc' } }],
+    }),
+    prisma.attendanceRecord.groupBy({
+      by: ['studentId', 'status'],
+      where: {
+        sectionId,
+        term: { schoolYearId: activeYear.id },
+        attendanceDate: { gte: start, lt: endExclusive },
+      },
+      _count: { _all: true },
+    }),
+    prisma.attendanceRecord.groupBy({
+      by: ['studentId', 'attendanceDate'],
+      where: {
+        sectionId,
+        term: { schoolYearId: activeYear.id },
+        attendanceDate: { gte: start, lt: endExclusive },
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const counts = new Map<string, { present: number; late: number; absent: number; excused: number }>();
+  for (const r of rows) {
+    const bucket = counts.get(r.studentId) ?? { present: 0, late: 0, absent: 0, excused: 0 };
+    if (r.status === AttendanceStatus.present) bucket.present += r._count._all;
+    else if (r.status === AttendanceStatus.late) bucket.late += r._count._all;
+    else if (r.status === AttendanceStatus.absent) bucket.absent += r._count._all;
+    else if (r.status === AttendanceStatus.excused) bucket.excused += r._count._all;
+    counts.set(r.studentId, bucket);
+  }
+
+  const loggedDays = new Map<string, number>();
+  for (const r of daysRows) {
+    loggedDays.set(r.studentId, (loggedDays.get(r.studentId) ?? 0) + 1);
+  }
+
+  return students.map((s) => {
+    const c = counts.get(s.id) ?? { present: 0, late: 0, absent: 0, excused: 0 };
+    const total = c.present + c.late + c.absent + c.excused;
+    const rate = total > 0 ? Math.round((c.present / total) * 1000) / 10 : null;
+    const notLogged = Math.max(0, schoolDays - (loggedDays.get(s.id) ?? 0));
+    return {
+      studentId: s.id,
+      lrn: s.lrn,
+      firstName: s.user.firstName,
+      lastName: s.user.lastName,
+      photoUrl: s.user.profilePhotoUrl ?? null,
+      gradeLabel: GRADE_LABELS[s.gradeLevel],
+      sectionName: s.section?.sectionName ?? null,
+      present: c.present,
+      late: c.late,
+      absent: c.absent,
+      excused: c.excused,
+      notLogged,
+      total,
+      rate,
+    };
+  });
+}
+
+export interface StudentAttendanceTrendPoint {
+  month: string;
+  label: string;
+  full: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  logged: number;
+  notLogged: number;
+  rate: number | null;
+}
+
+export async function getStudentAttendanceTrend(studentId: string) {
+  const activeYear = await prisma.schoolYear.findFirst({
+    where: { status: 'active' },
+    select: { id: true, startDate: true, endDate: true },
+  });
+  if (!activeYear) return [];
+
+  const start = new Date(activeYear.startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(activeYear.endDate);
+  end.setHours(0, 0, 0, 0);
+  const endExclusive = new Date(end);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const seriesEnd = today < endExclusive ? today : endExclusive;
+
+  const records = await prisma.attendanceRecord.findMany({
+    where: {
+      studentId,
+      term: { schoolYearId: activeYear.id },
+      attendanceDate: { gte: start, lt: endExclusive },
+    },
+    select: { attendanceDate: true, status: true },
+  });
+
+  const byMonth = new Map<string, {
+    present: number;
+    late: number;
+    absent: number;
+    excused: number;
+    loggedDays: Set<string>;
+  }>();
+
+  const fromMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (fromMonth < seriesEnd) {
+    byMonth.set(monthKey(fromMonth), { present: 0, late: 0, absent: 0, excused: 0, loggedDays: new Set() });
+    fromMonth.setMonth(fromMonth.getMonth() + 1);
+  }
+
+  for (const r of records) {
+    if (r.attendanceDate >= seriesEnd) continue;
+    const bucket = byMonth.get(monthKey(r.attendanceDate));
+    if (!bucket) continue;
+    if (r.status === AttendanceStatus.present) bucket.present += 1;
+    else if (r.status === AttendanceStatus.late) bucket.late += 1;
+    else if (r.status === AttendanceStatus.absent) bucket.absent += 1;
+    else if (r.status === AttendanceStatus.excused) bucket.excused += 1;
+    bucket.loggedDays.add(dayKey(r.attendanceDate));
+  }
+
+  const points: StudentAttendanceTrendPoint[] = [];
+  for (const [mk, bucket] of byMonth) {
+    const [yr, mo] = mk.split('-').map(Number);
+    const a = new Date(yr, mo - 1, 1);
+    const b = new Date(yr, mo, 1);
+    const monthStart = a < start ? start : a;
+    const monthEnd = b > seriesEnd ? seriesEnd : b;
+
+    let scheduled = 0;
+    const cur = new Date(monthStart);
+    while (cur < monthEnd) {
+      const dow = cur.getDay();
+      if (dow !== 0 && dow !== 6) scheduled += 1;
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    const short = MONTH_SHORT[mo - 1];
+    const logged = bucket.present + bucket.late + bucket.absent + bucket.excused;
+    const rate = logged > 0 ? round1((bucket.present / logged) * 100) : null;
+    points.push({
+      month: mk,
+      label: short,
+      full: `${short} ${yr}`,
+      present: bucket.present,
+      late: bucket.late,
+      absent: bucket.absent,
+      excused: bucket.excused,
+      logged,
+      notLogged: Math.max(0, scheduled - bucket.loggedDays.size),
+      rate,
+    });
+  }
+  return points;
 }
 
 async function loadAttendanceSummary(
   view: 'monthly' | 'daily' = 'monthly',
   gradeLevel?: string,
-  sectionId?: string
+  sectionId?: string,
+  date?: string
 ) {
   const activeYear = await prisma.schoolYear.findFirst({
     where: { status: 'active' },
@@ -388,7 +604,7 @@ async function loadAttendanceSummary(
   const empty = {
     schoolYear: null,
     totalEnrolled: 0,
-    today: { total: 0, present: 0, late: 0, absent: 0, excused: 0, presentRate: 0 },
+    today: { total: 0, present: 0, late: 0, absent: 0, excused: 0, notLogged: 0, presentRate: 0 },
     monthlyTrend: [],
     heatmap: [],
     perfectAttendance: [],
@@ -406,6 +622,16 @@ async function loadAttendanceSummary(
   endExclusive.setDate(endExclusive.getDate() + 1);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const overview = date
+    ? (() => {
+        const [y, m, d] = date.split('-').map(Number);
+        const parsed = new Date(y, m - 1, d);
+        parsed.setHours(0, 0, 0, 0);
+        return parsed;
+      })()
+    : today;
+  const overviewKey = dayKey(overview);
 
   const tomorrow = new Date();
   tomorrow.setHours(0, 0, 0, 0);
@@ -448,7 +674,7 @@ async function loadAttendanceSummary(
     })(),
   ]);
 
-  const todayKey = dayKey(today);
+  const todayKey = overviewKey;
   const todayCounts = { present: 0, absent: 0, late: 0, excused: 0 };
   const byDay = new Map<string, { present: number; absent: number; late: number; excused: number }>();
   const byDayStudents = new Map<string, Set<string>>();
@@ -528,7 +754,7 @@ async function loadAttendanceSummary(
     notLogged: s.notLogged,
   }));
 
-  const heatmap = buildSchoolYearHeatmap(byDay, start, endExclusive, today);
+  const heatmap = buildSchoolYearHeatmap(byDay, start, endExclusive, today, scopedEnrolled);
 
   const perfectAttendance = buildPerfectAttendance(records, byStudent);
   const lowAttendance = buildLowAttendance(records, byStudent);
@@ -537,6 +763,8 @@ async function loadAttendanceSummary(
   const totals = todayCounts;
   const todayTotal = totals.present + totals.absent + totals.late + totals.excused;
   const todayRate = todayTotal > 0 ? round1((totals.present / todayTotal) * 100) : 0;
+  const todayLogged = byDayStudents.get(todayKey)?.size ?? 0;
+  const todayNotLogged = Math.max(0, scopedEnrolled - todayLogged);
 
   return {
     schoolYear: activeYear.yearLabel,
@@ -547,6 +775,7 @@ async function loadAttendanceSummary(
       late: totals.late,
       absent: totals.absent,
       excused: totals.excused,
+      notLogged: todayNotLogged,
       presentRate: todayRate,
     },
     monthlyTrend,
@@ -561,7 +790,8 @@ function buildSchoolYearHeatmap(
   byDay: Map<string, { present: number; absent: number; late: number; excused: number }>,
   start: Date,
   endExclusive: Date,
-  today: Date
+  today: Date,
+  enrolled: number
 ) {
   const cells: Array<{ key: string; label: string; rate: number; level: number }> = [];
   const cur = new Date(start);
@@ -571,7 +801,8 @@ function buildSchoolYearHeatmap(
       const key = dayKey(cur);
       const c = byDay.get(key);
       const total = c ? c.present + c.absent + c.late + c.excused : 0;
-      const rate = total > 0 ? Math.round((c!.present / total) * 1000) / 10 : 0;
+      const present = c?.present ?? 0;
+      const rate = enrolled > 0 ? Math.round((present / enrolled) * 1000) / 10 : 0;
       let level = 0;
       if (total > 0) {
         if (rate >= 95) level = 6;

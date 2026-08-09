@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { useTheme } from "@/components/theme-provider";
 import { CustomSelect } from "@/components/ui/select";
+import { CloseButton } from "@/components/ui/close-button";
 import styles from "./three-d-bar-chart.module.css";
 
 export interface SectionBar {
@@ -356,9 +357,7 @@ export function ThreeDOverlay({ data, initialView, onClose }: ThreeDOverlayProps
       <div className={styles.overlayCard} onClick={(e) => e.stopPropagation()}>
         <div className={styles.overlayHeader}>
           <h4>Section Performance — 3D View</h4>
-          <button type="button" className={styles.overlayClose} onClick={onClose} aria-label="Close 3D view">
-            ×
-          </button>
+          <CloseButton onClose={onClose} label="Close 3D view" />
         </div>
         <ThreeDBarChart
           data={data}

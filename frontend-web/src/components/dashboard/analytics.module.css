@@ -263,65 +263,12 @@
   border-color: var(--chart-bd);
 }
 
-.heatmapCard .chartCardHeader {
-  border-bottom-color: var(--chart-bd-soft);
-}
-
-.heatmapCard .chartTitle {
-  color: var(--foreground);
-}
-
-.heatmapCard .chartSubtitle {
-  color: var(--muted-foreground);
-}
-
-.heatmapCard .heatmapDays,
-.heatmapCard .heatmapScale,
-.heatmapCard .heatmapFooter {
+.heatmapCard .heatmapDays {
   color: var(--muted-foreground);
 }
 
 .heatmapCard .heatmapLabel {
   color: var(--foreground);
-}
-
-.heatmapCard .heatCell {
-  background: var(--muted);
-}
-
-.heatmapCard .heat1 {
-  background: #064e3b;
-}
-
-.heatmapCard .heat2 {
-  background: #047857;
-}
-
-.heatmapCard .heat3 {
-  background: #059669;
-}
-
-.heatmapCard .heat4 {
-  background: #10b981;
-}
-
-.heatmapCard .heat5 {
-  background: #34d399;
-}
-
-.heatmapCard .heat6 {
-  background: #86efac;
-}
-
-.peakBadge {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--brand-primary);
-  background: var(--success-bg-soft);
-  padding: 2px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--success-bd-soft);
-  white-space: nowrap;
 }
 
 .heatmap {
@@ -406,30 +353,6 @@
   color: var(--muted-foreground);
   white-space: nowrap;
   pointer-events: none;
-}
-
-.heatmapFooter {
-  padding-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 10px;
-  color: var(--muted-foreground);
-  white-space: nowrap;
-  margin-top: auto;
-}
-
-.heatmapScale {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  color: var(--muted-foreground);
-}
-
-.heatmapScaleCell {
-  width: 8px;
-  height: 8px;
 }
 
 .barFooter {

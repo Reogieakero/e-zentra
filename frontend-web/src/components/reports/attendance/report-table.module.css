@@ -85,47 +85,6 @@
   background: var(--muted);
 }
 
-.tableFooter {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 12px;
-  margin-top: auto;
-}
-
-.paginationInfo {
-  font-size: 11px;
-  color: var(--muted-foreground);
-  margin-right: 2px;
-}
-
-.pageBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--brand-primary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.pageBtn:hover:not(:disabled) {
-  background: var(--card);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  box-shadow: var(--shadow-xs);
-}
-
-.pageBtn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
 .cellMonth {
   padding: 10px 12px 10px 0;
   font-weight: 500;

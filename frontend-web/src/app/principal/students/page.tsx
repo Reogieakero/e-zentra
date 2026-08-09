@@ -4,9 +4,9 @@ import StudentsHeader from "@/components/students/students-header";
 import StudentsStats, { StudentsStatsLoading } from "@/components/students/students-stats";
 import StudentsToolbar from "@/components/students/students-toolbar";
 import StudentsTable from "@/components/students/students-table";
-import StudentsPagination from "@/components/students/students-pagination";
 import { StudentsEmpty, StudentsError, StudentsTableLoading } from "@/components/students/students-states";
 import StudentDrawer from "@/components/students/students-drawer";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useStudentsQueryState } from "@/hooks/use-students-query";
 import styles from "./students.module.css";
 
@@ -58,13 +58,12 @@ export default function StudentsPage() {
             <>
               <StudentsTable page={data} onSelect={setSelectedId} />
               {data.data.length > 0 && (
-                <StudentsPagination
-                  page={query.page}
-                  totalPages={totalPages}
-                  totalCount={totalCount}
-                  from={from}
-                  to={to}
-                  onPageChange={setPage}
+                <TablePagination
+                  page={query.page - 1}
+                  pageCount={totalPages}
+                  info={totalCount > 0 ? `Showing ${from}–${to} of ${totalCount} students` : "No students"}
+                  onPageChange={(p) => setPage(p + 1)}
+                  className={styles.footer}
                 />
               )}
             </>

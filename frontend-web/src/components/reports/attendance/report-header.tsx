@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { ReportSection } from "@/lib/dashboard";
 import { CustomSelect } from "@/components/ui/select";
@@ -33,12 +33,18 @@ export default function ReportHeader({
   onGradeChange,
   onSectionChange,
 }: ReportHeaderProps) {
+  const router = useRouter();
   return (
     <div className={styles.header}>
       <div className={styles.headerTitleWrap}>
-        <Link href="/principal/dashboard" className={styles.backChevron} aria-label="Back to Dashboard">
+        <button
+          type="button"
+          className={styles.backChevron}
+          aria-label="Go back"
+          onClick={() => router.back()}
+        >
           <ChevronLeft size={16} />
-        </Link>
+        </button>
         <div>
           <h1 className={styles.title}>
             {isDaily ? "Daily" : "Monthly"} Attendance Trend Report

@@ -271,3 +271,134 @@ describe('Dashboard overview', () => {
     expect(allRes.body.data.sectionAttendance[0].totalCount).toBe(5);
   });
 });
+
+describe('Dashboard section roster', () => {
+  let principal: Awaited<ReturnType<typeof loginAs>>;
+  let rk: Awaited<ReturnType<typeof loginAs>>;
+  let teacher: Awaited<ReturnType<typeof loginAs>>;
+  let studentId: string;
+  let studentB: string;
+  let outsideId: string;
+  let section: Awaited<ReturnType<typeof seedSection>>;
+  let otherSection: Awaited<ReturnType<typeof seedSection>>;
+  let term: Awaited<ReturnType<typeof seedTerm>>;
+  let sy: Awaited<ReturnType<typeof seedSchoolYear>>;
+
+  beforeEach(async () => {
+    await truncateAll();
+    await invalidateDashboardCache();
+    principal = await loginAs('principal');
+    rk = await loginAs('record_keeper');
+    teacher = await loginAs('teacher');
+    sy = await seedSchoolYear(principal.user.id);
+    term = await seedTerm(sy.id, 'junior_high', 'term_1', principal.user.id);
+    section = await seedSection({ gradeLevel: 'grade_9', schoolYearId: sy.id, createdBy: rk.user.id });
+    otherSection = await seedSection({ gradeLevel: 'grade_9', schoolYearId: sy.id, createdBy: rk.user.id });
+
+    studentId = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    studentB = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    outsideId = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    await prisma.studentProfile.update({ where: { id: studentId }, data: { sectionId: section.id } });
+    await prisma.studentProfile.update({ where: { id: studentB }, data: { sectionId: section.id } });
+    await prisma.studentProfile.update({ where: { id: outsideId }, data: { sectionId: otherSection.id } });
+  });
+
+  it('returns only active-year students of the section with per-student attendance rate', async () => {
+    await prisma.attendanceRecord.create({
+      data: {
+        studentId,
+        sectionId: section.id,
+        termId: term.id,
+        attendanceDate: new Date('2026-07-01'),
+        session: 'morning',
+        status: 'present',
+        recordedBy: teacher.user.id,
+      },
+    });
+    await prisma.attendanceRecord.create({
+      data: {
+        studentId,
+        sectionId: section.id,
+        termId: term.id,
+        attendanceDate: new Date('2026-07-02'),
+        session: 'morning',
+        status: 'absent',
+        recordedBy: teacher.user.id,
+      },
+    });
+
+    const res = await request(app)
+      .get(`/api/v1/dashboard/attendance/section/${section.id}/students`)
+      .set(auth(principal.tokens.accessToken));
+
+    expect(res.status).toBe(200);
+    const roster = res.body.data;
+    expect(roster).toHaveLength(2);
+
+    const withRate = roster.find((s: { studentId: string }) => s.studentId === studentId);
+    expect(withRate).toBeTruthy();
+    expect(withRate.present).toBe(1);
+    expect(withRate.late).toBe(0);
+    expect(withRate.absent).toBe(1);
+    expect(withRate.excused).toBe(0);
+    expect(withRate.total).toBe(2);
+    expect(withRate.rate).toBe(50);
+    expect(withRate.notLogged).toBeGreaterThanOrEqual(0);
+
+    const withoutRate = roster.find((s: { studentId: string }) => s.studentId === studentB);
+    expect(withoutRate.rate).toBeNull();
+    expect(withoutRate.total).toBe(0);
+
+    expect(roster.map((s: { studentId: string }) => s.studentId)).not.toContain(outsideId);
+  });
+
+  it('returns the monthly attendance trend for a student in the active year', async () => {
+    await prisma.attendanceRecord.create({
+      data: {
+        studentId,
+        sectionId: section.id,
+        termId: term.id,
+        attendanceDate: new Date('2026-07-01'),
+        session: 'morning',
+        status: 'present',
+        recordedBy: teacher.user.id,
+      },
+    });
+    await prisma.attendanceRecord.create({
+      data: {
+        studentId,
+        sectionId: section.id,
+        termId: term.id,
+        attendanceDate: new Date('2026-07-01'),
+        session: 'afternoon',
+        status: 'absent',
+        recordedBy: teacher.user.id,
+      },
+    });
+
+    const res = await request(app)
+      .get(`/api/v1/dashboard/attendance/student/${studentId}/trend`)
+      .set(auth(principal.tokens.accessToken));
+
+    expect(res.status).toBe(200);
+    const trend = res.body.data;
+    expect(Array.isArray(trend)).toBe(true);
+
+    const july = trend.find((p: { month: string }) => p.month === '2026-07');
+    if (july) {
+      expect(july.present).toBe(1);
+      expect(july.absent).toBe(1);
+      expect(july.logged).toBe(2);
+      expect(july.rate).toBe(50);
+      expect(july.notLogged).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('rejects students access', async () => {
+    const student = await loginAs('student', { email: `student.roster.${Date.now()}@test.edu` });
+    const res = await request(app)
+      .get(`/api/v1/dashboard/attendance/section/${section.id}/students`)
+      .set(auth(student.tokens.accessToken));
+    expect(res.status).toBe(403);
+  });
+});
