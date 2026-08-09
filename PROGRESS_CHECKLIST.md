@@ -112,6 +112,14 @@ WHAT "DONE" MEANS
   - A color-coded grid shows each section's attendance intensity per weekday,
     so weak days stand out instantly.
 
+[DONE] Needs-attention report (Backend + Frontend)
+  - A report page lists students whose attendance is low, sorted by lowest
+    rate first, tagged High Risk (below 70%) or At Risk (70-79%).
+
+[DONE] Adviser alerts (Backend + Frontend)
+  - The Principal can alert the class advisers of low-attendance students in
+    one click, and see each alert's status (Alerted / Acknowledged / Replied).
+
 ------------------------------------------------------------
 4. GRADING AND REPORT CARDS (SF10)
 ------------------------------------------------------------
@@ -213,6 +221,11 @@ WHAT "DONE" MEANS
   - While the dashboard loads, placeholder ghost cards shimmer so the screen
     doesn't look broken.
 
+[DONE] Side navigation and dynamic top bar (Frontend)
+  - A permanent left menu stays visible on every screen size, and the top bar
+    always shows who you are (e.g. Principal) and which page you're on
+    (e.g. Attendance) instead of a hardcoded label.
+
 ------------------------------------------------------------
 9. SECURITY AND TRUST
 ------------------------------------------------------------
@@ -288,7 +301,8 @@ WHAT "DONE" MEANS
   - Secrets and credentials are scanned automatically.
 
 [DONE] Plain-English documentation (Other)
-  - This checklist and the tech stack guide explain the system without jargon.
+  - This checklist, the tech stack guide, and the per-module frontend guides in
+    docs/frontend explain the system without jargon.
 
 ------------------------------------------------------------
 12. STILL PLANNED / OPEN
@@ -318,5 +332,6 @@ ONE-LINE SUMMARY
 ------------------------------------------------------------
 
 A secure, role-aware school records system with attendance, grading, report cards,
-behavior and referrals, ADM approval, risk flags, a live principal dashboard, and full
+behavior and referrals, ADM approval, risk flags, a live principal dashboard and
+reporting with adviser alerts, a backups & export feature, and full plain-English
 documentation, with 99 automated tests guarding every change.
