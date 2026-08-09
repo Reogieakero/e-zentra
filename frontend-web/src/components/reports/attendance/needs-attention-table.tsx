@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Flag, MailCheck, MessageSquareReply, BellRing } from "lucide-react";
+import { BellRing, Flag, MailCheck, MessageSquareReply } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { AdviserAlert, NeedsAttentionStudent } from "@/lib/dashboard";
+import { Button } from "@/components/ui/button";
 import { CustomSelect } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
 import { initials } from "@/lib/students-format";
@@ -17,6 +18,8 @@ interface NeedsAttentionTableProps {
   rows: NeedsAttentionStudent[];
   alerts?: AdviserAlert[];
   isLoading?: boolean;
+  onAlertAdvisers?: () => void;
+  alertAdvisersDisabled?: boolean;
 }
 
 const ALERT_STATUS_META: Record<string, { label: string; className: string; icon: LucideIcon }> = {
@@ -36,7 +39,13 @@ function AlertBadge({ alert }: { alert: AdviserAlert }) {
   );
 }
 
-export default function NeedsAttentionTable({ rows, alerts = [], isLoading = false }: NeedsAttentionTableProps) {
+export default function NeedsAttentionTable({
+  rows,
+  alerts = [],
+  isLoading = false,
+  onAlertAdvisers,
+  alertAdvisersDisabled = false,
+}: NeedsAttentionTableProps) {
   const [tone, setTone] = useState("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
@@ -102,6 +111,17 @@ export default function NeedsAttentionTable({ rows, alerts = [], isLoading = fal
                 { value: "warn", label: "70–79% · At Risk" },
               ]}
             />
+            {onAlertAdvisers ? (
+              <Button
+                size="sm"
+                onClick={onAlertAdvisers}
+                disabled={alertAdvisersDisabled}
+                aria-label="Alert class advisers about flagged students"
+              >
+                <BellRing size={12} aria-hidden />
+                Alert Advisers
+              </Button>
+            ) : null}
           </div>
         </div>
 
