@@ -60,27 +60,18 @@
 .reportLink {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  background: var(--card);
-  color: var(--foreground);
+  gap: 3px;
+  color: var(--brand-primary);
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease,
-    background-color 0.15s ease;
+  white-space: nowrap;
 }
 
 .reportLink:hover {
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  background: var(--brand-weak);
+  text-decoration: underline;
 }
 
 .coachHint {
