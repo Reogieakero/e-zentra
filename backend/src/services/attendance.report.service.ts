@@ -491,6 +491,133 @@ export async function getSectionRoster(sectionId: string) {
   });
 }
 
+export interface NeedsAttentionStudent {
+  studentId: string;
+  lrn: string;
+  fullName: string;
+  sectionId: string;
+  sectionName: string;
+  gradeLabel: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  total: number;
+  rate: number;
+  tone: 'danger' | 'warn';
+}
+
+export interface NeedsAttentionReport {
+  schoolYear: string | null;
+  totalFlagged: number;
+  dangerCount: number;
+  warnCount: number;
+  rows: NeedsAttentionStudent[];
+}
+
+export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: string): Promise<NeedsAttentionReport> {
+  const empty: NeedsAttentionReport = {
+    schoolYear: null,
+    totalFlagged: 0,
+    dangerCount: 0,
+    warnCount: 0,
+    rows: [],
+  };
+
+  const activeYear = await prisma.schoolYear.findFirst({
+    where: { status: 'active' },
+    select: { id: true, yearLabel: true, startDate: true, endDate: true },
+  });
+  if (!activeYear) return empty;
+
+  const start = new Date(activeYear.startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(activeYear.endDate);
+  end.setHours(0, 0, 0, 0);
+  const endExclusive = new Date(end);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+
+  const enrollmentScope: Prisma.StudentProfileWhereInput = sectionId
+    ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
+    : gradeLevel
+    ? { section: { status: 'active', schoolYearId: activeYear.id, gradeLevel: gradeLevel as GradeLevel } }
+    : { section: { status: 'active', schoolYearId: activeYear.id } };
+
+  const sectionFilter: Prisma.AttendanceRecordWhereInput = sectionId
+    ? { sectionId }
+    : gradeLevel
+    ? { section: { gradeLevel: gradeLevel as GradeLevel } }
+    : {};
+
+  const [students, rows] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: enrollmentScope,
+      select: {
+        id: true,
+        lrn: true,
+        gradeLevel: true,
+        section: { select: { id: true, sectionName: true } },
+        user: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: [{ user: { lastName: 'asc' } }, { user: { firstName: 'asc' } }],
+    }),
+    prisma.attendanceRecord.groupBy({
+      by: ['studentId', 'status'],
+      where: {
+        term: { schoolYearId: activeYear.id },
+        attendanceDate: { gte: start, lt: endExclusive },
+        ...sectionFilter,
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const counts = new Map<string, { present: number; late: number; absent: number; excused: number }>();
+  for (const r of rows) {
+    const bucket = counts.get(r.studentId) ?? { present: 0, late: 0, absent: 0, excused: 0 };
+    if (r.status === AttendanceStatus.present) bucket.present += r._count._all;
+    else if (r.status === AttendanceStatus.late) bucket.late += r._count._all;
+    else if (r.status === AttendanceStatus.absent) bucket.absent += r._count._all;
+    else if (r.status === AttendanceStatus.excused) bucket.excused += r._count._all;
+    counts.set(r.studentId, bucket);
+  }
+
+  const flagged: NeedsAttentionStudent[] = [];
+  for (const s of students) {
+    const c = counts.get(s.id);
+    if (!c) continue;
+    const total = c.present + c.late + c.absent + c.excused;
+    if (total === 0) continue;
+    const rate = Math.round((c.present / total) * 100);
+    if (rate >= 80) continue;
+    flagged.push({
+      studentId: s.id,
+      lrn: s.lrn,
+      fullName: `${s.user.firstName} ${s.user.lastName}`,
+      sectionId: s.section?.id ?? '',
+      sectionName: s.section?.sectionName ?? '',
+      gradeLabel: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
+      present: c.present,
+      late: c.late,
+      absent: c.absent,
+      excused: c.excused,
+      total,
+      rate,
+      tone: rate < 70 ? 'danger' : 'warn',
+    });
+  }
+
+  flagged.sort((a, b) => a.rate - b.rate);
+
+  return {
+    schoolYear: activeYear.yearLabel,
+    totalFlagged: flagged.length,
+    dangerCount: flagged.filter((r) => r.tone === 'danger').length,
+    warnCount: flagged.filter((r) => r.tone === 'warn').length,
+    rows: flagged,
+  };
+}
+
 export interface StudentAttendanceTrendPoint {
   month: string;
   label: string;

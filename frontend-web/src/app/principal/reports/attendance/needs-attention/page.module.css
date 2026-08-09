@@ -1,0 +1,64 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .skGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .skGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.skCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skLineXs {
+  width: 40%;
+  height: 10px;
+}
+
+.skLineSm {
+  width: 50%;
+  height: 12px;
+}
+
+.skLineLg {
+  width: 70%;
+  height: 22px;
+}

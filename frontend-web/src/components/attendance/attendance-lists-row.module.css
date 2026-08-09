@@ -311,6 +311,7 @@
 .cardLink {
   font-weight: 500;
   color: var(--brand-primary);
+  text-decoration: none;
   cursor: pointer;
 }
 

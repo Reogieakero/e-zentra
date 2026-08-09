@@ -402,3 +402,116 @@ describe('Dashboard section roster', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('Dashboard needs-attention report', () => {
+  let principal: Awaited<ReturnType<typeof loginAs>>;
+  let rk: Awaited<ReturnType<typeof loginAs>>;
+  let teacher: Awaited<ReturnType<typeof loginAs>>;
+  let studentLow: string;
+  let studentBorder: string;
+  let studentOk: string;
+  let section: Awaited<ReturnType<typeof seedSection>>;
+  let term: Awaited<ReturnType<typeof seedTerm>>;
+  let sy: Awaited<ReturnType<typeof seedSchoolYear>>;
+
+  beforeEach(async () => {
+    await truncateAll();
+    await invalidateDashboardCache();
+    principal = await loginAs('principal');
+    rk = await loginAs('record_keeper');
+    teacher = await loginAs('teacher');
+    studentLow = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    studentBorder = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    studentOk = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    sy = await seedSchoolYear(principal.user.id);
+    term = await seedTerm(sy.id, 'junior_high', 'term_1', principal.user.id);
+    section = await seedSection({ gradeLevel: 'grade_9', schoolYearId: sy.id, createdBy: rk.user.id });
+    await prisma.studentProfile.update({ where: { id: studentLow }, data: { sectionId: section.id } });
+    await prisma.studentProfile.update({ where: { id: studentBorder }, data: { sectionId: section.id } });
+    await prisma.studentProfile.update({ where: { id: studentOk }, data: { sectionId: section.id } });
+  });
+
+  async function seedAttendance(student: string, statuses: string[]) {
+    for (let i = 0; i < statuses.length; i++) {
+      const d = new Date('2026-07-01');
+      d.setDate(d.getDate() + i);
+      await prisma.attendanceRecord.create({
+        data: {
+          studentId: student,
+          sectionId: section.id,
+          termId: term.id,
+          attendanceDate: d,
+          session: 'morning',
+          status: statuses[i] as never,
+          recordedBy: teacher.user.id,
+        },
+      });
+    }
+  }
+
+  it('flags students below 80% with danger/warn tone split and day counts', async () => {
+    await seedAttendance(studentLow, ['present', 'absent', 'absent', 'absent', 'absent']);
+    await seedAttendance(studentBorder, ['present', 'present', 'present', 'present', 'present', 'absent', 'absent']);
+    await seedAttendance(studentOk, ['present', 'present', 'present', 'present', 'present', 'present', 'present']);
+
+    const res = await request(app)
+      .get('/api/v1/dashboard/attendance/needs-attention')
+      .set(auth(principal.tokens.accessToken));
+
+    expect(res.status).toBe(200);
+    const report = res.body.data;
+    expect(report.schoolYear).toBe('TEST-2026');
+    expect(report.rows).toHaveLength(2);
+
+    const lowRow = report.rows.find((r: { studentId: string }) => r.studentId === studentLow);
+    expect(lowRow).toBeDefined();
+    expect(lowRow.rate).toBe(20);
+    expect(lowRow.tone).toBe('danger');
+    expect(lowRow.gradeLabel).toBe('Grade 9');
+    expect(lowRow.sectionName).toBe(section.sectionName);
+    expect(lowRow.total).toBe(5);
+    expect(lowRow.absent).toBe(4);
+    expect(lowRow.lrn).toBeTruthy();
+
+    const borderRow = report.rows.find((r: { studentId: string }) => r.studentId === studentBorder);
+    expect(borderRow).toBeDefined();
+    expect(borderRow.rate).toBe(71);
+    expect(borderRow.tone).toBe('warn');
+
+    expect(report.dangerCount).toBe(1);
+    expect(report.warnCount).toBe(1);
+    expect(report.totalFlagged).toBe(2);
+    expect(report.rows.sort((a: { rate: number }, b: { rate: number }) => a.rate - b.rate)[0].studentId).toBe(studentLow);
+  });
+
+  it('filters by section and returns empty for a clean section', async () => {
+    await seedAttendance(studentLow, ['present', 'absent', 'absent']);
+    const emptySection = await seedSection({
+      gradeLevel: 'grade_9',
+      schoolYearId: sy.id,
+      createdBy: rk.user.id,
+      sectionName: 'Sec-Clean',
+    });
+
+    const flagged = await request(app)
+      .get(`/api/v1/dashboard/attendance/needs-attention?section=${section.id}`)
+      .set(auth(principal.tokens.accessToken));
+    expect(flagged.status).toBe(200);
+    expect(flagged.body.data.rows).toHaveLength(1);
+
+    const clean = await request(app)
+      .get(`/api/v1/dashboard/attendance/needs-attention?section=${emptySection.id}`)
+      .set(auth(principal.tokens.accessToken));
+    expect(clean.status).toBe(200);
+    expect(clean.body.data.rows).toHaveLength(0);
+    expect(clean.body.data.totalFlagged).toBe(0);
+  });
+
+  it('rejects students access', async () => {
+    const student = await loginAs('student', { email: `student.flag.${Date.now()}@test.edu` });
+    const res = await request(app)
+      .get('/api/v1/dashboard/attendance/needs-attention')
+      .set(auth(student.tokens.accessToken));
+    expect(res.status).toBe(403);
+  });
+});

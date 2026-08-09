@@ -204,6 +204,62 @@ export function useAttendanceReport(view: "monthly" | "daily", grade: string = "
   return { data, error: error ?? null, isLoading };
 }
 
+export interface NeedsAttentionStudent {
+  studentId: string;
+  lrn: string;
+  fullName: string;
+  sectionId: string;
+  sectionName: string;
+  gradeLabel: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  total: number;
+  rate: number;
+  tone: "danger" | "warn";
+}
+
+export interface NeedsAttentionReport {
+  schoolYear: string | null;
+  totalFlagged: number;
+  dangerCount: number;
+  warnCount: number;
+  rows: NeedsAttentionStudent[];
+}
+
+export async function fetchNeedsAttention(
+  grade?: string,
+  section?: string
+): Promise<NeedsAttentionReport> {
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  const params = new URLSearchParams();
+  if (grade && grade !== "all") params.set("grade", grade);
+  if (section) params.set("section", section);
+  const qstr = params.toString();
+  const { data } = await api<{ data: NeedsAttentionReport }>(
+    `/dashboard/attendance/needs-attention${qstr ? `?${qstr}` : ""}`,
+    { token }
+  );
+  return data;
+}
+
+export function useNeedsAttention(grade: string = "all", section: string = "") {
+  const userId = getUser()?.id ?? "anon";
+  const key = userId === "anon" ? null : ["/dashboard/attendance/needs-attention", userId, grade, section];
+  const { data, error, isLoading, isValidating, mutate } = useSWR<NeedsAttentionReport>(
+    key,
+    () => fetchNeedsAttention(grade, section),
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      keepPreviousData: true,
+    }
+  );
+  return { data, error: error ?? null, isLoading, isValidating, refresh: () => mutate() };
+}
+
 export function useSectionsByGrade(grade: string) {
   const userId = getUser()?.id ?? "anon";
   const enabled = Boolean(grade && grade !== "all");
