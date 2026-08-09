@@ -498,6 +498,8 @@ export interface NeedsAttentionStudent {
   sectionId: string;
   sectionName: string;
   gradeLabel: string;
+  adviserId: string | null;
+  adviserName: string | null;
   present: number;
   late: number;
   absent: number;
@@ -568,7 +570,13 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
         id: true,
         lrn: true,
         gradeLevel: true,
-        section: { select: { id: true, sectionName: true } },
+        section: {
+          select: {
+            id: true,
+            sectionName: true,
+            adviser: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
         user: { select: { firstName: true, lastName: true } },
       },
       orderBy: [{ user: { lastName: 'asc' } }, { user: { firstName: 'asc' } }],
@@ -623,6 +631,8 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
       sectionId: s.section?.id ?? '',
       sectionName: s.section?.sectionName ?? '',
       gradeLabel: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
+      adviserId: s.section?.adviser?.id ?? null,
+      adviserName: s.section?.adviser ? `${s.section.adviser.firstName} ${s.section.adviser.lastName}` : null,
       present: c.present,
       late: c.late,
       absent: c.absent,

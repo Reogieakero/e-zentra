@@ -23,6 +23,22 @@
   outline-offset: 2px;
 }
 
+.loading {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.spinner {
+  animation: buttonSpin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes buttonSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 
 .sm {
   height: 24px;

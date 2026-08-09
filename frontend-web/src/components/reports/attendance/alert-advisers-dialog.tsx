@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BellRing } from "lucide-react";
+import { BellRing, CheckCircle2, XCircle } from "lucide-react";
 import type { AdviserAlertSendResult, NeedsAttentionStudent, ReportSection } from "@/lib/dashboard";
 import { sendAdviserAlerts } from "@/lib/dashboard";
+import { sileo } from "sileo";
+import { Button } from "@/components/ui/button";
 import { CustomSelect } from "@/components/ui/select";
 import { CloseButton } from "@/components/ui/close-button";
 import styles from "./alert-advisers-dialog.module.css";
@@ -34,7 +36,6 @@ export default function AlertAdvisersDialog({
   const [tone, setTone] = useState<Tone>("all");
   const [sectionScope, setSectionScope] = useState(section || "all");
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -48,22 +49,67 @@ export default function AlertAdvisersDialog({
 
   const gradeLocked = grade !== "all";
   const scopedFlagged = flagged.filter((f) => (tone === "all" ? true : f.tone === tone));
-  const adviserCount = new Set(scopedFlagged.map((f) => f.sectionName)).size;
+
+  const advisers = useMemo(() => {
+    const map = new Map<string, { name: string; sectionName: string }>();
+    for (const f of scopedFlagged) {
+      if (!f.sectionId) continue;
+      const sectionKey = `${f.sectionId}::${f.sectionName}`;
+      if (f.adviserName) {
+        map.set(sectionKey, { name: f.adviserName, sectionName: f.sectionName });
+      } else if (!map.has(sectionKey)) {
+        map.set(sectionKey, { name: "No adviser assigned", sectionName: f.sectionName });
+      }
+    }
+    return Array.from(map.values());
+  }, [scopedFlagged]);
 
   if (!mounted) return null;
 
   async function handleConfirm() {
     setSending(true);
-    setError(null);
     try {
-      const result = await sendAdviserAlerts({
-        grade: grade === "all" ? undefined : grade,
-        section: gradeLocked ? (sectionScope === "all" ? undefined : sectionScope) : undefined,
-        tone,
-      });
+      const result = await sileo.promise<AdviserAlertSendResult>(
+        sendAdviserAlerts({
+          grade: grade === "all" ? undefined : grade,
+          section: gradeLocked ? (sectionScope === "all" ? undefined : sectionScope) : undefined,
+          tone,
+        }),
+        {
+          loading: {
+            title: "Alerting class advisers…",
+            description: "Sending attendance alerts to the flagged students' class advisers.",
+            icon: <BellRing size={18} />,
+          },
+          success: (data) => ({
+            title: "Advisers alerted",
+            description: (
+              <span className={styles.toastList}>
+                {data.advisers.length > 0 ? (
+                  <ul className={styles.toastListUl}>
+                    {data.advisers.map((a) => (
+                      <li key={`${a.id}-${a.sectionId}`}>
+                        <strong>{a.name}</strong> · {a.sectionName}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  "No class advisers were notified."
+                )}
+              </span>
+            ),
+            icon: <CheckCircle2 size={18} />,
+          }),
+          error: (err) => ({
+            title: "Could not alert advisers",
+            description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
+            icon: <XCircle size={18} />,
+          }),
+        }
+      );
       onSent(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send alerts. Please try again.");
+    } catch {
+      // sileo.promise shows the error toast; nothing else to do here.
     } finally {
       setSending(false);
     }
@@ -126,27 +172,34 @@ export default function AlertAdvisersDialog({
 
           <div className={styles.summaryCard}>
             <p className={styles.summaryLine}>
-              <strong>{scopedFlagged.length}</strong> flagged student{scopedFlagged.length === 1 ? "" : "s"}
+              <strong>{scopedFlagged.length}</strong> flagged student{scopedFlagged.length === 1 ? "" : "s"} across{" "}
+              <strong>{advisers.length}</strong> class adviser{advisers.length === 1 ? "" : "s"}
             </p>
-            <p className={styles.summaryLine}>
-              <strong>{adviserCount}</strong> class adviser{adviserCount === 1 ? "" : "s"} will be notified
-            </p>
+            {advisers.length > 0 ? (
+              <ul className={styles.adviserList}>
+                {advisers.map((a) => (
+                  <li key={`${a.name}-${a.sectionName}`}>
+                    <span className={styles.adviserDot} aria-hidden />
+                    <span>
+                      <strong>{a.name}</strong>
+                      <span className={styles.adviserSection}> · {a.sectionName}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.summaryNote}>No flagged students with a class adviser under this scope.</p>
+            )}
           </div>
-
-          {error ? <p className={styles.error}>{error}</p> : null}
 
           <div className={styles.modalFooter}>
             <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={sending}>
               Cancel
             </button>
-            <button
-              type="button"
-              className={styles.confirmBtn}
-              onClick={handleConfirm}
-              disabled={sending || scopedFlagged.length === 0}
-            >
-              {sending ? "Sending…" : `Alert ${adviserCount} adviser${adviserCount === 1 ? "" : "s"}`}
-            </button>
+            <Button onClick={handleConfirm} loading={sending} disabled={scopedFlagged.length === 0}>
+              <BellRing size={14} aria-hidden />
+              {sending ? "Sending…" : `Alert ${advisers.length} adviser${advisers.length === 1 ? "" : "s"}`}
+            </Button>
           </div>
         </div>
       </div>

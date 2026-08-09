@@ -211,6 +211,8 @@ export interface NeedsAttentionStudent {
   sectionId: string;
   sectionName: string;
   gradeLabel: string;
+  adviserId?: string | null;
+  adviserName?: string | null;
   present: number;
   late: number;
   absent: number;
@@ -268,6 +270,7 @@ export interface AdviserAlert {
   lrn: string;
   sectionName: string;
   gradeLabel: string;
+  adviserName?: string;
   status: "pending" | "acknowledged" | "commented";
   note: string | null;
   rate: number;
@@ -278,11 +281,19 @@ export interface AdviserAlert {
   createdAt: string;
 }
 
+export interface AdviserAlertAdviser {
+  id: string;
+  name: string;
+  sectionName: string;
+  sectionId: string;
+}
+
 export interface AdviserAlertSendResult {
   created: number;
   notified: number;
   skippedNoAdviser: number;
   total: number;
+  advisers: AdviserAlertAdviser[];
   alerts: AdviserAlert[];
 }
 

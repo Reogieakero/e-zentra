@@ -10,6 +10,13 @@ export interface AdviserAlertScope {
   tone?: 'danger' | 'warn' | 'all';
 }
 
+export interface AdviserAlertAdviser {
+  id: string;
+  name: string;
+  sectionName: string;
+  sectionId: string;
+}
+
 export interface AdviserAlertListItem {
   id: string;
   studentId: string;
@@ -17,6 +24,7 @@ export interface AdviserAlertListItem {
   lrn: string;
   sectionName: string;
   gradeLabel: string;
+  adviserName: string;
   status: AdviserAlertStatus;
   note: string | null;
   rate: number;
@@ -37,7 +45,7 @@ const alertRowSelect = {
   issuedById: true,
   acknowledgedAt: true,
   createdAt: true,
-  section: { select: { sectionName: true, gradeLevel: true } },
+  section: { select: { sectionName: true, gradeLevel: true, adviser: { select: { firstName: true, lastName: true } } } },
   student: { select: { firstName: true, lastName: true, studentProfile: { select: { lrn: true } } } },
   issuedBy: { select: { firstName: true, lastName: true } },
 } satisfies Prisma.AdviserAlertSelect;
@@ -50,6 +58,7 @@ function serializeAlert(row: Prisma.AdviserAlertGetPayload<{ select: typeof aler
     lrn: row.student.studentProfile?.lrn ?? '',
     sectionName: row.section?.sectionName ?? '',
     gradeLabel: row.section ? GRADE_LABELS[row.section.gradeLevel] ?? row.section.gradeLevel : '',
+    adviserName: row.section?.adviser ? `${row.section.adviser.firstName} ${row.section.adviser.lastName}` : '',
     status: row.status,
     note: row.note,
     rate: row.rate,
@@ -90,6 +99,7 @@ export async function sendAdviserAlerts(
     notified: number;
     skippedNoAdviser: number;
     total: number;
+    advisers: AdviserAlertAdviser[];
     alerts: AdviserAlertListItem[];
   };
 }> {
@@ -107,7 +117,7 @@ export async function sendAdviserAlerts(
   const sectionIds = Array.from(new Set(flagged.map((r) => r.sectionId).filter(Boolean)));
   const sections = await prisma.section.findMany({
     where: { id: { in: sectionIds } },
-    select: { id: true, adviserId: true, adviser: { select: { id: true, firstName: true, lastName: true } } },
+    select: { id: true, sectionName: true, adviserId: true, adviser: { select: { id: true, firstName: true, lastName: true } } },
   });
   const bySection = new Map(sections.map((s) => [s.id, s]));
 
@@ -173,12 +183,30 @@ export async function sendAdviserAlerts(
   const relevantStudentIds = new Set(flagged.map((r) => r.studentId));
   const alerts = items.data.filter((a) => relevantStudentIds.has(a.studentId));
 
+  const adviserMap = new Map<string, AdviserAlertAdviser>();
+  for (const s of sections.values()) {
+    if (!s.adviser || !s.sectionName) continue;
+    const existing = adviserMap.get(s.adviser.id);
+    if (existing) {
+      existing.sectionName += `, ${s.sectionName}`;
+    } else {
+      adviserMap.set(s.adviser.id, {
+        id: s.adviser.id,
+        name: `${s.adviser.firstName} ${s.adviser.lastName}`,
+        sectionName: s.sectionName,
+        sectionId: s.id,
+      });
+    }
+  }
+  const advisers = Array.from(adviserMap.values());
+
   return {
     data: {
       created,
       notified,
       skippedNoAdviser,
       total: flagged.length,
+      advisers,
       alerts,
     },
   };

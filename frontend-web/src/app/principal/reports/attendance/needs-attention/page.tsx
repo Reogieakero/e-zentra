@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellRing, CheckCircle2 } from "lucide-react";
 import { useNeedsAttention, useSectionsByGrade, useAdviserAlerts } from "@/lib/dashboard";
-import type { AdviserAlertSendResult } from "@/lib/dashboard";
 import NeedsAttentionHeader from "@/components/reports/attendance/needs-attention-header";
 import NeedsAttentionStats from "@/components/reports/attendance/needs-attention-stats";
 import NeedsAttentionTable from "@/components/reports/attendance/needs-attention-table";
@@ -17,7 +15,6 @@ export default function NeedsAttentionReportPage() {
   const [grade, setGrade] = useState("all");
   const [section, setSection] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [sentNotice, setSentNotice] = useState<AdviserAlertSendResult | null>(null);
   const { data, error, isLoading } = useNeedsAttention(grade, section);
   const { data: sectionOptions, isLoading: sectionsLoading } = useSectionsByGrade(grade);
   const { data: alerts, refresh: refreshAlerts } = useAdviserAlerts(grade, section);
@@ -44,19 +41,6 @@ export default function NeedsAttentionReportPage() {
         onSectionChange={setSection}
       />
 
-      {sentNotice ? (
-        <div className={styles.sentBanner} role="status">
-          <CheckCircle2 size={16} />
-          <span>
-            Alerted <strong>{sentNotice.notified}</strong> adviser{sentNotice.notified === 1 ? "" : "s"} across{" "}
-            <strong>{sentNotice.created}</strong> student{sentNotice.created === 1 ? "" : "s"}.{" "}
-            {sentNotice.skippedNoAdviser > 0 && (
-              <>{sentNotice.skippedNoAdviser} student{sentNotice.skippedNoAdviser === 1 ? " has" : "s have"} no class adviser assigned.</>
-            )}
-          </span>
-        </div>
-      ) : null}
-
       {showSkeleton ? (
         <div className={styles.skGrid}>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -79,13 +63,14 @@ export default function NeedsAttentionReportPage() {
       {error && !data ? (
         <ReportError message={error.message} />
       ) : (
-        <NeedsAttentionTable rows={data?.rows ?? []} alerts={alerts} isLoading={showSkeleton} />
+        <NeedsAttentionTable
+          rows={data?.rows ?? []}
+          alerts={alerts}
+          isLoading={showSkeleton}
+          onAlertAdvisers={() => setDialogOpen(true)}
+          alertAdvisersDisabled={showSkeleton}
+        />
       )}
-
-      <button type="button" className={styles.alertBtn} onClick={() => setDialogOpen(true)} disabled={showSkeleton}>
-        <BellRing size={14} />
-        Alert Class Advisers
-      </button>
 
       {dialogOpen ? (
         <AlertAdvisersDialog
@@ -94,8 +79,7 @@ export default function NeedsAttentionReportPage() {
           sectionOptions={sectionOptions ?? []}
           sectionsLoading={sectionsLoading}
           flagged={data?.rows ?? []}
-          onSent={(result) => {
-            setSentNotice(result);
+          onSent={() => {
             setDialogOpen(false);
             refreshAlerts();
           }}

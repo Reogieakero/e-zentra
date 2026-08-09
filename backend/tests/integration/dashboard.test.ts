@@ -474,6 +474,7 @@ describe('Dashboard needs-attention report', () => {
     expect(lowRow.lrn).toBeTruthy();
     expect(typeof lowRow.notLogged).toBe('number');
     expect(lowRow.notLogged).toBeGreaterThanOrEqual(0);
+    expect(lowRow.adviserName).toBeNull();
 
     const borderRow = report.rows.find((r: { studentId: string }) => r.studentId === studentBorder);
     expect(borderRow).toBeDefined();
@@ -582,6 +583,11 @@ describe('Dashboard adviser alerts', () => {
     expect(send.body.data.alerts[0].studentId).toBe(studentLow);
     expect(send.body.data.alerts[0].status).toBe('pending');
     expect(send.body.data.alerts[0].tone).toBe('danger');
+    expect(send.body.data.advisers).toHaveLength(1);
+    expect(send.body.data.advisers[0]).toMatchObject({
+      name: `${teacher.user.firstName} ${teacher.user.lastName}`,
+      sectionName: section.sectionName,
+    });
 
     const list = await request(app)
       .get('/api/v1/dashboard/attendance/needs-attention/alerts')
