@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Menu, Moon, Sun, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
 import { api } from "@/lib/api";
 import { clearSession, getTokens, getUser } from "@/lib/auth";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -10,9 +10,15 @@ import { useTheme, type Theme } from "@/components/theme-provider";
 import { SearchInput } from "@/components/ui/search-input";
 import styles from "./topbar.module.css";
 
-interface TopbarProps {
-  onMenuClick: () => void;
-}
+const pageLabels: Record<string, string> = {
+  "/principal/dashboard": "Dashboard",
+  "/principal/students": "Students",
+  "/principal/sf10": "SF10 Records",
+  "/principal/attendance": "Attendance",
+  "/principal/reports/attendance": "Attendance Report",
+  "/principal/reports/attendance/needs-attention": "Needs Attention",
+  "/principal/backup": "Data Backup",
+};
 
 function logoutPath(role?: string): string {
   switch (role) {
@@ -33,8 +39,28 @@ function logoutPath(role?: string): string {
   }
 }
 
-export default function Topbar({ onMenuClick }: TopbarProps) {
+const roleLabels: Record<string, string> = {
+  principal: "Principal",
+  teacher: "Teacher",
+  registrar: "Registrar",
+  record_keeper: "Record Keeper",
+  adm_coordinator: "ADM Coordinator",
+  guidance_counselor: "Guidance Counselor",
+  nurse: "Nurse",
+  student: "Student",
+  parent: "Parent",
+};
+
+function currentPageLabel(pathname: string): string {
+  const matches = Object.keys(pageLabels)
+    .filter((href) => href !== "#" && pathname.startsWith(href))
+    .sort((a, b) => b.length - a.length);
+  return matches.length > 0 ? pageLabels[matches[0]] : "Dashboard";
+}
+
+export default function Topbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -60,12 +86,9 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <button onClick={onMenuClick} className={styles.iconBtn} aria-label="Open sidebar">
-          <Menu className={styles.icon} />
-        </button>
-        <span className={styles.crumb}>School Admin</span>
+        <span className={styles.crumb}>{roleLabels[user?.role ?? ""] ?? "Principal"}</span>
         <span className={styles.separator}>/</span>
-        <span className={styles.crumbCurrent}>Dashboard</span>
+        <span className={styles.crumbCurrent}>{currentPageLabel(pathname)}</span>
       </div>
 
       <div className={styles.right}>
