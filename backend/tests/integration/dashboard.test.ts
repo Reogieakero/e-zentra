@@ -472,6 +472,8 @@ describe('Dashboard needs-attention report', () => {
     expect(lowRow.total).toBe(5);
     expect(lowRow.absent).toBe(4);
     expect(lowRow.lrn).toBeTruthy();
+    expect(typeof lowRow.notLogged).toBe('number');
+    expect(lowRow.notLogged).toBeGreaterThanOrEqual(0);
 
     const borderRow = report.rows.find((r: { studentId: string }) => r.studentId === studentBorder);
     expect(borderRow).toBeDefined();
@@ -512,6 +514,124 @@ describe('Dashboard needs-attention report', () => {
     const res = await request(app)
       .get('/api/v1/dashboard/attendance/needs-attention')
       .set(auth(student.tokens.accessToken));
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Dashboard adviser alerts', () => {
+  let principal: Awaited<ReturnType<typeof loginAs>>;
+  let teacher: Awaited<ReturnType<typeof loginAs>>;
+  let rk: Awaited<ReturnType<typeof loginAs>>;
+  let studentLow: string;
+  let studentOk: string;
+  let section: Awaited<ReturnType<typeof seedSection>>;
+  let term: Awaited<ReturnType<typeof seedTerm>>;
+  let sy: Awaited<ReturnType<typeof seedSchoolYear>>;
+
+  beforeEach(async () => {
+    await truncateAll();
+    await invalidateDashboardCache();
+    principal = await loginAs('principal');
+    teacher = await loginAs('teacher');
+    rk = await loginAs('record_keeper');
+    studentLow = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    studentOk = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    sy = await seedSchoolYear(principal.user.id);
+    term = await seedTerm(sy.id, 'junior_high', 'term_1', principal.user.id);
+    section = await seedSection({
+      gradeLevel: 'grade_9',
+      schoolYearId: sy.id,
+      adviserId: teacher.user.id,
+      createdBy: rk.user.id,
+    });
+    await prisma.studentProfile.update({ where: { id: studentLow }, data: { sectionId: section.id } });
+    await prisma.studentProfile.update({ where: { id: studentOk }, data: { sectionId: section.id } });
+  });
+
+  async function seedAttendance(student: string, statuses: string[]) {
+    for (let i = 0; i < statuses.length; i++) {
+      const d = new Date('2026-07-01');
+      d.setDate(d.getDate() + i);
+      await prisma.attendanceRecord.create({
+        data: {
+          studentId: student,
+          sectionId: section.id,
+          termId: term.id,
+          attendanceDate: d,
+          session: 'morning',
+          status: statuses[i] as never,
+          recordedBy: teacher.user.id,
+        },
+      });
+    }
+  }
+
+  it('creates alerts for flagged students, notifies adviser, and lists them', async () => {
+    await seedAttendance(studentLow, ['present', 'absent', 'absent', 'absent', 'absent']);
+    await seedAttendance(studentOk, ['present', 'present', 'present', 'present', 'present', 'present', 'present']);
+
+    const send = await request(app)
+      .post('/api/v1/dashboard/attendance/needs-attention/alerts')
+      .set(auth(principal.tokens.accessToken))
+      .send({ tone: 'all' });
+    expect(send.status).toBe(201);
+    expect(send.body.data.total).toBe(1);
+    expect(send.body.data.created).toBe(1);
+    expect(send.body.data.skippedNoAdviser).toBe(0);
+    expect(send.body.data.alerts).toHaveLength(1);
+    expect(send.body.data.alerts[0].studentId).toBe(studentLow);
+    expect(send.body.data.alerts[0].status).toBe('pending');
+    expect(send.body.data.alerts[0].tone).toBe('danger');
+
+    const list = await request(app)
+      .get('/api/v1/dashboard/attendance/needs-attention/alerts')
+      .set(auth(principal.tokens.accessToken));
+    expect(list.status).toBe(200);
+    expect(list.body.data).toHaveLength(1);
+
+    const adviserNotifications = await prisma.notification.count({
+      where: { recipientId: teacher.user.id, notificationType: 'attendance_alert' },
+    });
+    expect(adviserNotifications).toBe(1);
+  });
+
+  it('is idempotent for pending alerts and reopens acknowledged ones', async () => {
+    await seedAttendance(studentLow, ['present', 'absent', 'absent', 'absent', 'absent']);
+
+    await request(app)
+      .post('/api/v1/dashboard/attendance/needs-attention/alerts')
+      .set(auth(principal.tokens.accessToken))
+      .send({ tone: 'all' });
+    const again = await request(app)
+      .post('/api/v1/dashboard/attendance/needs-attention/alerts')
+      .set(auth(principal.tokens.accessToken))
+      .send({ tone: 'all' });
+    expect(again.status).toBe(201);
+    expect(again.body.data.created).toBe(0);
+
+    const created = await prisma.adviserAlert.findFirstOrThrow({
+      where: { studentId: studentLow },
+    });
+    await request(app)
+      .patch(`/api/v1/dashboard/attendance/needs-attention/alerts/${created.id}`)
+      .set(auth(teacher.tokens.accessToken))
+      .send({ status: 'acknowledged' })
+      .expect(200);
+
+    const reopened = await request(app)
+      .post('/api/v1/dashboard/attendance/needs-attention/alerts')
+      .set(auth(principal.tokens.accessToken))
+      .send({ tone: 'all' });
+    expect(reopened.body.data.created).toBe(1);
+    const after = await prisma.adviserAlert.findUniqueOrThrow({ where: { id: created.id } });
+    expect(after.status).toBe('pending');
+  });
+
+  it('guards POST to principals only', async () => {
+    const res = await request(app)
+      .post('/api/v1/dashboard/attendance/needs-attention/alerts')
+      .set(auth(rk.tokens.accessToken))
+      .send({ tone: 'all' });
     expect(res.status).toBe(403);
   });
 });

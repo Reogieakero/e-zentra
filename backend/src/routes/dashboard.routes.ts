@@ -16,6 +16,12 @@ import {
   getStudentAttendanceTrend,
   listSectionsByGrade,
 } from '../services/attendance.report.service';
+import {
+  listAdviserAlerts,
+  sendAdviserAlerts,
+  setAlertStatus,
+} from '../services/adviser-alert.service';
+import { z } from 'zod';
 import { getSf10Summary } from '../services/sf10.service';
 import { getAiRecommendations } from '../services/ai.service';
 import { Sf10ListQuery, Sf10Sort } from '../types/sf10';
@@ -87,6 +93,44 @@ router.get(
     const section = typeof req.query.section === 'string' ? req.query.section : undefined;
     const result = await getLowAttendanceReport(grade, section);
     res.json({ data: result });
+  })
+);
+
+router.get(
+  '/dashboard/attendance/needs-attention/alerts',
+  requireRole(...STAFF_VIEW_ROLES),
+  asyncHandler(async (req, res) => {
+    const grade = GRADE_LEVELS.includes(String(req.query.grade)) ? String(req.query.grade) : undefined;
+    const section = typeof req.query.section === 'string' ? req.query.section : undefined;
+    const result = await listAdviserAlerts({ gradeLevel: grade, sectionId: section });
+    res.json(result);
+  })
+);
+
+router.post(
+  '/dashboard/attendance/needs-attention/alerts',
+  requireRole('principal'),
+  validateSchema({
+    body: z.object({
+      grade: z.enum(GRADE_LEVELS as [string, ...string[]]).optional(),
+      section: z.string().uuid().optional(),
+      tone: z.enum(['danger', 'warn', 'all']).default('all'),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const { grade, section, tone } = req.body as { grade?: string; section?: string; tone: 'danger' | 'warn' | 'all' };
+    const result = await sendAdviserAlerts(req.user!.id, { gradeLevel: grade, sectionId: section, tone });
+    res.status(201).json(result);
+  })
+);
+
+router.patch(
+  '/dashboard/attendance/needs-attention/alerts/:id',
+  requireRole('teacher'),
+  validateSchema({ params: uuidParams }),
+  asyncHandler(async (req, res) => {
+    const result = await setAlertStatus(req.params.id, req.user!.id, { status: 'acknowledged' });
+    res.json(result);
   })
 );
 

@@ -215,6 +215,7 @@ export interface NeedsAttentionStudent {
   late: number;
   absent: number;
   excused: number;
+  notLogged: number;
   total: number;
   rate: number;
   tone: "danger" | "warn";
@@ -258,6 +259,70 @@ export function useNeedsAttention(grade: string = "all", section: string = "") {
     }
   );
   return { data, error: error ?? null, isLoading, isValidating, refresh: () => mutate() };
+}
+
+export interface AdviserAlert {
+  id: string;
+  studentId: string;
+  studentName: string;
+  lrn: string;
+  sectionName: string;
+  gradeLabel: string;
+  status: "pending" | "acknowledged" | "commented";
+  note: string | null;
+  rate: number;
+  tone: "danger" | "warn";
+  issuedById: string;
+  issuedByName: string;
+  acknowledgedAt: string | null;
+  createdAt: string;
+}
+
+export interface AdviserAlertSendResult {
+  created: number;
+  notified: number;
+  skippedNoAdviser: number;
+  total: number;
+  alerts: AdviserAlert[];
+}
+
+export async function fetchAdviserAlerts(grade?: string, section?: string): Promise<AdviserAlert[]> {
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  const params = new URLSearchParams();
+  if (grade && grade !== "all") params.set("grade", grade);
+  if (section) params.set("section", section);
+  const qstr = params.toString();
+  const { data } = await api<{ data: AdviserAlert[] }>(
+    `/dashboard/attendance/needs-attention/alerts${qstr ? `?${qstr}` : ""}`,
+    { token }
+  );
+  return data;
+}
+
+export async function sendAdviserAlerts(payload: {
+  grade?: string;
+  section?: string;
+  tone?: "danger" | "warn" | "all";
+}): Promise<AdviserAlertSendResult> {
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  const { data } = await api<{ data: AdviserAlertSendResult }>(
+    "/dashboard/attendance/needs-attention/alerts",
+    { token, method: "POST", body: payload }
+  );
+  return data;
+}
+
+export function useAdviserAlerts(grade: string = "all", section: string = "") {
+  const userId = getUser()?.id ?? "anon";
+  const key = userId === "anon" ? null : ["/dashboard/attendance/needs-attention/alerts", userId, grade, section];
+  const { data, error, isLoading, mutate } = useSWR<AdviserAlert[]>(
+    key,
+    () => fetchAdviserAlerts(grade, section),
+    { revalidateOnFocus: true, keepPreviousData: true }
+  );
+  return { data: data ?? [], error: error ?? null, isLoading, refresh: () => mutate() };
 }
 
 export function useSectionsByGrade(grade: string) {

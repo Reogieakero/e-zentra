@@ -502,6 +502,7 @@ export interface NeedsAttentionStudent {
   late: number;
   absent: number;
   excused: number;
+  notLogged: number;
   total: number;
   rate: number;
   tone: 'danger' | 'warn';
@@ -536,6 +537,17 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
   end.setHours(0, 0, 0, 0);
   const endExclusive = new Date(end);
   endExclusive.setDate(endExclusive.getDate() + 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const seriesEnd = today < endExclusive ? today : endExclusive;
+
+  let schoolDays = 0;
+  const cursor = new Date(start);
+  while (cursor < seriesEnd) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) schoolDays += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
 
   const enrollmentScope: Prisma.StudentProfileWhereInput = sectionId
     ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
@@ -549,7 +561,7 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
     ? { section: { gradeLevel: gradeLevel as GradeLevel } }
     : {};
 
-  const [students, rows] = await Promise.all([
+  const [students, rows, daysRows] = await Promise.all([
     prisma.studentProfile.findMany({
       where: enrollmentScope,
       select: {
@@ -570,6 +582,15 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
       },
       _count: { _all: true },
     }),
+    prisma.attendanceRecord.groupBy({
+      by: ['studentId', 'attendanceDate'],
+      where: {
+        term: { schoolYearId: activeYear.id },
+        attendanceDate: { gte: start, lt: endExclusive },
+        ...sectionFilter,
+      },
+      _count: { _all: true },
+    }),
   ]);
 
   const counts = new Map<string, { present: number; late: number; absent: number; excused: number }>();
@@ -580,6 +601,11 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
     else if (r.status === AttendanceStatus.absent) bucket.absent += r._count._all;
     else if (r.status === AttendanceStatus.excused) bucket.excused += r._count._all;
     counts.set(r.studentId, bucket);
+  }
+
+  const loggedDays = new Map<string, number>();
+  for (const r of daysRows) {
+    loggedDays.set(r.studentId, (loggedDays.get(r.studentId) ?? 0) + 1);
   }
 
   const flagged: NeedsAttentionStudent[] = [];
@@ -601,6 +627,7 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
       late: c.late,
       absent: c.absent,
       excused: c.excused,
+      notLogged: Math.max(0, schoolDays - (loggedDays.get(s.id) ?? 0)),
       total,
       rate,
       tone: rate < 70 ? 'danger' : 'warn',
