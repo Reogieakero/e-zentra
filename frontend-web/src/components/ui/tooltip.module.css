@@ -25,7 +25,7 @@
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
-  z-index: 60;
+  z-index: 2000;
 }
 
 .tooltipWrap:hover .tooltip,

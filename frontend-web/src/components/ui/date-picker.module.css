@@ -36,6 +36,13 @@
   border-color: var(--brand-primary);
 }
 
+.triggerSm {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .triggerOpen {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 3px var(--brand-weak);

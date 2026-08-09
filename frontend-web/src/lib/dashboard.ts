@@ -220,6 +220,83 @@ export function useSectionsByGrade(grade: string) {
   return { data: data ?? [], error: error ?? null, isLoading: enabled && isLoading };
 }
 
+export interface SectionRosterStudent {
+  studentId: string;
+  lrn: string;
+  firstName: string;
+  lastName: string;
+  photoUrl: string | null;
+  gradeLabel: string;
+  sectionName: string | null;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  notLogged: number;
+  total: number;
+  rate: number | null;
+}
+
+async function fetchSectionRoster(token: string, sectionId: string): Promise<SectionRosterStudent[]> {
+  const { data } = await api<{ data: SectionRosterStudent[] }>(
+    `/dashboard/attendance/section/${sectionId}/students`,
+    { token }
+  );
+  return data;
+}
+
+export function useSectionRoster(sectionId: string) {
+  const userId = getUser()?.id ?? "anon";
+  const enabled = Boolean(sectionId);
+  const key = enabled ? ["/dashboard/attendance/section/students", userId, sectionId] : null;
+  const { data, error, isLoading } = useSWR<SectionRosterStudent[]>(
+    key,
+    async () => {
+      const token = getTokens()?.accessToken;
+      if (!token) throw new Error("Missing access token");
+      return fetchSectionRoster(token, sectionId);
+    },
+    { revalidateOnFocus: true }
+  );
+  return { data: data ?? [], error: error ?? null, isLoading: enabled && isLoading };
+}
+
+export interface StudentAttendanceTrendPoint {
+  month: string;
+  label: string;
+  full: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  logged: number;
+  notLogged: number;
+  rate: number | null;
+}
+
+async function fetchStudentAttendanceTrend(token: string, studentId: string): Promise<StudentAttendanceTrendPoint[]> {
+  const { data } = await api<{ data: StudentAttendanceTrendPoint[] }>(
+    `/dashboard/attendance/student/${studentId}/trend`,
+    { token }
+  );
+  return data;
+}
+
+export function useStudentAttendanceTrend(studentId: string | null) {
+  const userId = getUser()?.id ?? "anon";
+  const key = studentId && userId !== "anon" ? ["/dashboard/attendance/student/trend", userId, studentId] : null;
+  const { data, error, isLoading } = useSWR<StudentAttendanceTrendPoint[]>(
+    key,
+    async () => {
+      const token = getTokens()?.accessToken;
+      if (!token) throw new Error("Missing access token");
+      return fetchStudentAttendanceTrend(token, studentId!);
+    },
+    { revalidateOnFocus: false }
+  );
+  return { data: data ?? [], error: error ?? null, isLoading: key ? isLoading : false };
+}
+
 export interface AiRecommendationResult {
   ok: boolean;
   summary: string;
@@ -234,6 +311,7 @@ export interface TodayAttendance {
   late: number;
   absent: number;
   excused: number;
+  notLogged: number;
   presentRate: number;
 }
 
@@ -297,13 +375,15 @@ export interface AttendanceSummary {
 export async function fetchAttendanceSummary(
   view: "monthly" | "daily" = "monthly",
   grade: string = "all",
-  section: string = ""
+  section: string = "",
+  date?: string
 ): Promise<AttendanceSummary> {
   const token = getTokens()?.accessToken;
   if (!token) throw new Error("Missing access token");
   const params = new URLSearchParams({ view });
   if (grade && grade !== "all") params.set("grade", grade);
   if (section) params.set("section", section);
+  if (date) params.set("date", date);
   const { data } = await api<{ data: AttendanceSummary }>(
     `/dashboard/attendance/summary?${params.toString()}`,
     { token }
@@ -311,15 +391,15 @@ export async function fetchAttendanceSummary(
   return data;
 }
 
-export function useAttendanceSummary(view: "monthly" | "daily" = "monthly", grade: string = "all", section: string = "") {
+export function useAttendanceSummary(view: "monthly" | "daily" = "monthly", grade: string = "all", section: string = "", date?: string) {
   const userId = getUser()?.id ?? "anon";
   const key =
     userId === "anon"
       ? null
-      : ["/dashboard/attendance/summary", userId, view, grade, section];
+      : ["/dashboard/attendance/summary", userId, view, grade, section, date ?? "today"];
   const { data, error, isLoading, isValidating, mutate } = useSWR<AttendanceSummary>(
     key,
-    () => fetchAttendanceSummary(view, grade, section),
+    () => fetchAttendanceSummary(view, grade, section, date),
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,

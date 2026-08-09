@@ -19,21 +19,21 @@
 }
 
 .danger {
-  background: #fee2e2;
-  color: var(--danger);
-  border-color: #fecaca;
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+  border-color: var(--danger-bd);
 }
 
 .warning {
-  background: #fef3c7;
-  color: var(--warning);
-  border-color: #fde68a;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  border-color: var(--warning-bd);
 }
 
 .info {
-  background: #e0f2fe;
-  color: var(--info);
-  border-color: #bae6fd;
+  background: var(--info-bg);
+  color: var(--info-fg);
+  border-color: var(--info-bd);
 }
 
 .neutral {

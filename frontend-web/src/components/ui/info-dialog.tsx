@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Info, X } from "lucide-react";
+import { Info } from "lucide-react";
+import { CloseButton } from "@/components/ui/close-button";
 import styles from "./info-dialog.module.css";
 
 interface InfoDialogProps {
@@ -46,9 +47,7 @@ export function InfoDialog({ title, label = "More information", bare = false, ch
           >
             <div className={styles.modalHeader}>
               <h2 className={styles.modalTitle}>{title}</h2>
-              <button type="button" className={styles.modalClose} onClick={() => setOpen(false)} aria-label="Close">
-                <X className={styles.modalCloseIcon} />
-              </button>
+              <CloseButton onClose={() => setOpen(false)} />
             </div>
             <div className={styles.modalBody}>{children}</div>
           </div>

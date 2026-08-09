@@ -10,7 +10,7 @@ import {
   BarChart,
   CartesianGrid,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -18,6 +18,9 @@ import type { SectionHeatmap } from "@/lib/dashboard";
 import { useTheme } from "@/components/theme-provider";
 import { CustomSelect } from "@/components/ui/select";
 import { MonthPicker } from "@/components/ui/month-picker";
+import { HeatmapCard, HEAT_LEVELS as UI_HEAT_LEVELS } from "@/components/ui/heatmap-card";
+import uiStyles from "@/components/ui/heatmap-card.module.css";
+import { Tooltip } from "@/components/ui/tooltip";
 import { ThreeDOverlay } from "@/components/dashboard/three-d-bar-chart";
 import { ThreeDTrendOverlay } from "@/components/dashboard/three-d-trend-chart";
 import styles from "./analytics.module.css";
@@ -115,8 +118,6 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
     </div>
   );
 }
-
-const heatLevels = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
 
 type AttendanceView = "presentAbsent" | "lateExcused";
 
@@ -225,7 +226,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                     interval={0}
                   />
                   <YAxis hide />
-                  <Tooltip cursor={TOOLTIP_CURSOR} content={<TrendTooltip />} />
+                  <RechartsTooltip cursor={TOOLTIP_CURSOR} content={<TrendTooltip />} />
                   {STATUS_KEYS.map(({ key, name, color }) => (
                     <Area
                       key={key}
@@ -253,18 +254,13 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
             </div>
           </div>
 
-          <div className={`${styles.chartCard} ${styles.heatmapCard}`}>
-            <div className={styles.chartCardHeader}>
-              <div>
-                <h4 className={styles.chartTitle}>
-                  <Calendar className={styles.chartTitleIcon} />
-                  Section Attendance Heatmap
-                </h4>
-                <p className={styles.chartSubtitle}>Weekly daily log intensity by section (Mon – Fri)</p>
-              </div>
-              <span className={styles.peakBadge}>{peakRate}% peak</span>
-            </div>
-
+          <HeatmapCard
+            title="Section Attendance Heatmap"
+            subtitle="Weekly daily log intensity by section (Mon – Fri)"
+            icon={<Calendar />}
+            badge={`${peakRate}% peak`}
+            className={styles.heatmapCard}
+          >
             <div className={styles.heatmap}>
               <div className={styles.heatmapDays}>
                 {heatmap[0]?.days.map((d) => (
@@ -276,15 +272,15 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                   <div key={col.sectionId} className={styles.heatmapCol}>
                     <div className={styles.heatmapCells}>
                       {col.days.map((cell) => (
-                        <span
-                          key={cell.day}
-                          className={
-                            cell.level > 0
-                              ? `${styles.heatCell} ${styles[heatLevels[cell.level - 1]]}`
-                              : styles.heatCell
-                          }
-                          title={`${cell.label}: ${cell.rate}%`}
-                        />
+                        <Tooltip key={cell.day} label={`${cell.label}: ${cell.rate}% present`}>
+                          <span
+                            className={
+                              cell.level > 0
+                                ? `${styles.heatCell} ${uiStyles[UI_HEAT_LEVELS[cell.level - 1]]}`
+                                : styles.heatCell
+                            }
+                          />
+                        </Tooltip>
                       ))}
                     </div>
                     <span className={styles.heatmapLabel}>{col.sectionName}</span>
@@ -292,18 +288,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                 ))}
               </div>
             </div>
-
-            <div className={styles.heatmapFooter}>
-              <span>Mon – Fri school logs</span>
-              <div className={styles.heatmapScale}>
-                <span>Less</span>
-                {heatLevels.map((l) => (
-                  <span key={l} className={`${styles.heatCell} ${styles.heatmapScaleCell} ${styles[l]}`} />
-                ))}
-                <span>More</span>
-              </div>
-            </div>
-          </div>
+          </HeatmapCard>
         </div>
 
         <div className={styles.chartCard}>
@@ -369,7 +354,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                   tickLine={false}
                 />
                 <YAxis hide domain={[0, 100]} />
-                <Tooltip cursor={TOOLTIP_CURSOR} content={<ChartTooltip />} />
+                <RechartsTooltip cursor={TOOLTIP_CURSOR} content={<ChartTooltip />} />
                 {view === "presentAbsent" ? (
                   <>
                     <Bar dataKey="present" name="Present" fill="#16a34a" radius={[2, 2, 0, 0]} />

@@ -6,63 +6,14 @@
   padding: 16px;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-}
-
-.cardHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
-}
-
-.cardTitle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--foreground);
-  margin: 0;
-}
-
-.cardTitleIcon {
-  width: 15px;
-  height: 15px;
-  color: var(--brand-primary);
-}
-
-.cardSubtitle {
-  font-size: 10px;
-  color: var(--muted-foreground);
-  margin-top: 2px;
-}
-
-.cardHeaderRight {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.peakBadge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-  color: var(--brand-primary);
-  background: var(--success-bg-soft);
-  border: 1px solid var(--success-bd-soft);
+  gap: 14px;
 }
 
 .heatmapScroll {
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  padding-top: 24px;
   padding-bottom: 4px;
 }
 
@@ -71,12 +22,24 @@
 }
 
 .heatmapMonths {
-  display: flex;
+  position: relative;
+  height: 12px;
+  margin-bottom: 6px;
   font-size: 9px;
   color: var(--muted-foreground);
   font-weight: 500;
-  padding-left: 24px;
-  margin-bottom: 6px;
+}
+
+.heatmapMonths > span {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.heatmapMain {
+  display: flex;
+  flex-direction: column;
+  min-width: max-content;
 }
 
 .heatmapBody {
@@ -94,6 +57,7 @@
   color: var(--muted-foreground);
   font-weight: 500;
   padding-right: 4px;
+  margin-top: 18px;
 }
 
 .heatmapGrid {
@@ -108,6 +72,7 @@
 }
 
 .heatCell {
+  display: block;
   width: 12px;
   height: 12px;
   border-radius: 2px;
@@ -116,50 +81,6 @@
 
 .heatEmpty {
   background: transparent;
-}
-
-.heat1 {
-  background: #064e3b;
-}
-.heat2 {
-  background: #047857;
-}
-.heat3 {
-  background: #059669;
-}
-.heat4 {
-  background: #10b981;
-}
-.heat5 {
-  background: #34d399;
-}
-.heat6 {
-  background: #86efac;
-}
-
-.heatmapScale {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  color: var(--muted-foreground);
-}
-
-.heatCellSmall {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-}
-
-.heatmapFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 10px;
-  margin-top: 10px;
-  border-top: 1px solid var(--border);
-  font-size: 10px;
-  color: var(--muted-foreground);
 }
 
 .skeleton {

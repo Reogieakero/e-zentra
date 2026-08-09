@@ -1,0 +1,101 @@
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.cardTitle :global(svg) {
+  width: 15px;
+  height: 15px;
+  color: var(--brand-primary);
+}
+
+.cardSubtitle {
+  font-size: 10px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+}
+
+.peakBadge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  background: var(--success-bg-soft);
+  border: 1px solid var(--success-bd-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.heatmapScale {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: var(--muted-foreground);
+}
+
+.scaleCell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.heatCell {
+  background: var(--skel-1);
+}
+
+.heat1 {
+  background: #064e3b;
+}
+.heat2 {
+  background: #047857;
+}
+.heat3 {
+  background: #059669;
+}
+.heat4 {
+  background: #10b981;
+}
+.heat5 {
+  background: #34d399;
+}
+.heat6 {
+  background: #86efac;
+}

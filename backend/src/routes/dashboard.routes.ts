@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/authenticate';
 import { requireRole, STAFF_VIEW_ROLES } from '../middleware/authorize';
+import { validateSchema } from '../middleware/validate';
+import { uuidParams } from '../schemas/common';
 import { GradeLevel } from '@prisma/client';
 import {
   getDashboardOverview,
@@ -9,6 +11,8 @@ import {
 import {
   getAttendanceReport,
   getAttendanceSummary,
+  getSectionRoster,
+  getStudentAttendanceTrend,
   listSectionsByGrade,
 } from '../services/attendance.report.service';
 import { getSf10Summary } from '../services/sf10.service';
@@ -44,7 +48,8 @@ router.get(
     const view = req.query.view === 'daily' ? 'daily' : 'monthly';
     const grade = GRADE_LEVELS.includes(String(req.query.grade)) ? String(req.query.grade) : undefined;
     const section = typeof req.query.section === 'string' ? req.query.section : undefined;
-    const result = await getAttendanceSummary(view, grade, section);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date)) ? String(req.query.date) : undefined;
+    const result = await getAttendanceSummary(view, grade, section, date);
     res.json(result);
   })
 );
@@ -70,6 +75,26 @@ router.get(
     const section = typeof req.query.section === 'string' ? req.query.section : undefined;
     const result = await getAiRecommendations(view, grade, section);
     res.json(result);
+  })
+);
+
+router.get(
+  '/dashboard/attendance/section/:id/students',
+  requireRole(...STAFF_VIEW_ROLES),
+  validateSchema({ params: uuidParams }),
+  asyncHandler(async (req, res) => {
+    const roster = await getSectionRoster(req.params.id);
+    res.json({ data: roster });
+  })
+);
+
+router.get(
+  '/dashboard/attendance/student/:id/trend',
+  requireRole(...STAFF_VIEW_ROLES),
+  validateSchema({ params: uuidParams }),
+  asyncHandler(async (req, res) => {
+    const trend = await getStudentAttendanceTrend(req.params.id);
+    res.json({ data: trend });
   })
 );
 

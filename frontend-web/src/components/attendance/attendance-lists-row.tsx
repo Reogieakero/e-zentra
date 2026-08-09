@@ -1,8 +1,91 @@
 "use client";
 
-import { BadgeCheck, AlertTriangle } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import type { LowAttendanceRow, PerfectAttendanceRow } from "@/lib/dashboard";
+import { useRiskCarousel } from "@/hooks/use-risk-carousel";
 import styles from "./attendance-lists-row.module.css";
+
+function nameInitials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts[1]?.[0] ?? "";
+  return `${first.toUpperCase()}${last.toUpperCase()}` || "?";
+}
+
+function neqTone(tone: "danger" | "warn"): "high" | "moderate" {
+  return tone === "danger" ? "high" : "moderate";
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function AttendanceNeedsAttention({ low }: { low: LowAttendanceRow[] }) {
+  const { index, setIndex } = useRiskCarousel(low.length);
+  const current = low.length > 0 ? low[index % low.length] : undefined;
+  const level = current ? neqTone(current.tone) : "moderate";
+  const tone = capitalize(level);
+
+  return (
+    <section className={`${styles.card} ${styles.fillCard}`}>
+      <div className={styles.cardHeader}>
+        <div>
+          <h3 className={styles.cardTitle}>Needs Attention</h3>
+          <p className={styles.cardSubtitle}>Students with low attendance</p>
+        </div>
+        <span className={styles.flagBadge}>{low.length} flagged</span>
+      </div>
+
+      <div className={styles.needsList}>
+        {!current ? (
+          <p className={styles.emptyText}>No students below the attendance threshold.</p>
+        ) : (
+          <div className={styles.needsCarousel}>
+            <div className={`${styles.needsItem} ${styles[`needsItem${tone}`]}`}>
+              <div className={styles.needsTop}>
+                <div className={`${styles.avatar} ${styles[`avatar${tone}`]} ${styles.needsAvatar}`}>
+                  {nameInitials(current.fullName)}
+                </div>
+                <span className={styles.needsName}>{current.fullName}</span>
+              </div>
+              <div className={styles.needsDetail}>
+                <div className={styles.needsDetailCol}>
+                  <span className={styles.needsDetailLabel}>Attendance</span>
+                  <span className={`${styles.needsDetailValue} ${styles[`needsDetailValue${tone}`]}`}>{current.rate}%</span>
+                </div>
+                <div className={styles.needsDetailCol}>
+                  <span className={styles.needsDetailLabel}>Grade</span>
+                  <span className={styles.needsDetailValue}>{current.gradeLabel}</span>
+                </div>
+                <div className={styles.needsDetailCol}>
+                  <span className={styles.needsDetailLabel}>Section</span>
+                  <span className={styles.needsDetailValue}>{current.sectionName ?? "—"}</span>
+                </div>
+              </div>
+            </div>
+            {low.length > 1 && (
+              <div className={styles.needsDots}>
+                {low.map((_, i) => (
+                  <button
+                    key={i}
+                    className={`${styles.needsDot} ${i === index ? styles.needsDotActive : ""}`}
+                    onClick={() => setIndex(i)}
+                    aria-label={`Low attendance student ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.cardFooter}>
+        <span>Threshold: &lt;80% attendance</span>
+        <span className={styles.cardLink}>View all</span>
+      </div>
+    </section>
+  );
+}
 
 export function AttendanceListsRow({
   perfect,
@@ -57,46 +140,7 @@ export function AttendanceListsRow({
         )}
       </section>
 
-      <section className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <h3 className={styles.cardTitle}>Needs Attention</h3>
-            <p className={styles.cardSubtitle}>Students with low attendance</p>
-          </div>
-          <span className={styles.flagBadge}>{low.length} flagged</span>
-        </div>
-
-        {low.length === 0 ? (
-          <p className={styles.emptyText}>No students below the attendance threshold.</p>
-        ) : (
-          <div className={styles.lowList}>
-            {low.map((s) => (
-              <div
-                key={s.studentId}
-                className={`${styles.lowItem} ${s.tone === "danger" ? styles.lowDanger : styles.lowWarn}`}
-              >
-                <span className={styles.lowAvatar}>
-                  <AlertTriangle className={styles.lowAvatarIcon} />
-                </span>
-                <div className={styles.lowInfo}>
-                  <p className={styles.lowName}>{s.fullName}</p>
-                  <p className={styles.lowMeta}>
-                    {s.gradeLabel} &ndash; {s.sectionName}
-                  </p>
-                </div>
-                <span className={`${styles.lowRate} ${s.tone === "danger" ? styles.lowRateDanger : styles.lowRateWarn}`}>
-                  {s.rate}%
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className={styles.lowFooter}>
-          <AlertTriangle className={styles.lowFooterIcon} />
-          Below 80% attendance threshold
-        </div>
-      </section>
+      <AttendanceNeedsAttention low={low} />
     </div>
   );
 }

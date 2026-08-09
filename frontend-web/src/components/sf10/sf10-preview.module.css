@@ -52,30 +52,6 @@
   margin: 0;
 }
 
-.closeBtn {
-  padding: 6px;
-  border-radius: 8px;
-  border: 1px solid var(--brand-primary);
-  background: var(--card);
-  color: var(--muted-foreground);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-xs);
-  transition: color 0.15s, background 0.15s;
-}
-
-.closeBtn:hover {
-  background: var(--brand-weak);
-  color: var(--brand-primary);
-}
-
-.closeIcon {
-  width: 16px;
-  height: 16px;
-}
-
 .body {
   flex: 1;
   overflow-y: auto;

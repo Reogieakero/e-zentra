@@ -15,6 +15,7 @@ interface DatePickerProps {
   min?: string;
   max?: string;
   className?: string;
+  size?: "default" | "sm";
 }
 
 const WEEKDAYS = WEEKDAY_ABBREV;
@@ -36,7 +37,7 @@ function formatDisplay(iso: string): string {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export function DatePicker({ id, label, value, onChange, placeholder = "Select date", min, max, className }: DatePickerProps) {
+export function DatePicker({ id, label, value, onChange, placeholder = "Select date", min, max, className, size = "default" }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => (value ? new Date(`${value}T00:00:00`) : startOfMonth(new Date())));
   const ref = useRef<HTMLDivElement>(null);
@@ -101,7 +102,7 @@ export function DatePicker({ id, label, value, onChange, placeholder = "Select d
       ) : null}
       <button
         type="button"
-        className={`${styles.trigger} ${open ? styles.triggerOpen : ""}`}
+        className={`${styles.trigger} ${size === "sm" ? styles.triggerSm : ""} ${open ? styles.triggerOpen : ""}`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-labelledby={id ? `${id}-label` : undefined}

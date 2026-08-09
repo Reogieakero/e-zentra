@@ -70,3 +70,9 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+@media (min-width: 1024px) {
+  .statGridWide {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}

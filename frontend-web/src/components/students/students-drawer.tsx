@@ -1,7 +1,7 @@
-import { X } from "lucide-react";
 import type { StudentDetail } from "@/lib/students";
 import { formatDate, initials, sessionLabel } from "@/lib/students-format";
 import { RiskBadge, StatusBadge } from "@/components/students/badges";
+import { CloseButton } from "@/components/ui/close-button";
 import styles from "./students-drawer.module.css";
 
 interface StudentDrawerProps {
@@ -49,9 +49,7 @@ export default function StudentDrawer({ student, onClose }: StudentDrawerProps) 
       <aside className={styles.drawer}>
         <div className={styles.drawerHeader}>
           <h3 className={styles.drawerTitle}>Student Information</h3>
-          <button className={styles.iconBtn} onClick={onClose} aria-label="Close drawer">
-            <X className={styles.iconBtnIcon} />
-          </button>
+          <CloseButton onClose={onClose} label="Close drawer" />
         </div>
 
         <div className={styles.drawerBody}>
