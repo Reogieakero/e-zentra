@@ -11,6 +11,7 @@ import {
 import {
   getAttendanceReport,
   getAttendanceSummary,
+  getLowAttendanceReport,
   getSectionRoster,
   getStudentAttendanceTrend,
   listSectionsByGrade,
@@ -75,6 +76,17 @@ router.get(
     const section = typeof req.query.section === 'string' ? req.query.section : undefined;
     const result = await getAiRecommendations(view, grade, section);
     res.json(result);
+  })
+);
+
+router.get(
+  '/dashboard/attendance/needs-attention',
+  requireRole(...STAFF_VIEW_ROLES),
+  asyncHandler(async (req, res) => {
+    const grade = GRADE_LEVELS.includes(String(req.query.grade)) ? String(req.query.grade) : undefined;
+    const section = typeof req.query.section === 'string' ? req.query.section : undefined;
+    const result = await getLowAttendanceReport(grade, section);
+    res.json({ data: result });
   })
 );
 

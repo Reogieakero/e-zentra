@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { BadgeCheck } from "lucide-react";
 import type { LowAttendanceRow, PerfectAttendanceRow } from "@/lib/dashboard";
 import { useRiskCarousel } from "@/hooks/use-risk-carousel";
@@ -81,7 +82,9 @@ export function AttendanceNeedsAttention({ low }: { low: LowAttendanceRow[] }) {
 
       <div className={styles.cardFooter}>
         <span>Threshold: &lt;80% attendance</span>
-        <span className={styles.cardLink}>View all</span>
+        <Link href="/principal/reports/attendance/needs-attention" className={styles.cardLink}>
+          View all
+        </Link>
       </div>
     </section>
   );
