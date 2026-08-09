@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CloseButton } from "@/components/ui/close-button";
 import styles from "./sidebar.module.css";
 
 const mainNav = [
@@ -28,59 +27,50 @@ const systemNav = [
   { key: "settings", label: "Settings", icon: Settings, href: "#" },
 ];
 
-interface SidebarProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar() {
   const pathname = usePathname();
   const isActive = (href: string) => href !== "#" && pathname.startsWith(href);
 
   return (
-    <>
-      <div className={`${styles.backdrop} ${open ? styles.backdropVisible : ""}`} onClick={onClose} />
-      <aside className={`${styles.sidebar} ${open ? styles.sidebarOpen : ""}`}>
-        <div className={styles.brand}>
-          <div className={styles.brandInner}>
-            <div className={styles.brandLogo}>
-              <GraduationCap className={styles.brandLogoIcon} />
-            </div>
-            <span className={styles.brandName}>Zentra</span>
+    <aside className={styles.sidebar}>
+      <div className={styles.brand}>
+        <div className={styles.brandInner}>
+          <div className={styles.brandLogo}>
+            <GraduationCap className={styles.brandLogoIcon} />
           </div>
-          <CloseButton onClose={onClose} label="Close sidebar" className={styles.closeBtn} />
+          <span className={styles.brandName}>Zentra</span>
         </div>
+      </div>
 
-        <nav className={styles.nav}>
-          <div className={styles.groupLabel}>Main</div>
-          {mainNav.map((item) => (
-            <Link key={item.key} href={item.href} className={`${styles.navItem} ${isActive(item.href) ? styles.navActive : ""}`}>
-              <item.icon className={styles.navIcon} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
+      <nav className={styles.nav}>
+        <div className={styles.groupLabel}>Main</div>
+        {mainNav.map((item) => (
+          <Link key={item.key} href={item.href} className={`${styles.navItem} ${isActive(item.href) ? styles.navActive : ""}`}>
+            <item.icon className={styles.navIcon} />
+            <span>{item.label}</span>
+          </Link>
+        ))}
 
-          <div className={styles.groupLabel}>System</div>
-          {systemNav.map((item) => (
-            <Link key={item.key} href={item.href} className={styles.navItem}>
-              <item.icon className={styles.navIcon} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+        <div className={styles.groupLabel}>System</div>
+        {systemNav.map((item) => (
+          <Link key={item.key} href={item.href} className={styles.navItem}>
+            <item.icon className={styles.navIcon} />
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
 
-        <div className={styles.footer}>
-          <div className={styles.profile}>
-            <div className={styles.avatar}>
-              <User className={styles.avatarIcon} />
-            </div>
-            <div className={styles.profileInfo}>
-              <span className={styles.profileName}>Elena Vance</span>
-              <span className={styles.profileRole}>Administrator</span>
-            </div>
+      <div className={styles.footer}>
+        <div className={styles.profile}>
+          <div className={styles.avatar}>
+            <User className={styles.avatarIcon} />
+          </div>
+          <div className={styles.profileInfo}>
+            <span className={styles.profileName}>Elena Vance</span>
+            <span className={styles.profileRole}>Administrator</span>
           </div>
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   );
 }

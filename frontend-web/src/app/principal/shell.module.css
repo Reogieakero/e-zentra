@@ -11,6 +11,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  padding-left: 180px;
 }
 
 .main {
@@ -19,10 +20,4 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-@media (min-width: 1024px) {
-  .content {
-    padding-left: 180px;
-  }
 }
