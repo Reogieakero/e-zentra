@@ -14,6 +14,7 @@ import {
   getLowAttendanceReport,
   getSectionRoster,
   getStudentAttendanceTrend,
+  getAllSectionsAttendance,
   listSectionsByGrade,
 } from '../services/attendance.report.service';
 import {
@@ -165,6 +166,15 @@ router.get(
     }
     const sections = await listSectionsByGrade(grade);
     res.json(sections);
+  })
+);
+
+router.get(
+  '/dashboard/attendance/all-sections',
+  requireRole(...STAFF_VIEW_ROLES),
+  asyncHandler(async (req, res) => {
+    const result = await getAllSectionsAttendance();
+    res.json({ data: result });
   })
 );
 

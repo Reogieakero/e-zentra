@@ -8,6 +8,12 @@ interface StudentsTableProps {
   onSelect: (id: string) => void;
 }
 
+function rateTone(rate: number): string {
+  if (rate >= 90) return styles.countGood;
+  if (rate >= 80) return styles.countWarn;
+  return styles.countDanger;
+}
+
 export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
   const students = page.data;
 
@@ -16,21 +22,21 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
       <table className={styles.table}>
         <thead>
           <tr className={styles.tableHeadRow}>
-            <th className={styles.th}>Student ID</th>
+            <th className={`${styles.th} ${styles.thCenter}`}>Student ID</th>
             <th className={styles.th}>Student</th>
-            <th className={styles.th}>Grade & Section</th>
-            <th className={styles.th}>Gender</th>
-            <th className={styles.th}>Account Status</th>
-            <th className={styles.th}>SF10</th>
-            <th className={styles.th}>Attendance</th>
-            <th className={styles.th}>Risk Level</th>
+            <th className={`${styles.th} ${styles.thCenter}`}>Grade & Section</th>
+            <th className={`${styles.th} ${styles.thCenter}`}>Gender</th>
+            <th className={`${styles.th} ${styles.thCenter}`}>Account Status</th>
+            <th className={`${styles.th} ${styles.thCenter}`}>SF10</th>
+            <th className={`${styles.th} ${styles.thCenter}`}>Attendance</th>
+            <th className={`${styles.th} ${styles.thCenter}`}>Risk Level</th>
             <th className={`${styles.th} ${styles.thRight}`}>Actions</th>
           </tr>
         </thead>
         <tbody className={styles.tableBody}>
           {students.map((s) => (
             <tr key={s.studentId} className={styles.tableRow}>
-              <td className={styles.td}>
+              <td className={`${styles.td} ${styles.tdCenter}`}>
                 <span className={styles.tdId}>{s.lrn}</span>
               </td>
               <td className={styles.td}>
@@ -48,25 +54,29 @@ export default function StudentsTable({ page, onSelect }: StudentsTableProps) {
                   </div>
                 </div>
               </td>
-              <td className={styles.td}>
+              <td className={`${styles.td} ${styles.tdCenter}`}>
                 <span className={styles.tdText}>
                   {s.gradeLabel}
                   {s.sectionName ? ` - ${s.sectionName}` : ""}
                 </span>
               </td>
-              <td className={styles.td}>
+              <td className={`${styles.td} ${styles.tdCenter}`}>
                 <span className={styles.tdText}>{s.sex.charAt(0).toUpperCase() + s.sex.slice(1)}</span>
               </td>
-              <td className={styles.td}>
+              <td className={`${styles.td} ${styles.tdCenter}`}>
                 <StatusBadge status={s.accountStatus} />
               </td>
-              <td className={styles.td}>
+              <td className={`${styles.td} ${styles.tdCenter}`}>
                 <Sf10Badge status={s.sf10} />
               </td>
-              <td className={styles.td}>
-                <span className={styles.attendanceValue}>{s.attendance != null ? `${s.attendance}%` : "—"}</span>
+              <td className={`${styles.td} ${styles.tdCenter}`}>
+                {s.attendance != null ? (
+                  <span className={`${styles.count} ${rateTone(s.attendance)}`}>{s.attendance}%</span>
+                ) : (
+                  <span className={`${styles.count} ${styles.countMuted}`}>—</span>
+                )}
               </td>
-              <td className={styles.td}>
+              <td className={`${styles.td} ${styles.tdCenter}`}>
                 <RiskBadge
                   tone={s.riskLevel ?? "neutral"}
                   academicAvg={s.academicAvg}

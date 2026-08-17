@@ -1,6 +1,6 @@
 .statGrid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -9,13 +9,16 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+  min-width: 0;
 }
 
 .statHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   margin-bottom: 8px;
+  min-width: 0;
 }
 
 .statLabel {
@@ -24,12 +27,17 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted-foreground);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .statIcon {
   width: 14px;
   height: 14px;
   color: var(--brand-primary);
+  flex-shrink: 0;
 }
 
 .statValue {
@@ -37,7 +45,9 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--foreground);
-  white-space: nowrap;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
 }
 
 .statSub {
@@ -45,6 +55,7 @@
   font-weight: 500;
   color: var(--muted-foreground);
   margin-top: 4px;
+  line-height: 1.3;
 }
 
 .statSubGood {
@@ -61,18 +72,18 @@
 
 @media (min-width: 640px) {
   .statGrid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
   .statGrid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
   .statGridWide {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }

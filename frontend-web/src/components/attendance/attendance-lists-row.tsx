@@ -1,84 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheck } from "lucide-react";
-import type { LowAttendanceRow, PerfectAttendanceRow } from "@/lib/dashboard";
-import { useRiskCarousel } from "@/hooks/use-risk-carousel";
+import { AlertTriangle, BadgeCheck } from "lucide-react";
+import type { LowAttendanceRow, PerfectAttendanceRow, TopSection } from "@/lib/dashboard";
+import { AttendanceTopSections } from "./attendance-top-sections";
+import { PipBoyAttentionCard } from "./pipboy-attention-card";
 import styles from "./attendance-lists-row.module.css";
 
-function nameInitials(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts[1]?.[0] ?? "";
-  return `${first.toUpperCase()}${last.toUpperCase()}` || "?";
-}
-
-function neqTone(tone: "danger" | "warn"): "high" | "moderate" {
-  return tone === "danger" ? "high" : "moderate";
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 export function AttendanceNeedsAttention({ low }: { low: LowAttendanceRow[] }) {
-  const { index, setIndex } = useRiskCarousel(low.length);
-  const current = low.length > 0 ? low[index % low.length] : undefined;
-  const level = current ? neqTone(current.tone) : "moderate";
-  const tone = capitalize(level);
-
   return (
     <section className={`${styles.card} ${styles.fillCard}`}>
       <div className={styles.cardHeader}>
         <div>
-          <h3 className={styles.cardTitle}>Needs Attention</h3>
-          <p className={styles.cardSubtitle}>Students with low attendance</p>
+          <h3 className={styles.cardTitle}>
+            <AlertTriangle className={styles.cardTitleIcon} />
+            Needs Attention
+          </h3>
+          <p className={styles.cardSubtitle}>Students with attendance below 80%</p>
         </div>
         <span className={styles.flagBadge}>{low.length} flagged</span>
       </div>
 
-      <div className={styles.needsList}>
-        {!current ? (
-          <p className={styles.emptyText}>No students below the attendance threshold.</p>
-        ) : (
-          <div className={styles.needsCarousel}>
-            <div className={`${styles.needsItem} ${styles[`needsItem${tone}`]}`}>
-              <div className={styles.needsTop}>
-                <div className={`${styles.avatar} ${styles[`avatar${tone}`]} ${styles.needsAvatar}`}>
-                  {nameInitials(current.fullName)}
-                </div>
-                <span className={styles.needsName}>{current.fullName}</span>
-              </div>
-              <div className={styles.needsDetail}>
-                <div className={styles.needsDetailCol}>
-                  <span className={styles.needsDetailLabel}>Attendance</span>
-                  <span className={`${styles.needsDetailValue} ${styles[`needsDetailValue${tone}`]}`}>{current.rate}%</span>
-                </div>
-                <div className={styles.needsDetailCol}>
-                  <span className={styles.needsDetailLabel}>Grade</span>
-                  <span className={styles.needsDetailValue}>{current.gradeLabel}</span>
-                </div>
-                <div className={styles.needsDetailCol}>
-                  <span className={styles.needsDetailLabel}>Section</span>
-                  <span className={styles.needsDetailValue}>{current.sectionName ?? "—"}</span>
-                </div>
-              </div>
-            </div>
-            {low.length > 1 && (
-              <div className={styles.needsDots}>
-                {low.map((_, i) => (
-                  <button
-                    key={i}
-                    className={`${styles.needsDot} ${i === index ? styles.needsDotActive : ""}`}
-                    onClick={() => setIndex(i)}
-                    aria-label={`Low attendance student ${i + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {low.length === 0 ? (
+        <p className={styles.emptyText}>No students below the attendance threshold.</p>
+      ) : (
+        <PipBoyAttentionCard students={low} />
+      )}
 
       <div className={styles.cardFooter}>
         <span>Threshold: &lt;80% attendance</span>
@@ -93,55 +40,67 @@ export function AttendanceNeedsAttention({ low }: { low: LowAttendanceRow[] }) {
 export function AttendanceListsRow({
   perfect,
   low,
+  topSections,
 }: {
   perfect: PerfectAttendanceRow[];
   low: LowAttendanceRow[];
+  topSections: TopSection[];
 }) {
   return (
     <div className={styles.listsGrid}>
-      <section className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <h4 className={styles.cardTitle}>
-              <BadgeCheck className={styles.cardTitleIcon} />
-              Perfect Attendance
-            </h4>
-            <p className={styles.cardSubtitle}>Students with 100% attendance this school year</p>
+      {perfect.length > 0 ? (
+        <section className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <h4 className={styles.cardTitle}>
+                <BadgeCheck className={styles.cardTitleIcon} />
+                Perfect Attendance
+              </h4>
+              <p className={styles.cardSubtitle}>100% attendance across all school days so far this year</p>
+            </div>
+            <span className={styles.peakBadge}>{perfect.length} students</span>
           </div>
-          <span className={styles.peakBadge}>{perfect.length} students</span>
-        </div>
 
-        {perfect.length === 0 ? (
-          <p className={styles.emptyText}>No students with perfect attendance yet.</p>
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr className={styles.tableHeadRow}>
-                  <th className={styles.tableHead}>Student</th>
-                  <th className={styles.tableHead}>Grade &amp; Section</th>
-                  <th className={styles.tableHead}>Days Present</th>
-                  <th className={`${styles.tableHead} ${styles.right}`}>Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {perfect.map((s) => (
-                  <tr key={s.studentId} className={styles.tableRow}>
-                    <td className={styles.tableCell}>
-                      <span className={styles.studentName}>{s.fullName}</span>
-                    </td>
-                    <td className={styles.tableCell}>
-                      {s.gradeLabel} &ndash; {s.sectionName}
-                    </td>
-                    <td className={styles.tableCell}>{s.daysPresent} days</td>
-                    <td className={`${styles.tableCell} ${styles.right} ${styles.rateGood}`}>100%</td>
+          {perfect.length === 0 ? (
+            <p className={styles.emptyText}>No students with perfect attendance yet.</p>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr className={styles.tableHeadRow}>
+                    <th className={styles.tableHead}>Student</th>
+                    <th className={styles.tableHead}>Grade &amp; Section</th>
+                    <th className={`${styles.tableHead} ${styles.center}`}>Days Present</th>
+                    <th className={`${styles.tableHead} ${styles.center}`}>Rate</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {perfect.map((s) => (
+                    <tr key={s.studentId} className={styles.tableRow}>
+                      <td className={styles.tableCell}>
+                        <span className={styles.studentName}>{s.fullName}</span>
+                      </td>
+                      <td className={styles.tableCell}>
+                        {s.gradeLabel} &ndash; {s.sectionName}
+                      </td>
+                      <td className={`${styles.tableCell} ${styles.center}`}>
+                        <span className={`${styles.count} ${styles.countGood}`}>
+                          {s.daysPresent} / {s.totalSchoolDays} days
+                        </span>
+                      </td>
+                      <td className={`${styles.tableCell} ${styles.center}`}>
+                        <span className={`${styles.count} ${styles.countGood}`}>100%</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : (
+        <AttendanceTopSections sections={topSections} />
+      )}
 
       <AttendanceNeedsAttention low={low} />
     </div>

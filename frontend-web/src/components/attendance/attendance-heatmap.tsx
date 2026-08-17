@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { CalendarDays } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
-import { HeatmapCard, HEAT_LEVELS } from "@/components/ui/heatmap-card";
+import { HeatmapCard, HEAT_LEVELS, HEAT_COLORS } from "@/components/ui/heatmap-card";
 import uiStyles from "@/components/ui/heatmap-card.module.css";
 import { SCHOOL_WEEKDAYS } from "@/constants/dates";
 import type { HeatmapCell } from "@/lib/dashboard";
@@ -42,14 +42,14 @@ export function AttendanceHeatmap({ cells }: { cells: HeatmapCell[] }) {
     return { weeks, months };
   }, [cells]);
 
-  const peak = cells.reduce((mx, c) => (c.rate > mx ? c.rate : mx), 0);
+  const peak = cells.reduce((mx, c) => (c.present > mx ? c.present : mx), 0);
 
   return (
     <HeatmapCard
       title="Daily Attendance Heatmap"
-      subtitle="School-wide attendance rate for every school day this year"
+      subtitle="Students present for every school day this year"
       icon={<CalendarDays />}
-      badge={peak > 0 ? `${peak.toFixed(1)}% peak` : undefined}
+      badge={peak > 0 ? `${peak} peak present` : undefined}
     >
       <div className={`${styles.heatmapCardBody} ${styles.heatmapScroll}`} ref={scrollRef}>
         <div className={styles.heatmapBody}>
@@ -70,9 +70,10 @@ export function AttendanceHeatmap({ cells }: { cells: HeatmapCell[] }) {
               {weeks.map((week, k) => (
                 <div key={k} className={styles.heatmapColumn}>
                   {week.map((cell) => (
-                    <Tooltip key={cell.key} label={`${cell.label} — ${cell.rate.toFixed(1)}% present`}>
+                    <Tooltip key={cell.key} label={`${cell.label} — ${cell.present} present`}>
                       <span
                         className={`${styles.heatCell} ${cell.level > 0 ? uiStyles[HEAT_LEVELS[cell.level - 1]] : ""}`}
+                        style={cell.level > 0 ? { background: HEAT_COLORS[cell.level - 1] } : undefined}
                       />
                     </Tooltip>
                   ))}

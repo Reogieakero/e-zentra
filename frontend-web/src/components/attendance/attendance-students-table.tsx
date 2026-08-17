@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import { useSectionRoster } from "@/lib/dashboard";
 import { initials } from "@/lib/students-format";
+import { SearchInput } from "@/components/ui/search-input";
 import { AttendanceStudentModal } from "@/components/attendance/attendance-student-modal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import styles from "./attendance-students-table.module.css";
@@ -20,12 +21,26 @@ export function AttendanceStudentsTable({ sectionId }: { sectionId: string }) {
   const { data: students, isLoading } = useSectionRoster(sectionId);
   const [selected, setSelected] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
 
-  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
+  useEffect(() => {
+    setPage(0);
+  }, [query]);
+
+  const queryNorm = query.trim().toLowerCase();
+  const filtered = queryNorm
+    ? students.filter(
+        (s) =>
+          `${s.firstName} ${s.lastName}`.toLowerCase().includes(queryNorm) ||
+          s.lrn.toLowerCase().includes(queryNorm),
+      )
+    : students;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-  const pageRows = students.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
-  const fromCount = students.length === 0 ? 0 : safePage * PAGE_SIZE + 1;
-  const toCount = Math.min((safePage + 1) * PAGE_SIZE, students.length);
+  const pageRows = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const fromCount = filtered.length === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const toCount = Math.min((safePage + 1) * PAGE_SIZE, filtered.length);
 
   return (
     <section className={styles.card}>
@@ -37,7 +52,15 @@ export function AttendanceStudentsTable({ sectionId }: { sectionId: string }) {
           </h4>
           <p className={styles.cardSubtitle}>Active school year · click a student to view their trend</p>
         </div>
-        <span className={styles.countBadge}>{students.length.toLocaleString()} students</span>
+        <div className={styles.headerRight}>
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Search name or LRN"
+            aria-label="Search students in this section"
+            className={styles.search}
+          />
+        </div>
       </div>
 
       {isLoading ? (
@@ -52,6 +75,8 @@ export function AttendanceStudentsTable({ sectionId }: { sectionId: string }) {
         </div>
       ) : students.length === 0 ? (
         <p className={styles.empty}>No students enrolled in this section.</p>
+      ) : filtered.length === 0 ? (
+        <p className={styles.empty}>No students match your search.</p>
       ) : (
         <div className={styles.tableBody}>
           <table className={styles.table}>
@@ -114,7 +139,7 @@ export function AttendanceStudentsTable({ sectionId }: { sectionId: string }) {
         <TablePagination
           page={safePage}
           pageCount={totalPages}
-          info={students.length > 0 ? `${fromCount}–${toCount} of ${students.length}` : "No students"}
+          info={filtered.length > 0 ? `${fromCount}–${toCount} of ${filtered.length}` : "No results"}
           onPageChange={setPage}
           className={styles.footer}
         />

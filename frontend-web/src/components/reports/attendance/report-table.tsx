@@ -13,6 +13,12 @@ function vsTone(diff: number): "good" | "warn" | "danger" {
   return "danger";
 }
 
+function rateTone(rate: number): string {
+  if (rate >= 90) return styles.rateGood;
+  if (rate >= 80) return styles.rateWarn;
+  return styles.rateDanger;
+}
+
 interface ReportTableProps {
   rows: ReportSeriesPoint[];
   targetRate: number;
@@ -48,13 +54,13 @@ export default function ReportTable({ rows, targetRate, enrollmentTotal, isDaily
           <thead>
             <tr className={styles.tableHeadRow}>
               <th className={styles.tableHead}>Month</th>
-              <th className={styles.tableHead}>Present</th>
-              <th className={styles.tableHead}>Absent</th>
-              <th className={styles.tableHead}>Late</th>
-              <th className={styles.tableHead}>Excused</th>
-              <th className={styles.tableHead}>Not Logged</th>
-              <th className={styles.tableHead}>Rate</th>
-              <th className={`${styles.tableHead} ${styles.right}`}>vs. Target</th>
+              <th className={`${styles.tableHead} ${styles.center}`}>Present</th>
+              <th className={`${styles.tableHead} ${styles.center}`}>Absent</th>
+              <th className={`${styles.tableHead} ${styles.center}`}>Late</th>
+              <th className={`${styles.tableHead} ${styles.center}`}>Excused</th>
+              <th className={`${styles.tableHead} ${styles.center}`}>Not Logged</th>
+              <th className={`${styles.tableHead} ${styles.center}`}>Rate</th>
+              <th className={`${styles.tableHead} ${styles.center}`}>vs. Target</th>
             </tr>
           </thead>
           <tbody>
@@ -64,13 +70,29 @@ export default function ReportTable({ rows, targetRate, enrollmentTotal, isDaily
               return (
                 <tr key={s.key} className={styles.tableRow}>
                   <td className={styles.cellMonth}>{s.label}</td>
-                  <td className={styles.cellNum}>{s.present.toLocaleString()}</td>
-                  <td className={styles.cellNum}>{s.absent.toLocaleString()}</td>
-                  <td className={styles.cellNum}>{s.late.toLocaleString()}</td>
-                  <td className={styles.cellNum}>{s.excused.toLocaleString()}</td>
-                  <td className={styles.cellNum}>{s.notLogged.toLocaleString()}</td>
-                  <td className={styles.cellRate}>{s.rate != null ? fmt(s.rate) : "—"}</td>
-                  <td className={`${styles.cellVs} ${styles.right}`}>
+                  <td className={`${styles.cellNum} ${styles.center}`}>
+                    <span className={`${styles.count} ${styles.countGood}`}>{s.present.toLocaleString()}</span>
+                  </td>
+                  <td className={`${styles.cellNum} ${styles.center}`}>
+                    <span className={`${styles.count} ${styles.countDanger}`}>{s.absent.toLocaleString()}</span>
+                  </td>
+                  <td className={`${styles.cellNum} ${styles.center}`}>
+                    <span className={`${styles.count} ${styles.countWarn}`}>{s.late.toLocaleString()}</span>
+                  </td>
+                  <td className={`${styles.cellNum} ${styles.center}`}>
+                    <span className={`${styles.count} ${styles.countInfo}`}>{s.excused.toLocaleString()}</span>
+                  </td>
+                  <td className={`${styles.cellNum} ${styles.center}`}>
+                    <span className={`${styles.count} ${styles.countMuted}`}>{s.notLogged.toLocaleString()}</span>
+                  </td>
+                  <td className={`${styles.cellRate} ${styles.center}`}>
+                    {s.rate != null ? (
+                      <span className={`${styles.rate} ${rateTone(s.rate)}`}>{fmt(s.rate)}</span>
+                    ) : (
+                      <span className={styles.vsNone}>—</span>
+                    )}
+                  </td>
+                  <td className={`${styles.cellVs} ${styles.center}`}>
                     {s.rate == null ? (
                       <span className={styles.vsNone}>—</span>
                     ) : (

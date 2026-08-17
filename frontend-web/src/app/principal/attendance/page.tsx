@@ -7,7 +7,7 @@ import { AttendanceOverviewRow, AttendanceOverviewRowLoading } from "@/component
 import { AttendanceHeatmap, AttendanceHeatmapLoading } from "@/components/attendance/attendance-heatmap";
 import { AttendanceStudentsTable } from "@/components/attendance/attendance-students-table";
 import { AttendanceListsRow, AttendanceNeedsAttention, AttendanceListsRowLoading } from "@/components/attendance/attendance-lists-row";
-import { AttendanceTopSections, AttendanceTopSectionsLoading } from "@/components/attendance/attendance-top-sections";
+import { AttendanceTopSections } from "@/components/attendance/attendance-top-sections";
 import { AttendancePageError } from "@/components/attendance/attendance-error";
 import { FILTER_KEYS, storedFilter } from "@/constants/storage";
 import styles from "./attendance.module.css";
@@ -64,7 +64,6 @@ export default function AttendanceHomePage() {
         <AttendanceOverviewRowLoading />
         <AttendanceHeatmapLoading />
         <AttendanceListsRowLoading />
-        <AttendanceTopSectionsLoading />
       </div>
     );
   }
@@ -107,8 +106,8 @@ export default function AttendanceHomePage() {
       )}
       <div className={`${styles.vanishArea} ${hasFilters ? styles.vanishAreaHidden : ""}`} aria-hidden={hasFilters}>
         <div className={styles.vanishInner}>
-          <AttendanceListsRow perfect={data.perfectAttendance} low={data.lowAttendance} />
-          <AttendanceTopSections sections={data.topSections} />
+          <AttendanceListsRow perfect={data.perfectAttendance} low={data.lowAttendance} topSections={data.topSections} />
+          {data.perfectAttendance.length > 0 && <AttendanceTopSections sections={data.topSections} />}
         </div>
       </div>
     </div>

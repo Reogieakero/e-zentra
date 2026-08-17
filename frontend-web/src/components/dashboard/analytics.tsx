@@ -132,8 +132,8 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
   const tickFill = dark ? "#94a3b8" : "#6b7280";
   const tickAltFill = dark ? "#a1a1aa" : "#4b5563";
 
-  const peakRate = heatmap.reduce(
-    (max, col) => Math.max(max, ...col.days.map((d) => d.rate)),
+  const peakPresent = heatmap.reduce(
+    (max, col) => Math.max(max, ...col.days.map((d) => d.present)),
     0
   );
 
@@ -258,7 +258,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
             title="Section Attendance Heatmap"
             subtitle="Weekly daily log intensity by section (Mon – Fri)"
             icon={<Calendar />}
-            badge={`${peakRate}% peak`}
+            badge={`${peakPresent} peak present`}
             className={styles.heatmapCard}
           >
             <div className={styles.heatmap}>
@@ -272,7 +272,7 @@ export default function Analytics({ trend, sections, heatmap, schoolYear, month,
                   <div key={col.sectionId} className={styles.heatmapCol}>
                     <div className={styles.heatmapCells}>
                       {col.days.map((cell) => (
-                        <Tooltip key={cell.day} label={`${cell.label}: ${cell.rate}% present`}>
+                        <Tooltip key={cell.day} label={`${cell.label} — ${cell.present} present`}>
                           <span
                             className={
                               cell.level > 0

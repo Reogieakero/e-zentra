@@ -6,6 +6,7 @@ import { redis } from './lib/redis';
 import { startEscalationJob } from './jobs/flagEscalation';
 import { startOcrWorker } from './services/ocr.service';
 import { startBackupJob } from './jobs/backupJob';
+import { startDashboardCacheWarmer, stopDashboardCacheWarmer } from './services/dashboard.service';
 const app = createApp();
 const server = app.listen(config.port, () => {
     logger.info(`Zentra API listening on http://localhost:${config.port}`);
@@ -13,9 +14,11 @@ const server = app.listen(config.port, () => {
     startEscalationJob();
     startOcrWorker();
     startBackupJob();
+    startDashboardCacheWarmer();
 });
 async function shutdown(signal: string) {
     logger.info(`Received ${signal}, shutting down`);
+    stopDashboardCacheWarmer();
     server.close(async () => {
         await prisma.$disconnect();
         redis.disconnect();

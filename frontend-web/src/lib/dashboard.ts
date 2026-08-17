@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { getTokens, getUser } from "@/lib/auth";
 import useSWR from "swr";
@@ -66,6 +67,8 @@ export interface DailyTrend {
 export interface HeatmapDay {
   day: string;
   label: string;
+  present: number;
+  total: number;
   rate: number;
   level: number;
 }
@@ -158,6 +161,9 @@ export interface AttendanceReport {
   targetRate: number;
   granularity: "monthly" | "daily";
   enrollmentTotal: number;
+  averagePresentPerDay: number;
+  presentTotal: number;
+  trackedSchoolDays: number;
   series: ReportSeriesPoint[];
   statBlocks: ReportStatBlocks;
   gradeLevels: ReportGradeLevel[];
@@ -463,6 +469,8 @@ export interface MonthlyTrendPoint {
 export interface HeatmapCell {
   key: string;
   label: string;
+  present: number;
+  total: number;
   rate: number;
   level: number;
 }
@@ -473,6 +481,7 @@ export interface PerfectAttendanceRow {
   sectionName: string;
   gradeLabel: string;
   daysPresent: number;
+  totalSchoolDays: number;
   rate: number;
 }
 
@@ -489,9 +498,13 @@ export interface TopSection {
   sectionId: string;
   sectionName: string;
   gradeLabel: string;
+  adviserName: string | null;
   rate: number;
   studentCount: number;
+  avgPresent: number;
 }
+
+export type AllSectionsRow = TopSection;
 
 export interface AttendanceSummary {
   schoolYear: string | null;
@@ -529,17 +542,92 @@ export function useAttendanceSummary(view: "monthly" | "daily" = "monthly", grad
     userId === "anon"
       ? null
       : ["/dashboard/attendance/summary", userId, view, grade, section, date ?? "today"];
+  const storageKey = key ? `zentra:attendance:summary:v4:${key.slice(1).join("|")}` : null;
   const { data, error, isLoading, isValidating, mutate } = useSWR<AttendanceSummary>(
     key,
     () => fetchAttendanceSummary(view, grade, section, date),
     {
+      onSuccess: (data) => {
+        if (!storageKey) return;
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(data));
+        } catch {
+        }
+      },
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       refreshInterval: REFRESH_INTERVAL_MS,
       keepPreviousData: true,
     }
   );
+
+  useEffect(() => {
+    if (!storageKey) return;
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(storageKey);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    let parsed: AttendanceSummary;
+    try {
+      parsed = JSON.parse(raw) as AttendanceSummary;
+    } catch {
+      return;
+    }
+    mutate(parsed, { revalidate: false });
+  }, [storageKey, mutate]);
+
   return { data, error: error ?? null, isLoading, isValidating, refresh: () => mutate() };
+}
+
+export async function fetchAllSectionsAttendance(): Promise<AllSectionsRow[]> {
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  const { data } = await api<{ data: AllSectionsRow[] }>("/dashboard/attendance/all-sections", { token });
+  return data;
+}
+
+export function useAllSectionsAttendance() {
+  const userId = getUser()?.id ?? "anon";
+  const key = userId === "anon" ? null : ["/dashboard/attendance/all-sections", userId];
+  const storageKey = key ? `zentra:attendance:all-sections:v2:${key.slice(1).join("|")}` : null;
+  const { data, error, isLoading, isValidating, mutate } = useSWR<AllSectionsRow[]>(
+    key,
+    () => fetchAllSectionsAttendance(),
+    {
+      onSuccess: (data) => {
+        if (!storageKey) return;
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(data));
+        } catch {
+        }
+      },
+      revalidateOnFocus: true,
+      keepPreviousData: true,
+    }
+  );
+
+  useEffect(() => {
+    if (!storageKey) return;
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(storageKey);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    let parsed: AllSectionsRow[];
+    try {
+      parsed = JSON.parse(raw) as AllSectionsRow[];
+    } catch {
+      return;
+    }
+    mutate(parsed, { revalidate: false });
+  }, [storageKey, mutate]);
+
+  return { data: data ?? [], error: error ?? null, isLoading, isValidating, refresh: () => mutate() };
 }
 
 export async function fetchAiRecommendations(

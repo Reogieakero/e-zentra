@@ -1,14 +1,13 @@
 .tooltipWrap {
   position: relative;
   display: block;
+  line-height: 0;
 }
 
 .tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translate(-50%, 6px) scale(0.95);
-  transform-origin: bottom center;
+  position: fixed;
+  left: 0;
+  top: 0;
   width: max-content;
   max-width: 220px;
   padding: 6px 10px;
@@ -22,14 +21,6 @@
   text-align: center;
   opacity: 0;
   pointer-events: none;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.2s ease;
   z-index: 2000;
-}
-
-.tooltipWrap:hover .tooltip,
-.tooltipWrap:focus-within .tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
 }
