@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { cacheKey, getCached, invalidateByPattern } from './cache.service';
 import { classifyLiveRisk } from './risk.service';
 import { HEATMAP_DAYS, countEnrolledStudents, shortDate } from '../lib/school';
+import { logger } from '../lib/logger';
 
 const ADM_APPROVAL_LIMIT = 5;
 const DASHBOARD_CACHE_TTL = 30;
@@ -85,13 +86,17 @@ async function loadDashboardOverview(month?: string) {
   const excusedToday = statusCounts[AttendanceStatus.excused] ?? 0;
   const presentRate = todayTotal > 0 ? Math.round((presentToday / todayTotal) * 1000) / 10 : 0;
 
-  const [atRiskStudents, atRiskCount, admForApproval, sectionAttendance, dailyTrend, heatmap] = await Promise.all([
+  const [atRiskStudents, admForApproval, sectionAttendance, weekRecords] = await Promise.all([
     getAtRiskStudents(activeYear?.id ?? null),
-    countAtRiskStudents(activeYear?.id ?? null),
     getAdmForApproval(),
     getSectionAttendance(monthFilter),
-    getDailyTrend(today, totalStudents),
-    getSectionHeatmap(),
+    getWeekAttendance(),
+  ]);
+
+  const atRiskCount = atRiskStudents.length;
+  const [dailyTrend, heatmap] = await Promise.all([
+    Promise.resolve(buildDailyTrend(weekRecords, today, totalStudents)),
+    buildSectionHeatmap(weekRecords),
   ]);
 
   return {
@@ -121,12 +126,6 @@ async function loadDashboardOverview(month?: string) {
       term: activeTerm?.termLabel ?? null,
     },
   };
-}
-
-async function countAtRiskStudents(schoolYearId: string | null): Promise<number> {
-  if (!schoolYearId) return 0;
-  const rows = await getAtRiskStudents(schoolYearId);
-  return rows.length;
 }
 
 async function getAtRiskStudents(schoolYearId: string | null) {
@@ -277,80 +276,44 @@ function heatmapLevel(rate: number): number {
   return 1;
 }
 
-async function getSectionHeatmap() {
+interface WeekAttendanceRecord {
+  sectionId: string;
+  attendanceDate: Date;
+  status: AttendanceStatus;
+  studentId: string;
+}
+
+async function getWeekAttendance(): Promise<WeekAttendanceRecord[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const monday = new Date(today);
   monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
   monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + HEATMAP_DAYS.length - 1);
+  sunday.setHours(23, 59, 59, 999);
 
-  const weekDates: Date[] = [];
-  const weekKeys: string[] = [];
-  for (let i = 0; i < HEATMAP_DAYS.length; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    weekDates.push(d);
-    weekKeys.push(d.toISOString().slice(0, 10));
-  }
-
-  const [sections, records] = await Promise.all([
-    prisma.section.findMany({
-      where: { status: 'active' },
-      select: { id: true, sectionName: true },
-      orderBy: { sectionName: 'asc' },
-    }),
-    prisma.attendanceRecord.findMany({
-      where: { attendanceDate: { gte: monday } },
-      select: { sectionId: true, attendanceDate: true, status: true },
-    }),
-  ]);
-
-  const sectionNames = new Map(sections.map((s) => [s.id, s.sectionName]));
-  const bySectionDay = new Map<string, Map<string, { present: number; total: number }>>();
-  for (const r of records) {
-    if (!sectionNames.has(r.sectionId)) continue;
-    const key = r.attendanceDate.toISOString().slice(0, 10);
-    if (!weekKeys.includes(key)) continue;
-    const dayMap = bySectionDay.get(r.sectionId) ?? new Map();
-    const bucket = dayMap.get(key) ?? { present: 0, total: 0 };
-    bucket.total += 1;
-    if (r.status === AttendanceStatus.present) bucket.present += 1;
-    dayMap.set(key, bucket);
-    bySectionDay.set(r.sectionId, dayMap);
-  }
-
-  return sections.map((s) => {
-    const dayMap = bySectionDay.get(s.id);
-    const days = HEATMAP_DAYS.map((day, i) => {
-      const bucket = dayMap?.get(weekKeys[i]);
-      if (!bucket || bucket.total === 0) {
-        return { day, label: `${shortDate(weekDates[i])} - ${day}`, rate: 0, level: 0 };
-      }
-      const rate = Math.round((bucket.present / bucket.total) * 1000) / 10;
-      return { day, label: `${shortDate(weekDates[i])} - ${day}`, rate, level: heatmapLevel(rate) };
-    });
-    return { sectionId: s.id, sectionName: s.sectionName, days };
+  return prisma.attendanceRecord.findMany({
+    where: { attendanceDate: { gte: monday, lte: sunday } },
+    select: { sectionId: true, attendanceDate: true, status: true, studentId: true },
   });
 }
 
-async function getDailyTrend(today: Date, totalStudents: number) {
-  const dow = today.getDay();
+function weekDays(today: Date): Date[] {
   const monday = new Date(today);
-  monday.setDate(today.getDate() - ((dow + 6) % 7));
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
   monday.setHours(0, 0, 0, 0);
-
   const days: Date[] = [];
   for (let i = 0; i < HEATMAP_DAYS.length; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     days.push(d);
   }
+  return days;
+}
 
-  const records = await prisma.attendanceRecord.findMany({
-    where: { attendanceDate: { gte: days[0], lte: days[HEATMAP_DAYS.length - 1] } },
-    select: { attendanceDate: true, status: true, studentId: true },
-  });
-
+function buildDailyTrend(records: WeekAttendanceRecord[], today: Date, totalStudents: number) {
+  const days = weekDays(today);
   const byDate = new Map<
     string,
     { present: number; absent: number; late: number; excused: number; students: Set<string> }
@@ -399,4 +362,66 @@ async function getDailyTrend(today: Date, totalStudents: number) {
       rate: total > 0 ? Math.round((present / total) * 1000) / 10 : null,
     };
   });
+}
+
+async function buildSectionHeatmap(records: WeekAttendanceRecord[]) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = weekDays(today);
+  const weekKeys = days.map((d) => d.toISOString().slice(0, 10));
+
+  const sections = await prisma.section.findMany({
+    where: { status: 'active' },
+    select: { id: true, sectionName: true },
+    orderBy: { sectionName: 'asc' },
+  });
+
+  const sectionNames = new Map(sections.map((s) => [s.id, s.sectionName]));
+  const bySectionDay = new Map<string, Map<string, { present: number; total: number }>>();
+  for (const r of records) {
+    if (!sectionNames.has(r.sectionId)) continue;
+    const key = r.attendanceDate.toISOString().slice(0, 10);
+    if (!weekKeys.includes(key)) continue;
+    const dayMap = bySectionDay.get(r.sectionId) ?? new Map();
+    const bucket = dayMap.get(key) ?? { present: 0, total: 0 };
+    bucket.total += 1;
+    if (r.status === AttendanceStatus.present) bucket.present += 1;
+    dayMap.set(key, bucket);
+    bySectionDay.set(r.sectionId, dayMap);
+  }
+
+  return sections.map((s) => {
+    const dayMap = bySectionDay.get(s.id);
+    const outDays = HEATMAP_DAYS.map((day, i) => {
+      const bucket = dayMap?.get(weekKeys[i]);
+      if (!bucket || bucket.total === 0) {
+        return { day, label: `${shortDate(days[i])} - ${day}`, present: 0, total: 0, rate: 0, level: 0 };
+      }
+      const present = bucket.present;
+      const total = bucket.total;
+      const rate = Math.round((present / total) * 1000) / 10;
+      return { day, label: `${shortDate(days[i])} - ${day}`, present, total, rate, level: heatmapLevel(rate) };
+    });
+    return { sectionId: s.id, sectionName: s.sectionName, days: outDays };
+  });
+}
+
+const DASHBOARD_WARM_INTERVAL_MS = 20_000;
+let warmerHandle: ReturnType<typeof setInterval> | null = null;
+
+export function startDashboardCacheWarmer(): void {
+  if (process.env.NODE_ENV === 'test') return;
+  if (warmerHandle) return;
+  const warm = () => {
+    getDashboardOverview().catch((err) => logger.warn({ err }, 'dashboard cache warm failed'));
+  };
+  warm();
+  warmerHandle = setInterval(warm, DASHBOARD_WARM_INTERVAL_MS);
+}
+
+export function stopDashboardCacheWarmer(): void {
+  if (warmerHandle) {
+    clearInterval(warmerHandle);
+    warmerHandle = null;
+  }
 }

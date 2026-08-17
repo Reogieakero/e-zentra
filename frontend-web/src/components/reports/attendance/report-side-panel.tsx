@@ -3,9 +3,18 @@
 import { useState } from "react";
 import { AlertTriangle, BarChart3, Lightbulb, Sparkles } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
+import { HowComputed } from "@/components/ui/how-computed";
 import { fetchAiRecommendations, type AiRecommendationResult, type ReportGradeLevel } from "@/lib/dashboard";
 import { AI_RECOMMENDATIONS_ENABLED, fmt } from "./report-config";
 import styles from "./report-side-panel.module.css";
+
+const COMPUTATION_TEXT =
+  "Average present per school day is computed as the total present attendance records of the section divided by the number of school days with attendance.";
+
+type SolutionLine =
+  | { type: "title"; text: string }
+  | { type: "divider" }
+  | { type: "row"; label: string; value: string };
 
 interface ReportSidePanelProps {
   gradeLevels: ReportGradeLevel[];
@@ -14,6 +23,10 @@ interface ReportSidePanelProps {
   view: "monthly" | "daily";
   grade: string;
   section: string;
+  averagePresentPerDay: number;
+  presentTotal: number;
+  trackedSchoolDays: number;
+  sectionName: string;
   reportLoading: boolean;
   aiEnabled?: boolean;
   onGenerate?: (
@@ -30,12 +43,32 @@ export default function ReportSidePanel({
   view,
   grade,
   section,
+  averagePresentPerDay,
+  presentTotal,
+  trackedSchoolDays,
+  sectionName,
   reportLoading,
   aiEnabled = AI_RECOMMENDATIONS_ENABLED,
   onGenerate = fetchAiRecommendations,
 }: ReportSidePanelProps) {
   const [aiResult, setAiResult] = useState<AiRecommendationResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+
+  const hasSection = Boolean(section);
+
+  const solutionLines: SolutionLine[] = hasSection
+    ? [
+        { type: "title", text: `Solving — ${sectionName || "selected section"}` },
+        { type: "row", label: "Total present records", value: `= ${presentTotal.toLocaleString()}` },
+        { type: "row", label: "School days with attendance", value: `= ${trackedSchoolDays.toLocaleString()}` },
+        { type: "divider" },
+        {
+          type: "row",
+          label: "Average present / day",
+          value: `${presentTotal.toLocaleString()} ÷ ${trackedSchoolDays.toLocaleString()} = ${averagePresentPerDay.toLocaleString()}`,
+        },
+      ]
+    : [];
 
   const generateAi = async () => {
     setAiLoading(true);
@@ -58,33 +91,45 @@ export default function ReportSidePanel({
   return (
     <div className={styles.sideCol}>
       <div className={styles.card}>
-        <h4 className={styles.cardTitle}>
-          <BarChart3 className={styles.cardTitleIcon} />
-          Average Rate by Grade Level
-        </h4>
-        <div className={styles.gradeList}>
-          {gradeLevels.length === 0 ? (
-            <p className={styles.emptyText}>No attendance data recorded yet for this school year.</p>
-          ) : (
-            gradeLevels.map((g) => {
-              const low = g.rate < targetRate;
-              return (
-                <div key={g.gradeLevel} className={styles.gradeRow}>
-                  <div className={styles.gradeLabelRow}>
-                    <span className={styles.gradeName}>{g.label}</span>
-                    <span className={`${styles.gradeRate} ${low ? styles.gradeRateWarn : ""}`}>{fmt(g.rate)}</span>
-                  </div>
-                  <div className={styles.gradeTrack}>
-                    <div
-                      className={`${styles.gradeFill} ${low ? styles.gradeFillWarn : ""}`}
-                      style={{ width: `${Math.min(g.rate, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })
+        <div className={styles.cardHeaderRow}>
+          <h4 className={styles.cardTitle}>
+            <BarChart3 className={styles.cardTitleIcon} />
+            {hasSection ? "Average present per school day of section" : "Average Rate by Grade Level"}
+          </h4>
+          {hasSection && (
+            <HowComputed computationText={COMPUTATION_TEXT} lines={solutionLines} />
           )}
         </div>
+        {hasSection ? (
+          <div className={styles.avgPresent}>
+            <span className={styles.avgPresentValue}>{averagePresentPerDay.toLocaleString()}</span>
+            <span className={styles.avgPresentLabel}>students present per school day</span>
+          </div>
+        ) : (
+          <div className={styles.gradeList}>
+            {gradeLevels.length === 0 ? (
+              <p className={styles.emptyText}>No attendance data recorded yet for this school year.</p>
+            ) : (
+              gradeLevels.map((g) => {
+                const low = g.rate < targetRate;
+                return (
+                  <div key={g.gradeLevel} className={styles.gradeRow}>
+                    <div className={styles.gradeLabelRow}>
+                      <span className={styles.gradeName}>{g.label}</span>
+                      <span className={`${styles.gradeRate} ${low ? styles.gradeRateWarn : ""}`}>{fmt(g.rate)}</span>
+                    </div>
+                    <div className={styles.gradeTrack}>
+                      <div
+                        className={`${styles.gradeFill} ${low ? styles.gradeFillWarn : ""}`}
+                        style={{ width: `${Math.min(g.rate, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.insights}>

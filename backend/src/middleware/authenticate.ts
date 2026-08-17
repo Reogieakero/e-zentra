@@ -13,6 +13,13 @@ export interface AuthenticatedUser {
   lastName: string;
 }
 
+interface CachedUser extends AuthenticatedUser {
+  expires: number;
+}
+
+const AUTH_USER_TTL_MS = 30_000;
+const authUserCache = new Map<string, CachedUser>();
+
 export function signAccessToken(userId: string): string {
   return jwt.sign({ sub: userId }, config.jwt.accessSecret, { expiresIn: config.jwt.accessTtl as jwt.SignOptions['expiresIn'] });
 }
@@ -32,10 +39,21 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   if (!payload.sub) {
     return next(ApiError.unauthorized());
   }
-  const user = await prisma.user.findUnique({
-    where: { id: payload.sub },
-    select: { id: true, email: true, role: true, accountStatus: true, firstName: true, lastName: true },
-  });
+
+  const cached = authUserCache.get(payload.sub);
+  const now = Date.now();
+  let user: AuthenticatedUser | null = cached && cached.expires > now ? cached : null;
+  if (!user) {
+    const found = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, role: true, accountStatus: true, firstName: true, lastName: true },
+    });
+    if (found) {
+      user = found;
+      authUserCache.set(found.id, { ...found, expires: now + AUTH_USER_TTL_MS });
+    }
+  }
+
   if (!user) {
     return next(ApiError.unauthorized('Account no longer exists'));
   }

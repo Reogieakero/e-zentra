@@ -17,6 +17,7 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
+  app.set('etag', false);
   if (config.security.trustProxy > 0) {
     app.set('trust proxy', config.security.trustProxy);
   }

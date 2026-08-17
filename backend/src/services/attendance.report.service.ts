@@ -9,6 +9,7 @@ import {
   WEEKDAYS,
   addStatus,
   dayKey,
+  isWeekendDayKey,
   monthKey,
   rateOf,
   round1,
@@ -38,6 +39,83 @@ export async function listSectionsByGrade(gradeLevel: string) {
   return sections;
 }
 
+export async function getAllSectionsAttendance() {
+  const key = cacheKey('dashboard', 'attendance-all-sections');
+  return getCached<unknown>(key, DASHBOARD_CACHE_TTL, async () => {
+    const activeYear = await prisma.schoolYear.findFirst({
+      where: { status: 'active' },
+      select: { id: true, startDate: true, endDate: true },
+    });
+    if (!activeYear) return [];
+
+    const start = new Date(activeYear.startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(activeYear.endDate);
+    end.setHours(0, 0, 0, 0);
+    const endExclusive = new Date(end);
+    endExclusive.setDate(endExclusive.getDate() + 1);
+
+    const [sections, records] = await Promise.all([
+      prisma.section.findMany({
+        where: { status: 'active', schoolYearId: activeYear.id },
+        select: {
+          id: true,
+          sectionName: true,
+          gradeLevel: true,
+          adviser: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: { sectionName: 'asc' },
+      }),
+      prisma.attendanceRecord.findMany({
+        where: {
+          term: { schoolYearId: activeYear.id },
+          attendanceDate: { gte: start, lt: endExclusive },
+        },
+        select: { status: true, attendanceDate: true, studentId: true, sectionId: true },
+      }),
+    ]);
+
+    const agg = new Map<
+      string,
+      {
+        counts: { present: number; absent: number; late: number; excused: number };
+        students: Set<string>;
+        dayKeys: Set<string>;
+      }
+    >();
+    for (const r of records) {
+      let a = agg.get(r.sectionId);
+      if (!a) {
+        a = { counts: { present: 0, absent: 0, late: 0, excused: 0 }, students: new Set(), dayKeys: new Set() };
+        agg.set(r.sectionId, a);
+      }
+      addStatus(a.counts, r.status);
+      a.dayKeys.add(dayKey(r.attendanceDate));
+      a.students.add(r.studentId);
+    }
+
+    return sections
+      .map((s) => {
+        const a = agg.get(s.id);
+        const counts = a?.counts ?? { present: 0, absent: 0, late: 0, excused: 0 };
+        const total = counts.present + counts.absent + counts.late + counts.excused;
+        const rate = total > 0 ? Math.round((counts.present / total) * 1000) / 10 : 0;
+        const dayCount = Array.from(a?.dayKeys ?? []).filter((k) => !isWeekendDayKey(k)).length;
+        const avgPresent = dayCount > 0 ? round1(counts.present / dayCount) : 0;
+        return {
+          sectionId: s.id,
+          sectionName: s.sectionName,
+          gradeLabel: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
+          adviserName: s.adviser ? `${s.adviser.firstName} ${s.adviser.lastName}` : null,
+          rate,
+          studentCount: a?.students.size ?? 0,
+          avgPresent,
+        };
+      })
+      .sort((a, b) => b.avgPresent - a.avgPresent || a.sectionName.localeCompare(b.sectionName));
+  });
+}
+
 export async function loadAttendanceReport(
   view: 'monthly' | 'daily' = 'monthly',
   gradeLevel?: string,
@@ -54,6 +132,9 @@ export async function loadAttendanceReport(
     targetRate: 95,
     granularity: view,
     enrollmentTotal: 0,
+    averagePresentPerDay: 0,
+    presentTotal: 0,
+    trackedSchoolDays: 0,
     series: [],
     statBlocks: {
       averageRate: 0,
@@ -76,11 +157,11 @@ export async function loadAttendanceReport(
   const endExclusive = new Date(end);
   endExclusive.setDate(endExclusive.getDate() + 1);
 
-  const sectionFilter = sectionId
-    ? { sectionId }
+  const sectionFilter: Prisma.AttendanceRecordWhereInput = sectionId
+    ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
     : gradeLevel
-    ? { section: { gradeLevel: gradeLevel as GradeLevel } }
-    : {};
+    ? { section: { status: 'active', schoolYearId: activeYear.id, gradeLevel: gradeLevel as GradeLevel } }
+    : { section: { status: 'active', schoolYearId: activeYear.id } };
 
   const enrollmentScope: Prisma.StudentProfileWhereInput = sectionId
     ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
@@ -114,6 +195,19 @@ export async function loadAttendanceReport(
       select: { termLabel: true },
     }),
   ]);
+
+  let scopeLabel = 'School-wide';
+  if (sectionId) {
+    const section = await prisma.section.findFirst({
+      where: { id: sectionId },
+      select: { sectionName: true, gradeLevel: true },
+    });
+    scopeLabel = section
+      ? `${GRADE_LABELS[section.gradeLevel] ?? section.gradeLevel} - ${section.sectionName}`
+      : 'Selected section';
+  } else if (gradeLevel) {
+    scopeLabel = GRADE_LABELS[gradeLevel as GradeLevel] ?? gradeLevel;
+  }
 
   const byDay = new Map<string, { present: number; absent: number; late: number; excused: number }>();
   const byDayStudents = new Map<string, Set<string>>();
@@ -152,6 +246,12 @@ export async function loadAttendanceReport(
     return { ...s, notLogged: Math.max(0, scopedEnrolled - loggedStudents) };
   });
   const series = view === 'monthly' ? buildMonthlySeriesFromDaily(dailyTrend) : dailyTrend;
+
+  const activeDays = dailyTrend.filter((s) => s.total > 0);
+  const presentTotal = activeDays.reduce((sum, s) => sum + s.present, 0);
+  const averagePresentPerDay =
+    activeDays.length > 0 ? round1(presentTotal / activeDays.length) : 0;
+  const trackedSchoolDays = activeDays.length;
 
   const tracked = series.filter((s) => s.rate !== null);
   const rates = tracked.map((s) => s.rate as number);
@@ -199,7 +299,8 @@ export async function loadAttendanceReport(
     tracked.length,
     target,
     gradeLevels,
-    view
+    view,
+    scopeLabel
   );
 
   return {
@@ -208,6 +309,9 @@ export async function loadAttendanceReport(
     targetRate: target,
     granularity: view,
     enrollmentTotal: scopedEnrolled,
+    averagePresentPerDay,
+    presentTotal,
+    trackedSchoolDays,
     series,
     statBlocks: {
       averageRate,
@@ -329,13 +433,14 @@ function buildReportInsights(
   tracked: number,
   target: number,
   gradeLevels: Array<{ label: string; rate: number }>,
-  view: 'monthly' | 'daily'
+  view: 'monthly' | 'daily',
+  scopeLabel: string
 ): string[] {
   const period = view === 'monthly' ? 'month' : 'day';
   const out: string[] = [];
   if (tracked > 0) {
     out.push(
-      `School-wide attendance averaged ${averageRate}% across ${tracked} tracked ${period}${tracked === 1 ? '' : 's'}.`
+      `${scopeLabel} attendance averaged ${averageRate}% across ${tracked} tracked ${period}${tracked === 1 ? '' : 's'}.`
     );
   }
   if (bestRate !== undefined && bestLabel) {
@@ -357,11 +462,19 @@ function buildReportInsights(
   );
   const below = gradeLevels.filter((g) => g.rate < target);
   if (below.length > 0) {
-    out.push(
-      `Grade level${below.length === 1 ? '' : 's'} below target: ${below.map((g) => `${g.label} (${g.rate}%)`).join(', ')}.`
-    );
+    if (gradeLevels.length === 1) {
+      out.push(`${scopeLabel} averaged below the ${target}% target (${below[0].rate}%).`);
+    } else {
+      out.push(
+        `Grade level${below.length === 1 ? '' : 's'} below target: ${below.map((g) => `${g.label} (${g.rate}%)`).join(', ')}.`
+      );
+    }
   } else if (gradeLevels.length > 0) {
-    out.push('All grade levels averaged at or above the attendance target this year.');
+    if (gradeLevels.length === 1) {
+      out.push(`${scopeLabel} averaged at or above the ${target}% attendance target this year.`);
+    } else {
+      out.push('All grade levels averaged at or above the attendance target this year.');
+    }
   }
   return out;
 }
@@ -558,10 +671,10 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
     : { section: { status: 'active', schoolYearId: activeYear.id } };
 
   const sectionFilter: Prisma.AttendanceRecordWhereInput = sectionId
-    ? { sectionId }
+    ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
     : gradeLevel
-    ? { section: { gradeLevel: gradeLevel as GradeLevel } }
-    : {};
+    ? { section: { status: 'active', schoolYearId: activeYear.id, gradeLevel: gradeLevel as GradeLevel } }
+    : { section: { status: 'active', schoolYearId: activeYear.id } };
 
   const [students, rows, daysRows] = await Promise.all([
     prisma.studentProfile.findMany({
@@ -802,11 +915,25 @@ async function loadAttendanceSummary(
   tomorrow.setDate(tomorrow.getDate() + 1);
   const seriesEnd = tomorrow < endExclusive ? tomorrow : endExclusive;
 
-  const sectionFilter = sectionId
-    ? { sectionId }
+  const runningSchoolDayKeys = new Set<string>();
+  let runningSchoolDays = 0;
+  {
+    const cur = new Date(start);
+    while (cur <= today && cur < endExclusive) {
+      const dow = cur.getDay();
+      if (dow !== 0 && dow !== 6) {
+        runningSchoolDayKeys.add(dayKey(cur));
+        runningSchoolDays += 1;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  const sectionFilter: Prisma.AttendanceRecordWhereInput = sectionId
+    ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
     : gradeLevel
-    ? { section: { gradeLevel: gradeLevel as GradeLevel } }
-    : {};
+    ? { section: { status: 'active', schoolYearId: activeYear.id, gradeLevel: gradeLevel as GradeLevel } }
+    : { section: { status: 'active', schoolYearId: activeYear.id } };
 
   const enrollmentScope: Prisma.StudentProfileWhereInput = sectionId
     ? { section: { status: 'active', schoolYearId: activeYear.id, id: sectionId } }
@@ -829,7 +956,9 @@ async function loadAttendanceSummary(
             studentId: true,
             sectionId: true,
             student: { select: { firstName: true, lastName: true, profilePhotoUrl: true } },
-            section: { select: { sectionName: true, gradeLevel: true } },
+            section: {
+              select: { sectionName: true, gradeLevel: true, adviser: { select: { firstName: true, lastName: true } } },
+            },
           },
         }),
         prisma.studentProfile.count({ where: enrollmentScope }),
@@ -844,7 +973,14 @@ async function loadAttendanceSummary(
   const byDayStudents = new Map<string, Set<string>>();
   const bySection = new Map<
     string,
-    { sectionName: string; gradeLevel: string; counts: { present: number; absent: number; late: number; excused: number }; students: Set<string> }
+    {
+      sectionName: string;
+      gradeLevel: string;
+      adviserName: string | null;
+      counts: { present: number; absent: number; late: number; excused: number };
+      students: Set<string>;
+      dayKeys: Set<string>;
+    }
   >();
   const byStudent = new Map<
     string,
@@ -880,12 +1016,15 @@ async function loadAttendanceSummary(
       sec = {
         sectionName: r.section.sectionName,
         gradeLevel: r.section.gradeLevel,
+        adviserName: r.section.adviser ? `${r.section.adviser.firstName} ${r.section.adviser.lastName}` : null,
         counts: { present: 0, absent: 0, late: 0, excused: 0 },
         students: new Set(),
+        dayKeys: new Set(),
       };
       bySection.set(r.sectionId, sec);
     }
     addStatus(sec.counts, r.status);
+    sec.dayKeys.add(dKey);
     sec.students.add(r.studentId);
 
     if (!byStudent.has(r.studentId)) {
@@ -920,7 +1059,7 @@ async function loadAttendanceSummary(
 
   const heatmap = buildSchoolYearHeatmap(byDay, start, endExclusive, today, scopedEnrolled);
 
-  const perfectAttendance = buildPerfectAttendance(records, byStudent);
+  const perfectAttendance = buildPerfectAttendance(records, byStudent, runningSchoolDays, runningSchoolDayKeys);
   const lowAttendance = buildLowAttendance(records, byStudent);
   const topSections = buildTopSections(bySection);
 
@@ -957,7 +1096,7 @@ function buildSchoolYearHeatmap(
   today: Date,
   enrolled: number
 ) {
-  const cells: Array<{ key: string; label: string; rate: number; level: number }> = [];
+  const cells: Array<{ key: string; label: string; present: number; total: number; rate: number; level: number }> = [];
   const cur = new Date(start);
   while (cur < endExclusive && cur <= today) {
     const dow = cur.getDay();
@@ -976,7 +1115,7 @@ function buildSchoolYearHeatmap(
         else if (rate >= 60) level = 2;
         else level = 1;
       }
-      cells.push({ key, label: shortDate(cur), rate, level });
+      cells.push({ key, label: shortDate(cur), present, total, rate, level });
     }
     cur.setDate(cur.getDate() + 1);
   }
@@ -992,7 +1131,9 @@ function buildPerfectAttendance(
   byStudent: Map<
     string,
     { firstName: string; lastName: string; photo: string | null; sectionName: string; gradeLevel: string }
-  >
+  >,
+  runningSchoolDays: number,
+  runningSchoolDayKeys: Set<string>
 ) {
   const studentDays = new Map<string, Map<string, { present: number; absent: number; late: number; excused: number }>>();
   for (const r of records) {
@@ -1016,16 +1157,24 @@ function buildPerfectAttendance(
     sectionName: string;
     gradeLabel: string;
     daysPresent: number;
+    totalSchoolDays: number;
     rate: number;
   }> = [];
   for (const [studentId, days] of studentDays) {
     let presentDays = 0;
-    const totalDays = days.size;
-    for (const c of days.values()) {
-      if (c.present > 0 && c.absent === 0 && c.late === 0 && c.excused === 0) presentDays += 1;
+    for (const [dayKeyStr, c] of days) {
+      if (
+        runningSchoolDayKeys.has(dayKeyStr) &&
+        c.present > 0 &&
+        c.absent === 0 &&
+        c.late === 0 &&
+        c.excused === 0
+      ) {
+        presentDays += 1;
+      }
     }
-    if (totalDays === 0) continue;
-    const ratePercent = Math.round((presentDays / totalDays) * 100);
+    if (runningSchoolDays === 0) continue;
+    const ratePercent = Math.round((presentDays / runningSchoolDays) * 100);
     const info = byStudent.get(studentId);
     if (!info) continue;
     rows.push({
@@ -1034,12 +1183,13 @@ function buildPerfectAttendance(
       sectionName: info.sectionName,
       gradeLabel: GRADE_LABELS[info.gradeLevel] ?? info.gradeLevel,
       daysPresent: presentDays,
+      totalSchoolDays: runningSchoolDays,
       rate: ratePercent,
     });
   }
   return rows
     .filter((r) => r.rate === 100)
-    .sort((a, b) => b.daysPresent - a.daysPresent)
+    .sort((a, b) => b.daysPresent - a.daysPresent || a.fullName.localeCompare(b.fullName))
     .slice(0, 18);
 }
 
@@ -1090,22 +1240,33 @@ function buildLowAttendance(
 function buildTopSections(
   bySection: Map<
     string,
-    { sectionName: string; gradeLevel: string; counts: { present: number; absent: number; late: number; excused: number }; students: Set<string> }
+    {
+      sectionName: string;
+      gradeLevel: string;
+      adviserName: string | null;
+      counts: { present: number; absent: number; late: number; excused: number };
+      students: Set<string>;
+      dayKeys: Set<string>;
+    }
   >
 ) {
   const rows = Array.from(bySection.entries()).map(([sectionId, s]) => {
     const total = s.counts.present + s.counts.absent + s.counts.late + s.counts.excused;
     const rate = total > 0 ? Math.round((s.counts.present / total) * 1000) / 10 : 0;
+    const schoolDayKeys = Array.from(s.dayKeys).filter((k) => !isWeekendDayKey(k));
+    const avgPresent = schoolDayKeys.length > 0 ? round1(s.counts.present / schoolDayKeys.length) : 0;
     return {
       sectionId,
       sectionName: s.sectionName,
       gradeLabel: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
+      adviserName: s.adviserName,
       rate,
       studentCount: s.students.size,
+      avgPresent,
     };
   });
   return rows
     .filter((r) => r.studentCount > 0)
-    .sort((a, b) => b.rate - a.rate)
-    .slice(0, 6);
+    .sort((a, b) => b.avgPresent - a.avgPresent)
+    .slice(0, 10);
 }

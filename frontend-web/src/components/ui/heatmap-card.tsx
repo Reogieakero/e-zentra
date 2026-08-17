@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import styles from "./heatmap-card.module.css";
 
 export const HEAT_LEVELS = ["heat1", "heat2", "heat3", "heat4", "heat5", "heat6"];
+export const HEAT_COLORS = ["#064e3b", "#047857", "#059669", "#10b981", "#34d399", "#86efac"];
 
 interface HeatmapCardProps {
   title: string;

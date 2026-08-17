@@ -84,8 +84,8 @@ export default function DashboardHeader({ railOpen, onToggleRail }: DashboardHea
               target.
             </li>
             <li>
-              <strong>Section Attendance Heatmap</strong> — colour intensity shows each section&apos;s attendance per
-              weekday of the current week.
+              <strong>Section Attendance Heatmap</strong> — colour intensity shows each section&apos;s
+              present count per weekday of the current week.
             </li>
             <li>
               <strong>Section Performance Breakdown</strong> — for each section, the bars show statuses as % of all

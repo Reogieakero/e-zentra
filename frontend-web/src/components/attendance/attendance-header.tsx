@@ -98,7 +98,7 @@ export function AttendanceHeader({
             </li>
           </ul>
           <h3 className={styles.modalSection}>Daily Attendance Heatmap</h3>
-          <p>Attendance rate for every school day (Mon&ndash;Fri) this year. Deeper green = higher rate.</p>
+          <p>Present count for every school day (Mon&ndash;Fri) this year. Deeper green = more students present.</p>
           <h3 className={styles.modalSection}>Perfect &amp; low attendance</h3>
           <ul className={styles.modalList}>
             <li>

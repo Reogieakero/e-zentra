@@ -12,6 +12,6 @@
 
 @media (min-width: 1024px) {
   .twoCol {
-    grid-template-columns: 3fr 2fr;
+    grid-template-columns: 5fr 2fr;
   }
 }

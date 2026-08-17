@@ -9,10 +9,12 @@ interface InfoDialogProps {
   title: string;
   label?: string;
   bare?: boolean;
+  wide?: boolean;
+  trigger?: ReactNode;
   children: ReactNode;
 }
 
-export function InfoDialog({ title, label = "More information", bare = false, children }: InfoDialogProps) {
+export function InfoDialog({ title, label = "More information", bare = false, wide = false, trigger, children }: InfoDialogProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -26,20 +28,39 @@ export function InfoDialog({ title, label = "More information", bare = false, ch
 
   return (
     <>
-      <button
-        type="button"
-        className={`${styles.infoButton} ${bare ? styles.infoButtonBare : ""}`}
-        onClick={() => setOpen(true)}
-        aria-label={label}
-        aria-haspopup="dialog"
-      >
-        <Info className={styles.infoButtonIcon} />
-      </button>
+      {trigger ? (
+        <div
+          className={styles.trigger}
+          role="button"
+          tabIndex={0}
+          aria-haspopup="dialog"
+          aria-label={label}
+          onClick={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setOpen(true);
+            }
+          }}
+        >
+          {trigger}
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={`${styles.infoButton} ${bare ? styles.infoButtonBare : ""}`}
+          onClick={() => setOpen(true)}
+          aria-label={label}
+          aria-haspopup="dialog"
+        >
+          <Info className={styles.infoButtonIcon} />
+        </button>
+      )}
 
       {open && (
         <div className={styles.modalOverlay} onClick={() => setOpen(false)}>
           <div
-            className={styles.modal}
+            className={`${styles.modal} ${wide ? styles.modalWide : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={title}

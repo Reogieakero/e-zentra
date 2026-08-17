@@ -1,0 +1,161 @@
+.button {
+  white-space: nowrap;
+}
+
+.buttonIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.card {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  width: min(360px, calc(100vw - 40px));
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 14px 16px;
+  animation: cardIn 0.25s ease;
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.cardIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--brand-primary);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.text {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  min-height: 56px;
+  margin: 0;
+}
+
+.caret {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-left: 2px;
+  background: var(--brand-primary);
+  vertical-align: -2px;
+  animation: caretBlink 0.8s steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.lines {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--foreground);
+  min-height: 108px;
+}
+
+.lineTitle,
+.lineRow {
+  animation: lineIn 0.2s ease;
+}
+
+@keyframes lineIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lineTitle {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted-foreground);
+  margin: 0 0 8px;
+}
+
+.lineRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.lineLabel {
+  color: var(--muted-foreground);
+}
+
+.lineValue {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lineDivider {
+  border-top: 1px dashed var(--border-strong);
+  margin: 6px 0;
+}

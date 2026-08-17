@@ -88,3 +88,9 @@ export function monthKey(d: Date): string {
 export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+export function isWeekendDayKey(key: string): boolean {
+  const [y, m, d] = key.split('-').map(Number);
+  const dow = new Date(y, m - 1, d).getDay();
+  return dow === 0 || dow === 6;
+}

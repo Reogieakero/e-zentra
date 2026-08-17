@@ -10,7 +10,7 @@ export const STATUS_KEYS: Array<{ key: "present" | "absent" | "late" | "excused"
   { key: "notLogged", name: "Not logged", color: "#94a3b8" },
 ];
 
-export const PAGE_SIZE = 8;
+export const PAGE_SIZE = 10;
 
 export const FILTER_KEYS = REPORT_FILTER_KEYS.attendanceReport;
 

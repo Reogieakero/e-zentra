@@ -12,7 +12,7 @@ grading, risk classification, access control & oversight, student-facing records
 
 ```
 ├── backend/           Express + TypeScript + Prisma REST API (port 3000)
-├── frontend-web/      Next.js 16 + React + TypeScript app (port 3000, dev 5173-friendly)
+├── frontend-web/      Next.js 16 + React + TypeScript app (port 3001; backend owns 3000)
 ├── ocr-service/       Self-hosted PaddleOCR microservice (port 8000) — optional
 ├── docker-compose.yml Production-style compose (API + Postgres)
 └── TECH_STACK.md      Plain-English tech guide
@@ -91,7 +91,7 @@ cp .env.example .env.local  # Windows: copy .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000 (the frontend dev server proxies to the API).
+Open http://localhost:3001 (the backend API runs on 3000; the frontend dev server takes 3001).
 
 `.env.local` defaults already point the frontend at `http://localhost:3000/api/v1`, so no edits are needed
 unless your backend runs elsewhere. Supabase keys are only required for Google sign-in — leave them blank to

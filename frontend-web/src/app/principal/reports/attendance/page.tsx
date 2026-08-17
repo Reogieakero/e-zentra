@@ -52,6 +52,7 @@ export default function AttendanceReportPage() {
 
   const isDaily = view === "daily";
   const rows = data.series.slice().reverse();
+  const sectionName = sectionOptions?.find((s) => s.id === section)?.sectionName ?? "";
 
   return (
     <div className={styles.page}>
@@ -92,6 +93,10 @@ export default function AttendanceReportPage() {
           view={view}
           grade={grade}
           section={section}
+          averagePresentPerDay={data.averagePresentPerDay}
+          presentTotal={data.presentTotal}
+          trackedSchoolDays={data.trackedSchoolDays}
+          sectionName={sectionName}
           reportLoading={isLoading}
         />
       </div>
