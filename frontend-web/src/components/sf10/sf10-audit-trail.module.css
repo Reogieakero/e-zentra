@@ -1,0 +1,320 @@
+.auditCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.auditTop {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auditHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auditMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.auditTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.auditSubtitle {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchWrap {
+  width: 260px;
+  max-width: 100%;
+  flex: none;
+}
+
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: var(--muted);
+}
+
+.rowIcon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rowIconInner {
+  width: 16px;
+  height: 16px;
+}
+
+.toneAttach {
+  color: var(--brand-fg, var(--brand-primary));
+  background: var(--brand-bg, var(--muted));
+  border: 1px solid var(--brand-bd, var(--border));
+}
+
+.toneView {
+  color: var(--info-fg, var(--muted-foreground));
+  background: var(--info-bg, var(--muted));
+  border: 1px solid var(--info-bd, var(--border));
+}
+
+.toneReady {
+  color: var(--info-fg, var(--muted-foreground));
+  background: var(--info-bg, var(--muted));
+  border: 1px solid var(--info-bd, var(--border));
+}
+
+.toneRelease {
+  color: var(--success-fg, var(--muted-foreground));
+  background: var(--success-bg, var(--muted));
+  border: 1px solid var(--success-bd, var(--border));
+}
+
+.toneGenerate {
+  color: var(--success-fg, var(--muted-foreground));
+  background: var(--success-bg, var(--muted));
+  border: 1px solid var(--success-bd, var(--border));
+}
+
+.toneOcr {
+  color: var(--warning-fg);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-bd);
+}
+
+.toneError {
+  color: var(--danger-fg);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-bd);
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.rowAction {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.rowDot {
+  color: var(--border-strong);
+  font-weight: 600;
+}
+
+.rowStudent {
+  font-weight: 600;
+  color: var(--brand-primary);
+}
+
+.rowStudentMuted {
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.rowSub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.rowRole {
+  color: var(--muted-foreground);
+  margin-left: 6px;
+  opacity: 0.8;
+}
+
+.rowMeta {
+  flex: none;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.rowTime {
+  font-weight: 500;
+}
+
+.loadingStrip {
+  width: 100%;
+  height: 2px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.loadingBar {
+  height: 100%;
+  width: 40%;
+  background: var(--brand-primary);
+  animation: loadingShift 1s ease-in-out infinite;
+}
+
+@keyframes loadingShift {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.errorIcon {
+  color: var(--danger-fg);
+}
+
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.emptyText {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.auditPager {
+  margin-top: 0;
+  padding: 12px 16px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skCardTitle {
+  width: 140px;
+  height: 14px;
+}
+
+.skSub {
+  width: 260px;
+  height: 10px;
+  margin-top: 6px;
+}
+
+.skSearch {
+  height: 36px;
+}
+
+.skRow {
+  height: 64px;
+  border-radius: 0;
+}
+
+.skPageInfo {
+  width: 160px;
+  height: 12px;
+}
+
+.skOverlay {
+  padding: 0;
+}

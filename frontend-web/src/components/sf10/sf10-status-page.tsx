@@ -3,18 +3,19 @@
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSf10Summary, type Sf10Params } from "@/lib/dashboard";
+import { useSf10Summary, type Sf10Params, type Sf10StatusCode } from "@/lib/dashboard";
 import { Sf10Records, Sf10RecordsLoading } from "./sf10-records";
 import { Sf10Preview } from "./sf10-preview";
 import { Sf10PageError } from "./sf10-states";
 import styles from "./sf10-scope-page.module.css";
 
-interface Sf10ScopePageProps {
-  grade: string;
-  section?: string;
+interface Sf10StatusPageProps {
+  status: Sf10StatusCode;
+  title: string;
+  subtitle: string;
 }
 
-export function Sf10ScopePage({ grade, section }: Sf10ScopePageProps) {
+export function Sf10StatusPage({ status, title, subtitle }: Sf10StatusPageProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -32,26 +33,15 @@ export function Sf10ScopePage({ grade, section }: Sf10ScopePageProps) {
   const params = useMemo<Sf10Params>(
     () => ({
       search: debounced || undefined,
-      grade,
-      section: section || undefined,
+      status,
       sort: "last_updated",
       page,
       pageSize: 12,
     }),
-    [debounced, grade, section, page]
+    [debounced, status, page]
   );
 
   const { data, error, refresh, isValidating } = useSf10Summary(params);
-
-  const gradeLabel = useMemo(
-    () => (data?.folders ?? []).find((f) => f.gradeLevel === grade)?.label ?? grade,
-    [data, grade]
-  );
-
-  const adviserName = useMemo(
-    () => (data?.sections ?? []).find((s) => s.gradeLevel === grade && s.sectionName === section)?.adviserName ?? null,
-    [data, grade, section]
-  );
 
   const selectedRecord = useMemo(
     () => data?.records.find((r) => r.studentId === selectedId) ?? null,
@@ -90,17 +80,8 @@ export function Sf10ScopePage({ grade, section }: Sf10ScopePageProps) {
           <ChevronLeft size={16} />
         </button>
         <div className={styles.headerMain}>
-          <h1 className={styles.title}>
-            {gradeLabel}
-            {section ? ` - ${section}` : ""}
-          </h1>
-          <p className={styles.subtitle}>
-            {section && adviserName
-              ? `Adviser: ${adviserName}`
-              : data.schoolYear
-                ? `School Year ${data.schoolYear}`
-                : "No active school year"}
-          </p>
+          <h1 className={styles.title}>{title}</h1>
+          <p className={styles.subtitle}>{subtitle}</p>
         </div>
       </header>
 
@@ -115,13 +96,9 @@ export function Sf10ScopePage({ grade, section }: Sf10ScopePageProps) {
         selectedId={selectedId}
         onSelect={(id) => setSelectedId(id)}
         isValidating={isValidating}
-        stats={[
-          { label: "Records", value: data.counts.total },
-          { label: "Released", value: data.counts.released },
-          { label: "Missing", value: data.counts.missing },
-        ]}
-        title={section ? `${gradeLabel} - ${section} Records` : `${gradeLabel} Records`}
-        subtitle="SF10 records for learners in this scope."
+        stats={[{ label: "Records", value: data.total }]}
+        title={title}
+        subtitle={subtitle}
       />
 
       {selectedRecord && <Sf10Preview record={selectedRecord} onClose={() => setSelectedId(null)} />}
@@ -129,7 +106,7 @@ export function Sf10ScopePage({ grade, section }: Sf10ScopePageProps) {
   );
 }
 
-export function Sf10ScopePageLoading() {
+export function Sf10StatusPageLoading() {
   return (
     <div className={styles.page}>
       <ScopeHeaderLoading />

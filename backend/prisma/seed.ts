@@ -1,4 +1,4 @@
-﻿import { AccountStatus, ExtractionStatus, GradeLevel, OcrJobStatus, PrismaClient, Role, Sex, type TermNumber } from '@prisma/client';
+﻿import { AccountStatus, ExtractionStatus, GradeLevel, OcrJobStatus, Prisma, PrismaClient, Role, Sex, type TermNumber } from '@prisma/client';
 import argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -736,16 +736,18 @@ async function seedDemoData(
   await prisma.reportCard.createMany({
     data: Array.from({ length: 12 }, (_, i) => {
       const student = pick(students, i);
+      const status = pick(['pending', 'ready', 'released'] as const, i);
+      const hasFile = status !== 'pending';
       return {
         studentId: student.id,
         termId: termFor(student.id).id,
         source: pick(['system_generated', 'scanned_upload'] as const, i),
-        fileUrl: null,
-        status: pick(['pending', 'ready', 'released'] as const, i),
+        fileUrl: hasFile ? `/uploads/report-cards/demo-sf10-${i + 1}.pdf` : null,
+        status,
         generatedAt: i % 3 === 0 ? null : new Date(2026, 6, 5),
-        scannedBy: null,
+        scannedBy: hasFile ? pick([recordKeeper, registrar], i).id : null,
         managedBy: i % 3 === 1 ? recordKeeper.id : i % 3 === 2 ? registrar.id : null,
-        releasedAt: i % 3 === 2 ? new Date(2026, 6, 20) : null,
+        releasedAt: status === 'released' ? new Date(2026, 6, 20) : null,
       };
     }),
   });
@@ -810,6 +812,177 @@ async function seedDemoData(
   for (const [name, count] of counts) console.log(`  ${name.padEnd(30)} ${count}`);
 }
 
+
+async function seedSf10AuditTrail() {
+  const existing = await prisma.auditLog.count({
+    where: {
+      OR: [
+        { tableName: 'report_cards', action: { in: ['CREATE', 'READY', 'RELEASE', 'GENERATE', 'VIEW'] } },
+        { tableName: 'ocr_jobs', action: { startsWith: 'OCR_' } },
+        { tableName: 'report_card_extractions', action: { startsWith: 'OCR_' } },
+      ],
+    },
+  });
+  if (existing > 0) {
+    console.log('SF10 audit trail already seeded; skipping.');
+    return;
+  }
+
+  const actors = await prisma.user.findMany({
+    where: { role: { in: ['record_keeper', 'registrar', 'principal', 'teacher'] } },
+    select: { id: true, role: true },
+  });
+  if (actors.length === 0) return;
+
+  const byRole = (roles: string[]) => actors.find((a) => roles.includes(a.role)) ?? actors[0];
+  const recordKeeper = byRole(['record_keeper']);
+  const registrar = byRole(['registrar']);
+  const principal = byRole(['principal']);
+  const teacher = byRole(['teacher']);
+
+  const reportCards = await prisma.reportCard.findMany({
+    take: 30,
+    select: { id: true, fileUrl: true, createdAt: true, releasedAt: true, status: true },
+  });
+
+  const ocrJobs = await prisma.ocrJob.findMany({
+    where: { reportCardId: { in: reportCards.map((c) => c.id) } },
+    take: 30,
+    select: { id: true, reportCardId: true, fileUrl: true, createdAt: true, status: true },
+  });
+
+  const extractions = await prisma.reportCardExtraction.findMany({
+    where: { reportCardId: { in: reportCards.map((c) => c.id) } },
+    take: 30,
+    select: { id: true, reportCardId: true, createdAt: true, status: true },
+  });
+
+  const jobByCard = new Map(ocrJobs.map((j) => [j.reportCardId, j]));
+  const extractionByCard = new Map(extractions.map((e) => [e.reportCardId, e]));
+
+  const rows: Array<{
+    actorId: string;
+    action: string;
+    tableName: string;
+    recordId: string;
+    newValue?: Prisma.InputJsonValue;
+    createdAt: Date;
+  }> = [];
+
+  for (let i = 0; i < reportCards.length; i++) {
+    const card = reportCards[i];
+    const base = new Date(card.createdAt);
+    const cardActor = i % 3 === 0 ? registrar : recordKeeper;
+    const fileUrl = card.fileUrl ?? `/uploads/report-cards/demo-sf10-${i + 1}.pdf`;
+    const fileName = fileUrl.split('/').pop() ?? 'SF10.pdf';
+    const wasProcessed = card.status !== 'pending';
+
+    rows.push(
+      {
+        actorId: teacher.id,
+        action: 'CREATE',
+        tableName: 'report_cards',
+        recordId: card.id,
+        newValue: { studentId: card.id, source: 'scanned_upload' },
+        createdAt: base,
+      },
+      {
+        actorId: cardActor.id,
+        action: 'VIEW',
+        tableName: 'report_cards',
+        recordId: card.id,
+        newValue: { fileUrl },
+        createdAt: new Date(base.getTime() + 2 * 60 * 60 * 1000),
+      }
+    );
+
+    if (wasProcessed) {
+      rows.push({
+        actorId: cardActor.id,
+        action: 'READY',
+        tableName: 'report_cards',
+        recordId: card.id,
+        newValue: { status: 'ready' },
+        createdAt: new Date(base.getTime() + 5 * 60 * 60 * 1000),
+      });
+    }
+
+    const job = jobByCard.get(card.id);
+    if (job) {
+      rows.push(
+        {
+          actorId: cardActor.id,
+          action: 'OCR_ENQUEUE',
+          tableName: 'ocr_jobs',
+          recordId: job.id,
+          newValue: { reportCardId: card.id, fileUrl: job.fileUrl, engine: 'fake' },
+          createdAt: new Date(base.getTime() + 1 * 60 * 60 * 1000),
+        },
+        {
+          actorId: cardActor.id,
+          action: job.status === 'failed' ? 'OCR_FAILED' : 'OCR_COMPLETE',
+          tableName: 'ocr_jobs',
+          recordId: job.id,
+          newValue: { reportCardId: card.id, status: job.status },
+          createdAt: new Date(base.getTime() + 3 * 60 * 60 * 1000),
+        }
+      );
+    }
+
+    const extraction = extractionByCard.get(card.id);
+    if (extraction) {
+      rows.push({
+        actorId: cardActor.id,
+        action: extraction.status === 'rejected' ? 'OCR_REJECT' : 'OCR_APPROVE',
+        tableName: 'report_card_extractions',
+        recordId: extraction.id,
+        newValue: { reportCardId: card.id, gradesCount: 4, corrections: [] },
+        createdAt: new Date(base.getTime() + 4 * 60 * 60 * 1000),
+      });
+    }
+
+    if (card.status === 'released') {
+      rows.push({
+        actorId: principal.id,
+        action: 'RELEASE',
+        tableName: 'report_cards',
+        recordId: card.id,
+        newValue: { status: 'released', releasedAt: card.releasedAt?.toISOString() },
+        createdAt: card.releasedAt ?? new Date(base.getTime() + 7 * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    rows.push({
+      actorId: cardActor.id,
+      action: 'UPLOAD',
+      tableName: 'uploads',
+      recordId: card.id,
+      newValue: { kind: 'report-card', url: fileUrl, size: 240_000 + i * 1200, mimeType: 'application/pdf', fileName },
+      createdAt: base,
+    });
+  }
+
+  await prisma.auditLog.createMany({ data: rows });
+  console.log(`SF10 audit trail seeded: ${rows.length} entries.`);
+}
+
+async function repairReportCardFiles() {
+  const cards = await prisma.reportCard.findMany({
+    where: { status: { in: ['ready', 'released'] }, fileUrl: null },
+    select: { id: true },
+  });
+  if (cards.length === 0) {
+    console.log('Report card files already set; skipping repair.');
+    return;
+  }
+  for (let i = 0; i < cards.length; i++) {
+    await prisma.reportCard.update({
+      where: { id: cards[i].id },
+      data: { fileUrl: `/uploads/report-cards/demo-sf10-${i + 1}.pdf` },
+    });
+  }
+  console.log(`Report card repair: set fileUrl on ${cards.length} ready/released card(s).`);
+}
 
 async function seedOperationalTables() {
 
@@ -1143,6 +1316,8 @@ async function main() {
   await seedGradeComponents(termMap);
   await seedDemoData(sectionsByGrade, termMap);
   await seedOperationalTables();
+  await repairReportCardFiles();
+  await seedSf10AuditTrail();
   await seedCurrentWeekDemo();
   await seedAttendanceHistory();
 

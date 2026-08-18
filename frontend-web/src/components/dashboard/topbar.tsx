@@ -8,6 +8,7 @@ import { clearSession, getTokens, getUser } from "@/lib/auth";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useTheme, type Theme } from "@/components/theme-provider";
 import { SearchInput } from "@/components/ui/search-input";
+import { Sf10Breadcrumb } from "./sf10-breadcrumb";
 import styles from "./topbar.module.css";
 
 const pageLabels: Record<string, string> = {
@@ -58,6 +59,16 @@ function currentPageLabel(pathname: string): string {
   return matches.length > 0 ? pageLabels[matches[0]] : "Dashboard";
 }
 
+function gradeLabel(value: string): string {
+  return value.startsWith("grade_") ? `Grade ${value.replace("grade_", "")}` : value;
+}
+
+function crumbTail(pathname: string): string[] {
+  if (!pathname.startsWith("/principal/sf10")) return [];
+  const rest = pathname.replace("/principal/sf10", "").split("/").filter(Boolean);
+  return rest.map((seg) => gradeLabel(decodeURIComponent(seg)));
+}
+
 export default function Topbar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -88,7 +99,29 @@ export default function Topbar() {
       <div className={styles.left}>
         <span className={styles.crumb}>{roleLabels[user?.role ?? ""] ?? "Principal"}</span>
         <span className={styles.separator}>/</span>
-        <span className={styles.crumbCurrent}>{currentPageLabel(pathname)}</span>
+        {pathname.startsWith("/principal/sf10") ? (
+          <Sf10Breadcrumb pathname={pathname} />
+        ) : (
+          <>
+            {crumbTail(pathname).length === 0 ? (
+              <span className={styles.crumbCurrent}>{currentPageLabel(pathname)}</span>
+            ) : (
+              <>
+                <span className={styles.crumb}>{currentPageLabel(pathname)}</span>
+                {crumbTail(pathname).map((label, i, arr) => (
+                  <span key={label} className={styles.crumbGroup}>
+                    <span className={styles.separator}>/</span>
+                    {i === arr.length - 1 ? (
+                      <span className={styles.crumbCurrent}>{label}</span>
+                    ) : (
+                      <span className={styles.crumb}>{label}</span>
+                    )}
+                  </span>
+                ))}
+              </>
+            )}
+          </>
+        )}
       </div>
 
       <div className={styles.right}>

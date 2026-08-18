@@ -69,56 +69,6 @@
   flex-wrap: wrap;
 }
 
-.exportButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-foreground);
-  background: var(--card);
-  border: 1px solid var(--border);
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-
-.exportButton:hover {
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  background: var(--brand-weak);
-}
-
-.exportButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.exportButtonIcon {
-  width: 14px;
-  height: 14px;
-}
-
-.yearBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--brand-primary);
-  background: var(--brand-weak);
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--success-bd-soft);
-}
-
-.yearBadgeMeta {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--muted-foreground);
-}
-
 .skeleton {
   background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
   background-size: 200% 100%;

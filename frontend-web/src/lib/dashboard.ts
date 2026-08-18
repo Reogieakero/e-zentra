@@ -643,7 +643,7 @@ export async function fetchAiRecommendations(
   return api<AiRecommendationResult>(`/dashboard/attendance/report/ai-recommendations?${params.toString()}`, { token });
 }
 
-export type Sf10StatusCode = "released" | "missing";
+export type Sf10StatusCode = "released" | "ready" | "missing";
 
 export interface Sf10Folder {
   gradeLevel: string;
@@ -656,6 +656,7 @@ export interface Sf10Section {
   sectionName: string;
   gradeLevel: string;
   count: number;
+  adviserName: string | null;
 }
 
 export interface Sf10SummaryCounts {
@@ -687,6 +688,7 @@ export interface Sf10Summary {
   counts: Sf10SummaryCounts;
   records: Sf10Record[];
   recentAttached: Sf10Record[];
+  readyList: Sf10Record[];
   missingList: Sf10Record[];
   total: number;
   page: number;
@@ -727,6 +729,67 @@ export function useSf10Summary(params: Sf10Params) {
   const { data, error, isLoading, isValidating, mutate } = useSWR<Sf10Summary>(
     key,
     () => fetchSf10Summary(params),
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      keepPreviousData: true,
+    }
+  );
+  return { data, error: error ?? null, isLoading, isValidating, refresh: () => mutate() };
+}
+
+export interface Sf10AuditEntry {
+  id: string;
+  action: string;
+  actor: { id: string; fullName: string; role: string } | null;
+  student: {
+    id: string;
+    fullName: string;
+    lrn: string;
+    gradeLabel: string;
+    sectionName: string | null;
+  } | null;
+  termLabel: string | null;
+  fileName: string | null;
+  fileUrl: string | null;
+  detail: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface Sf10AuditTrail {
+  entries: Sf10AuditEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface Sf10AuditParams {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function fetchSf10AuditTrail(params: Sf10AuditParams): Promise<Sf10AuditTrail> {
+  const token = getTokens()?.accessToken;
+  if (!token) throw new Error("Missing access token");
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.page) qs.set("page", String(params.page));
+  if (params.pageSize) qs.set("pageSize", String(params.pageSize));
+  const qstr = qs.toString();
+  const { data } = await api<{ data: Sf10AuditTrail }>(
+    `/dashboard/sf10/audit-trail${qstr ? `?${qstr}` : ""}`,
+    { token }
+  );
+  return data;
+}
+
+export function useSf10AuditTrail(params: Sf10AuditParams) {
+  const userId = getUser()?.id ?? "anon";
+  const key = userId === "anon" ? null : ["/dashboard/sf10/audit-trail", userId, params];
+  const { data, error, isLoading, isValidating, mutate } = useSWR<Sf10AuditTrail>(
+    key,
+    () => fetchSf10AuditTrail(params),
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,

@@ -86,6 +86,7 @@ export async function releaseReportCard(actorId: string, actorRole: import('@pri
     where: { id },
     data: { status: 'released', managedBy: actorId, releasedAt: new Date() },
   });
+  await writeAudit({ actorId, action: 'RELEASE', tableName: 'report_cards', recordId: id, newValue: { status: 'released', releasedAt: updated.releasedAt?.toISOString() } as unknown as Prisma.InputJsonValue });
   await notifyStudentAndParents(card.studentId, {
     sourceTable: 'report_cards',
     sourceRecordId: id,

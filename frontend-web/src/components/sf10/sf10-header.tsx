@@ -1,13 +1,8 @@
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { InfoDialog } from "@/components/ui/info-dialog";
 import styles from "./sf10-header.module.css";
 
-interface Sf10HeaderProps {
-  schoolYear: string | null;
-  total: number;
-}
-
-export function Sf10Header({ schoolYear, total }: Sf10HeaderProps) {
+export function Sf10Header() {
   return (
     <div className={styles.header}>
       <div className={styles.headerTitleWrap}>
@@ -21,16 +16,6 @@ export function Sf10Header({ schoolYear, total }: Sf10HeaderProps) {
       </div>
 
       <div className={styles.headerControls}>
-        {schoolYear && (
-          <span className={styles.yearBadge}>
-            Year: {schoolYear}
-            <span className={styles.yearBadgeMeta}>{total.toLocaleString()} records</span>
-          </span>
-        )}
-        <button className={styles.exportButton} disabled aria-label="Export all SF10 records">
-          <Download className={styles.exportButtonIcon} />
-          Export All
-        </button>
         <InfoDialog title="SF10 Records — What You See" bare>
           <p className={styles.sectionHint}>
             This page is the registrar&apos;s view of learner&apos;s permanent academic records (SF10) across all grade
