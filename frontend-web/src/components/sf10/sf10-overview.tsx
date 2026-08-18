@@ -1,26 +1,27 @@
-import { AlertTriangle, CheckCircle2, FileText, FileUp, FileX2, FolderOpen } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileCheck2, FileX2, FolderOpen } from "lucide-react";
 import type { Sf10Folder, Sf10Record, Sf10SummaryCounts } from "@/lib/dashboard";
-import { formatDate } from "@/lib/students-format";
 import { AnimatedFolder } from "@/components/ui/animated-folder";
 import styles from "./sf10-overview.module.css";
 
 interface Sf10OverviewProps {
   folders: Sf10Folder[];
   counts: Sf10SummaryCounts;
-  recentAttached: Sf10Record[];
+  readyList: Sf10Record[];
   missingList: Sf10Record[];
   schoolYear: string | null;
   onGradeClick: (grade: string) => void;
+  onShowReady?: () => void;
   onShowMissing?: () => void;
 }
 
 export function Sf10Overview({
   folders,
   counts,
-  recentAttached,
+  readyList,
   missingList,
   schoolYear,
   onGradeClick,
+  onShowReady,
   onShowMissing,
 }: Sf10OverviewProps) {
   return (
@@ -94,39 +95,46 @@ export function Sf10Overview({
           <div className={`${styles.card} ${styles.listCard}`}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>
-                <FileUp className={styles.cardTitleIcon} />
-                Recent Attached SF10
+                <FileCheck2 className={styles.cardTitleIcon} />
+                Mark as Ready SF10
               </h2>
-              <span className={styles.cardHint}>Latest uploads</span>
             </div>
-            {recentAttached.length === 0 ? (
+            {readyList.length === 0 ? (
               <div className={styles.listEmptyWrap}>
                 <div className={styles.listEmptyIcon}>
-                  <FileUp className={styles.listEmptyIconInner} />
+                  <FileCheck2 className={styles.listEmptyIconInner} />
                 </div>
-                <p className={styles.listEmpty}>No SF10 files attached for this view yet.</p>
+                <p className={styles.listEmpty}>No SF10 files marked ready yet.</p>
               </div>
             ) : (
               <ul className={styles.listRows}>
-                {recentAttached.map((r) => (
-                  <li key={r.studentId} className={styles.listRow}>
-                    <div className={styles.listRowIcon}>
-                      <FileText className={styles.listRowIconInner} />
-                    </div>
+                {readyList.slice(0, 2).map((r) => (
+                  <li key={r.studentId} className={styles.missingRow}>
                     <div className={styles.listRowMain}>
                       <div className={styles.listRowTitle}>{r.fullName}</div>
                       <div className={styles.listRowSub}>
                         {r.gradeLabel}
                         {r.sectionName ? ` - ${r.sectionName}` : ""}
                       </div>
+                      <div className={styles.listRowLrn}>{r.lrn}</div>
                     </div>
-                    <div className={styles.listRowMeta}>
-                      <span className={styles.listRowDate}>{formatDate(r.lastUpdated)}</span>
-                      {r.handledBy ? <span className={styles.listRowBy}>{r.handledBy}</span> : null}
-                    </div>
+                    <AnimatedFolder
+                      count={1}
+                      size="sm"
+                      className={styles.missingFolder}
+                      title={`${r.fullName} - SF10 ready`}
+                    />
                   </li>
                 ))}
               </ul>
+            )}
+            {readyList.length > 0 && (
+              <div className={styles.cardFooter}>
+                <span>Showing {Math.min(readyList.length, 2)} of {readyList.length} ready</span>
+                <span className={styles.cardLink} onClick={onShowReady} role="button" tabIndex={0}>
+                  View all
+                </span>
+              </div>
             )}
           </div>
 

@@ -24,6 +24,36 @@
   flex-wrap: wrap;
 }
 
+.kpiGroup {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: none;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 52px;
+}
+
+.kpiValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiLabel {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
 .recordsMeta {
   flex: 1;
   min-width: 0;
@@ -83,22 +113,18 @@
 .recordCard {
   display: flex;
   flex-direction: column;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--card);
+  padding: 8px 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: background 0.15s;
 }
 
 .recordCard:hover {
-  border-color: var(--brand-primary);
-  box-shadow: var(--shadow-xs);
+  background: var(--muted);
 }
 
 .recordCardSelected {
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 1px var(--brand-primary);
+  background: var(--brand-weak);
 }
 
 .recordBody {
@@ -153,6 +179,12 @@
   color: var(--warning-fg);
   background: var(--warning-bg);
   border: 1px solid var(--warning-bd);
+}
+
+.statusReady {
+  color: var(--info-fg);
+  background: var(--info-bg);
+  border: 1px solid var(--info-bd);
 }
 
 .statusMissing {

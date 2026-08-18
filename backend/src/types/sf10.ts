@@ -2,7 +2,7 @@ import { GradeLevel } from '@prisma/client';
 
 export type Sf10Sort = 'last_updated' | 'name_az' | 'status';
 
-export type Sf10StatusCode = 'released' | 'missing';
+export type Sf10StatusCode = 'released' | 'ready' | 'missing';
 
 export interface Sf10ListQuery {
   page: number;
@@ -10,7 +10,7 @@ export interface Sf10ListQuery {
   search?: string;
   grade?: GradeLevel;
   section?: string;
-  status?: 'released' | 'missing';
+  status?: Sf10StatusCode;
   year?: string;
   sort?: Sf10Sort;
 }
@@ -26,6 +26,7 @@ export interface Sf10Section {
   sectionName: string;
   gradeLevel: GradeLevel;
   count: number;
+  adviserName: string | null;
 }
 
 export interface Sf10SummaryCounts {
@@ -58,7 +59,39 @@ export interface Sf10SummaryData {
   counts: Sf10SummaryCounts;
   records: Sf10Record[];
   recentAttached: Sf10Record[];
+  readyList: Sf10Record[];
   missingList: Sf10Record[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface Sf10AuditQuery {
+  page: number;
+  pageSize: number;
+  search?: string;
+}
+
+export interface Sf10AuditEntry {
+  id: string;
+  action: string;
+  actor: { id: string; fullName: string; role: string } | null;
+  student: {
+    id: string;
+    fullName: string;
+    lrn: string;
+    gradeLabel: string;
+    sectionName: string | null;
+  } | null;
+  termLabel: string | null;
+  fileName: string | null;
+  fileUrl: string | null;
+  detail: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface Sf10AuditTrailData {
+  entries: Sf10AuditEntry[];
   total: number;
   page: number;
   pageSize: number;

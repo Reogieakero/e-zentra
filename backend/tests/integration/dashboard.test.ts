@@ -641,3 +641,86 @@ describe('Dashboard adviser alerts', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('SF10 audit trail', () => {
+  let principal: Awaited<ReturnType<typeof loginAs>>;
+  let rk: Awaited<ReturnType<typeof loginAs>>;
+  let studentId: string;
+  let term: Awaited<ReturnType<typeof seedTerm>>;
+  let sy: Awaited<ReturnType<typeof seedSchoolYear>>;
+
+  beforeEach(async () => {
+    await truncateAll();
+    await invalidateDashboardCache();
+    principal = await loginAs('principal');
+    rk = await loginAs('record_keeper');
+    studentId = await createUser({ role: 'student', gradeLevel: 'grade_9' });
+    sy = await seedSchoolYear(principal.user.id);
+    term = await seedTerm(sy.id, 'junior_high', 'term_1', principal.user.id);
+  });
+
+  it('lists report card lifecycle events (create, ready, release) with actor + student resolution', async () => {
+    const student = await loginAs('student', { email: `student.audit.${Date.now()}@test.edu` });
+    const created = await request(app)
+      .post('/api/v1/report-cards')
+      .set(auth(rk.tokens.accessToken))
+      .send({ studentId: student.user.id, termId: term.id, source: 'system_generated' });
+    expect(created.status).toBe(201);
+    const cardId = created.body.data.id;
+
+    await request(app)
+      .post(`/api/v1/report-cards/${cardId}/ready`)
+      .set(auth(rk.tokens.accessToken))
+      .expect(200);
+    await request(app)
+      .post(`/api/v1/report-cards/${cardId}/release`)
+      .set(auth(rk.tokens.accessToken))
+      .expect(200);
+
+    const res = await request(app)
+      .get('/api/v1/dashboard/sf10/audit-trail')
+      .set(auth(principal.tokens.accessToken))
+      .expect(200);
+
+    expect(res.body.data.total).toBeGreaterThanOrEqual(3);
+    const actions = res.body.data.entries.map((e: { action: string }) => e.action);
+    expect(actions).toContain('CREATE');
+    expect(actions).toContain('READY');
+    expect(actions).toContain('RELEASE');
+
+    const releaseEntry = res.body.data.entries.find((e: { action: string }) => e.action === 'RELEASE');
+    expect(releaseEntry.actor.fullName).toContain(rk.user.lastName);
+    expect(releaseEntry.student.fullName).toContain(student.user.lastName);
+    expect(releaseEntry.student.lrn).toBeTruthy();
+    expect(releaseEntry.student.gradeLabel).toBeTruthy();
+    expect(releaseEntry.termLabel).toBe(term.termLabel);
+  });
+
+  it('search filters by student name', async () => {
+    const student = await loginAs('student', { email: `student.audit2.${Date.now()}@test.edu` });
+    await request(app)
+      .post('/api/v1/report-cards')
+      .set(auth(rk.tokens.accessToken))
+      .send({ studentId: student.user.id, termId: term.id, source: 'system_generated' })
+      .expect(201);
+
+    const res = await request(app)
+      .get(`/api/v1/dashboard/sf10/audit-trail?search=${encodeURIComponent(student.user.lastName)}`)
+      .set(auth(principal.tokens.accessToken))
+      .expect(200);
+
+    expect(res.body.data.total).toBeGreaterThanOrEqual(1);
+    const allMatch = res.body.data.entries.every(
+      (e: { student: { fullName: string } | null }) => e.student?.fullName.includes(student.user.lastName)
+    );
+    expect(allMatch).toBe(true);
+  });
+
+  it('requires staff role', async () => {
+    const student = await loginAs('student', { email: `student.audit3.${Date.now()}@test.edu` });
+    await request(app)
+      .get('/api/v1/dashboard/sf10/audit-trail')
+      .set(auth(student.tokens.accessToken))
+      .expect(403);
+  });
+});

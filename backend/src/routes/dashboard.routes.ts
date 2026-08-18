@@ -23,9 +23,9 @@ import {
   setAlertStatus,
 } from '../services/adviser-alert.service';
 import { z } from 'zod';
-import { getSf10Summary } from '../services/sf10.service';
+import { getSf10Summary, getSf10AuditTrail } from '../services/sf10.service';
 import { getAiRecommendations } from '../services/ai.service';
-import { Sf10ListQuery, Sf10Sort } from '../types/sf10';
+import { Sf10AuditQuery, Sf10ListQuery, Sf10Sort } from '../types/sf10';
 
 const GRADE_LEVELS = [
   'grade_7',
@@ -187,7 +187,7 @@ router.get(
     const grade: GradeLevel | undefined = GRADE_LEVELS.includes(String(req.query.grade))
       ? (String(req.query.grade) as GradeLevel)
       : undefined;
-    const status = ['released', 'missing'].includes(String(req.query.status))
+    const status = ['released', 'ready', 'missing'].includes(String(req.query.status))
       ? (String(req.query.status) as Sf10ListQuery['status'])
       : undefined;
     const year = typeof req.query.year === 'string' && req.query.year ? (req.query.year as string) : undefined;
@@ -198,6 +198,19 @@ router.get(
       : 'last_updated';
     const query: Sf10ListQuery = { page, pageSize, search, grade, section, status, year, sort };
     const result = await getSf10Summary(query);
+    res.json(result);
+  })
+);
+
+router.get(
+  '/dashboard/sf10/audit-trail',
+  requireRole(...STAFF_VIEW_ROLES),
+  asyncHandler(async (req, res) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+    const search = typeof req.query.search === 'string' && req.query.search.trim() ? req.query.search.trim() : undefined;
+    const query: Sf10AuditQuery = { page, pageSize, search };
+    const result = await getSf10AuditTrail(query);
     res.json(result);
   })
 );

@@ -17,6 +17,12 @@
   gap: 12px;
 }
 
+.crumbGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .iconBtn {
   display: none;
   padding: 6px;
@@ -45,6 +51,23 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--muted-foreground);
+}
+
+.crumbLink {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.crumbLink:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
 }
 
 .separator {

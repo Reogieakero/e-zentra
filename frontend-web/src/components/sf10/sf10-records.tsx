@@ -8,6 +8,7 @@ import styles from "./sf10-records.module.css";
 export function Sf10StatusPill({ status }: { status: Sf10StatusCode }) {
   const map = {
     released: { icon: CheckCircle2, cls: styles.statusReleased },
+    ready: { icon: FileText, cls: styles.statusReady },
     missing: { icon: AlertTriangle, cls: styles.statusMissing },
   }[status];
   const Icon = map.icon;
@@ -37,8 +38,8 @@ function RecordCard({
     >
       <div className={styles.recordBody}>
         <AnimatedFolder
-          count={record.status === "released" ? 1 : 0}
-          variant={record.status === "released" ? "default" : "danger"}
+          count={record.status === "released" ? 1 : record.status === "ready" ? 1 : 0}
+          variant={record.status === "missing" ? "danger" : "default"}
           title={`${record.fullName} - ${record.status}`}
         />
         <div className={styles.recordName}>{record.fullName}</div>
@@ -65,6 +66,7 @@ export function Sf10Records({
   selectedId,
   onSelect,
   isValidating,
+  stats,
   title = "All SF10 Records",
   subtitle = "Directory of released learner's permanent academic records.",
 }: {
@@ -78,6 +80,7 @@ export function Sf10Records({
   selectedId: string | null;
   onSelect: (id: string) => void;
   isValidating: boolean;
+  stats?: { label: string; value: number }[];
   title?: string;
   subtitle?: string;
 }) {
@@ -98,6 +101,16 @@ export function Sf10Records({
             <h2 className={styles.recordsTitle}>{title}</h2>
             <p className={styles.recordsSubtitle}>{subtitle}</p>
           </div>
+          {stats && stats.length > 0 && (
+            <div className={styles.kpiGroup}>
+              {stats.map((s) => (
+                <div key={s.label} className={styles.kpi}>
+                  <span className={styles.kpiValue}>{s.value.toLocaleString()}</span>
+                  <span className={styles.kpiLabel}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className={styles.toolbar}>

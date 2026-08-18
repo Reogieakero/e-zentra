@@ -5,6 +5,7 @@ import { config } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { getSupabaseStorage } from '../lib/supabase';
 import { ApiError } from '../utils/ApiError';
+import { writeAudit } from '../services/audit.service';
 
 const SERVED_DIRS = ['profile-photos', 'report-cards', 'adm-photos'] as const;
 
@@ -42,6 +43,17 @@ export async function serveUpload(req: Request, res: Response, next: NextFunctio
 
   if (!(await viewerMayReadFile(user, dir, fileName))) {
     return next(ApiError.forbidden('You may not view this file'));
+  }
+
+  if (dir === 'report-cards') {
+    const fileUrl = `/uploads/${dir}/${fileName}`;
+    const card = await prisma.reportCard.findFirst({
+      where: { fileUrl },
+      select: { id: true },
+    });
+    if (card) {
+      await writeAudit({ actorId: user.id, action: 'VIEW', tableName: 'report_cards', recordId: card.id, newValue: { fileUrl } });
+    }
   }
 
   if (config.storage.backend === 'supabase') {
