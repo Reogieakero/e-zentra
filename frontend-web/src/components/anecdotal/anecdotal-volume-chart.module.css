@@ -1,0 +1,102 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.titleIcon {
+  color: var(--brand-primary);
+}
+
+.subtitle {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.chartBody {
+  flex: 1;
+  min-height: 260px;
+  padding-top: 12px;
+}
+
+.empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--brand-primary);
+}
+
+.hint {
+  color: var(--muted-foreground);
+}
+
+.tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: #111827;
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+}
+
+.tooltipLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.tooltipValue {
+  font-size: 11px;
+  color: #d1d5db;
+}
