@@ -643,7 +643,7 @@ export async function fetchAiRecommendations(
   return api<AiRecommendationResult>(`/dashboard/attendance/report/ai-recommendations?${params.toString()}`, { token });
 }
 
-export type Sf10StatusCode = "complete" | "pending" | "missing";
+export type Sf10StatusCode = "released" | "missing";
 
 export interface Sf10Folder {
   gradeLevel: string;
@@ -651,12 +651,18 @@ export interface Sf10Folder {
   count: number;
 }
 
+export interface Sf10Section {
+  sectionId: string;
+  sectionName: string;
+  gradeLevel: string;
+  count: number;
+}
+
 export interface Sf10SummaryCounts {
   total: number;
-  complete: number;
-  pending: number;
+  released: number;
   missing: number;
-  completePercent: number;
+  releasedPercent: number;
 }
 
 export interface Sf10Record {
@@ -677,8 +683,11 @@ export interface Sf10Record {
 export interface Sf10Summary {
   schoolYear: string | null;
   folders: Sf10Folder[];
+  sections: Sf10Section[];
   counts: Sf10SummaryCounts;
   records: Sf10Record[];
+  recentAttached: Sf10Record[];
+  missingList: Sf10Record[];
   total: number;
   page: number;
   pageSize: number;
@@ -687,6 +696,7 @@ export interface Sf10Summary {
 export interface Sf10Params {
   search?: string;
   grade?: string;
+  section?: string;
   status?: Sf10StatusCode;
   year?: string;
   sort?: string;
@@ -699,6 +709,7 @@ export async function fetchSf10Summary(params: Sf10Params): Promise<Sf10Summary>
   if (!token) throw new Error("Missing access token");
   const qs = new URLSearchParams();
   if (params.search) qs.set("search", params.search);
+  if (params.section) qs.set("section", params.section);
   if (params.grade) qs.set("grade", params.grade);
   if (params.status) qs.set("status", params.status);
   if (params.year) qs.set("year", params.year);

@@ -1,0 +1,49 @@
+.errorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 16px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+}
+
+.errorIcon {
+  width: 26px;
+  height: 26px;
+  color: var(--danger-fg);
+}
+
+.errorText {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  max-width: 460px;
+  margin: 0;
+}
+
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--brand-primary);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.retryButton:hover {
+  background: var(--brand-secondary);
+}
+
+.retryIcon {
+  width: 14px;
+  height: 14px;
+}

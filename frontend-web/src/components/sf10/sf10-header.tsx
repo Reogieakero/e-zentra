@@ -1,6 +1,6 @@
 import { Download, FileText } from "lucide-react";
 import { InfoDialog } from "@/components/ui/info-dialog";
-import styles from "./sf10.module.css";
+import styles from "./sf10-header.module.css";
 
 interface Sf10HeaderProps {
   schoolYear: string | null;
@@ -44,15 +44,16 @@ export function Sf10Header({ schoolYear, total }: Sf10HeaderProps) {
               <strong>Total Records</strong> — every enrolled learner with a permanent record.
             </li>
             <li>
-              <strong>Complete</strong> — records whose SF10 file is final.
+              <strong>Released</strong> — records whose SF10 has been released by the registrar.
             </li>
             <li>
-              <strong>Pending Review</strong> — records awaiting registrar review.
-            </li>
-            <li>
-              <strong>Missing Documents</strong> — learners without an uploaded SF10.
+              <strong>Missing Documents</strong> — learners without a released SF10.
             </li>
           </ul>
+          <h3 className={styles.sectionTitle}>Recent Attached</h3>
+          <p>The latest released SF10 files, most recent first.</p>
+          <h3 className={styles.sectionTitle}>Missing SF10</h3>
+          <p>Learners who still need their SF10 file uploaded.</p>
           <h3 className={styles.sectionTitle}>All SF10 Records</h3>
           <p>Filter, sort, and paginate through every learner record. Open a record to preview its metadata.</p>
         </InfoDialog>

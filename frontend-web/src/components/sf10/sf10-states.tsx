@@ -1,6 +1,6 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { ApiClientError } from "@/lib/api";
-import styles from "./sf10.module.css";
+import styles from "./sf10-states.module.css";
 
 export function Sf10PageError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const message = error instanceof ApiClientError ? error.message : "Could not load SF10 records. Please try again.";
