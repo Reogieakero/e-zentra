@@ -249,6 +249,122 @@ const time = (h: string): Date => {
   return new Date(2000, 0, 1, hh, mm, 0, 0);
 };
 
+const ANECDOTAL_SEED: Array<{ desc: string; notes: string; perf: string | null; attend: string }> = [
+  { desc: 'Volunteered to lead the group activity and helped peers stay on task during the science project.', notes: 'Praised for initiative and teamwork.', perf: null, attend: 'Regular' },
+  { desc: 'Demonstrated strong initiative and encouraged classmates who were falling behind to keep up with the discussion.', notes: 'Recognized for consistent effort.', perf: null, attend: 'Regular' },
+  { desc: 'Represented the school well during the regional quiz bee, showing composure and good sportsmanship.', notes: 'Commended by the panel of judges.', perf: null, attend: 'Regular' },
+  { desc: 'Consistently submits assignments on time and assists new students during orientation week.', notes: 'Model student behavior this term.', perf: null, attend: 'Regular' },
+  { desc: 'Showed kindness by helping a classmate who fell on the playground and alerting the teacher promptly.', notes: 'Displayed maturity and care for others.', perf: null, attend: 'Regular' },
+  { desc: 'Actively participated in the school cleanup drive and organized her group efficiently.', notes: 'Leadership potential noted by the adviser.', perf: null, attend: 'Regular' },
+  { desc: 'Tutored a struggling peer in mathematics during lunch break without being asked.', notes: 'Encouraged to continue peer mentoring.', perf: null, attend: 'Regular' },
+  { desc: 'Significant improvement in quarterly exam scores across subjects, particularly Mathematics and Science.', notes: 'Recommend continued encouragement at home.', perf: 'Improving', attend: 'Regular' },
+  { desc: 'Struggling to keep up with reading comprehension exercises compared to peers.', notes: 'Started supplemental reading sessions twice a week.', perf: 'Below expectation', attend: 'Regular' },
+  { desc: 'Excellent performance in the culminating research project; presented findings clearly.', notes: 'Eligible for academic recognition this term.', perf: 'Outstanding', attend: 'Regular' },
+  { desc: 'Consistent high scores in weekly quizzes for the past grading period.', notes: 'Maintain current study habits and peer support.', perf: 'Above expectation', attend: 'Regular' },
+  { desc: 'Needs support in laboratory procedures but shows willingness to learn.', notes: 'Paired with a lab buddy for hands-on guidance.', perf: 'Developing', attend: 'Regular' },
+  { desc: 'Improved essay writing structure after the writing workshop sessions.', notes: 'Continue writing clinic attendance.', perf: 'Improving', attend: 'Regular' },
+  { desc: 'Repeated disruption during class discussions this week.', notes: 'Spoken to privately about classroom expectations.', perf: null, attend: 'Regular' },
+  { desc: 'Argued with a classmate during group work and refused to participate.', notes: 'Counseled on conflict resolution strategies.', perf: null, attend: 'Regular' },
+  { desc: 'Frequent tardiness to morning classes observed over the past two weeks.', notes: 'Parent notified regarding punctuality.', perf: null, attend: 'Often late' },
+  { desc: 'Disrespectful tone toward a substitute teacher during the period.', notes: 'Reflective conversation held after class.', perf: null, attend: 'Regular' },
+  { desc: 'Left the classroom without permission during a lesson.', notes: 'Reinforced hallway pass procedures with the student.', perf: null, attend: 'Regular' },
+  { desc: 'Withdrawn behavior observed over the past two weeks; recommend guidance counselor referral.', notes: 'Schedule a check-in with the guidance office.', perf: null, attend: 'Regular' },
+  { desc: 'Recurring difficulty focusing in class; teacher recommends a follow-up with parents.', notes: 'Set a monitoring plan with the adviser.', perf: null, attend: 'Regular' },
+  { desc: 'Aggressive outburst during recess; referred to the guidance counselor for intervention.', notes: 'Behavioral support plan to be drafted.', perf: null, attend: 'Regular' },
+  { desc: 'Bullying incident reported by peers; requires a formal follow-up with the family.', notes: 'Coordinate with guidance for early intervention.', perf: null, attend: 'Regular' },
+  { desc: 'Sudden drop in participation and grades; recommend a counselor check-in.', notes: 'Monitor academic and emotional wellbeing.', perf: null, attend: 'Regular' },
+  { desc: 'Repeated defiance of classroom rules; referred for administrative follow-up.', notes: 'Document incidents and monitor closely.', perf: null, attend: 'Regular' },
+];
+
+async function seedAnecdotalDemo() {
+  const marker = await prisma.anecdotalRecord.findFirst({
+    where: { incidentDescription: { startsWith: 'Volunteered to lead' } },
+  });
+  if (marker) {
+    console.log('Anecdotal demo already present; skipping.');
+    return;
+  }
+
+  const pick = <T,>(arr: readonly T[], i: number): T => arr[i % arr.length];
+
+  const legacy = await prisma.anecdotalRecord.findMany({
+    where: { incidentDescription: { startsWith: 'Anecdotal note' } },
+    select: { id: true },
+  });
+  if (legacy.length > 0) {
+    const ids = legacy.map((r) => r.id);
+    const refIds = (
+      await prisma.referral.findMany({ where: { anecdotalRecordId: { in: ids } }, select: { id: true } })
+    ).map((r) => r.id);
+    if (refIds.length > 0) {
+      const admIds = (
+        await prisma.admLearnerProfile.findMany({ where: { referralId: { in: refIds } }, select: { id: true } })
+      ).map((r) => r.id);
+      if (admIds.length > 0) {
+        await prisma.admParentMeeting.deleteMany({ where: { admLearnerProfileId: { in: admIds } } });
+        await prisma.admModule.deleteMany({ where: { admLearnerProfileId: { in: admIds } } });
+        await prisma.admLearnerProfile.deleteMany({ where: { id: { in: admIds } } });
+      }
+      await prisma.healthRecord.deleteMany({ where: { referralId: { in: refIds } } });
+      await prisma.homeVisitationRecord.deleteMany({ where: { referralId: { in: refIds } } });
+      await prisma.referral.deleteMany({ where: { id: { in: refIds } } });
+    }
+    await prisma.anecdotalRecordFollowup.deleteMany({ where: { anecdotalRecordId: { in: ids } } });
+    await prisma.anecdotalRecord.deleteMany({ where: { id: { in: ids } } });
+    console.log(`Removed ${legacy.length} legacy anecdotal seed records.`);
+  }
+
+  const students = await prisma.user.findMany({ where: { role: 'student' } });
+  const teachers = await prisma.user.findMany({ where: { role: 'teacher', accountStatus: 'active' } });
+  const studentProfiles = await prisma.studentProfile.findMany();
+  const sectionIdFor = new Map(studentProfiles.map((sp) => [sp.id, sp.sectionId]));
+  const studentInfo = new Map(
+    studentProfiles.map((sp) => [sp.id, { gradeLevel: sp.gradeLevel, sectionId: sectionIdFor.get(sp.id) ?? sp.sectionId! }]),
+  );
+  const isShs = (sid: string) =>
+    studentInfo.get(sid)?.gradeLevel === 'grade_11' || studentInfo.get(sid)?.gradeLevel === 'grade_12';
+  const lastSy = await prisma.schoolYear.findUniqueOrThrow({ where: { yearLabel: '2025-2026' } });
+  const jhsTerm = await prisma.term.findUniqueOrThrow({
+    where: { schoolYearId_gradeBand_termNumber: { schoolYearId: lastSy.id, gradeBand: 'junior_high', termNumber: 'term_1' as TermNumber } },
+  });
+  const shsTerm = await prisma.term.findUniqueOrThrow({
+    where: { schoolYearId_gradeBand_termNumber: { schoolYearId: lastSy.id, gradeBand: 'senior_high', termNumber: 'term_1' as TermNumber } },
+  });
+  const termFor = (sid: string) => (isShs(sid) ? shsTerm : jhsTerm);
+
+  const anecdotalCreated = await prisma.anecdotalRecord.createManyAndReturn({
+    data: ANECDOTAL_SEED.map((s, i) => {
+      const student = pick(students, i);
+      return {
+        observerId: pick(teachers, i).id,
+        studentId: student.id,
+        sectionId: studentInfo.get(student.id)!.sectionId,
+        termId: termFor(student.id).id,
+        observationDate: new Date(2026, (i % 5) + 5, (i % 27) + 2),
+        observationTime: time(pick(['09:00', '10:00', '13:00', '14:00'], i)),
+        incidentDescription: s.desc,
+        locationSetting: 'Classroom',
+        notesRecommendationsActions: s.notes,
+        classPerformance: s.perf,
+        attendanceSummary: s.attend,
+        confidentialityLevel: pick(['confidential', 'internal_staff', 'parent_visible'] as const, i),
+      };
+    }),
+  });
+
+  const anecdotalFollowupIndexes = [18, 19, 20, 21, 22, 23];
+  await prisma.anecdotalRecordFollowup.createMany({
+    data: anecdotalFollowupIndexes.map((i) => ({
+      anecdotalRecordId: anecdotalCreated[i].id,
+      followedUpBy: pick(teachers, i).id,
+      followupDate: new Date(2026, (i % 5) + 6, (i % 27) + 4),
+      followupNotes: `Follow-up ${i + 1}: behavior improving; continue monitoring and keep the family informed.`,
+    })),
+  });
+
+  console.log(`Seeded ${ANECDOTAL_SEED.length} anecdotal records with ${anecdotalFollowupIndexes.length} follow-ups.`);
+}
+
 async function seedDemoData(
   sectionsByGrade: Map<GradeLevel, { id: string; adviserId: string | null }>,
   termMap: Map<string, { id: string; band: 'junior_high' | 'senior_high'; number: number }>,
@@ -439,33 +555,36 @@ async function seedDemoData(
   });
 
 
+  const anecdotalSeed = ANECDOTAL_SEED;
+
   const anecdotalCreated = await prisma.anecdotalRecord.createManyAndReturn({
-    data: Array.from({ length: 12 }, (_, i) => {
+    data: anecdotalSeed.map((s, i) => {
       const student = pick(students, i);
       return {
         observerId: pick(teachers, i).id,
         studentId: student.id,
         sectionId: studentInfo.get(student.id)!.sectionId,
         termId: termFor(student.id).id,
-        observationDate: new Date(2026, 5, (i % 27) + 2),
-        observationTime: time(pick(['09:00', '10:00', '13:00'], i)),
-        incidentDescription: `Anecdotal note ${i + 1}: observed classroom behavior during a period.`,
+        observationDate: new Date(2026, (i % 5) + 5, (i % 27) + 2),
+        observationTime: time(pick(['09:00', '10:00', '13:00', '14:00'], i)),
+        incidentDescription: s.desc,
         locationSetting: 'Classroom',
-        notesRecommendationsActions: 'Monitor progress; schedule a check-in.',
-        classPerformance: 'Satisfactory',
-        attendanceSummary: 'Regular',
+        notesRecommendationsActions: s.notes,
+        classPerformance: s.perf,
+        attendanceSummary: s.attend,
         confidentialityLevel: pick(['confidential', 'internal_staff', 'parent_visible'] as const, i),
       };
     }),
   });
 
 
+  const anecdotalFollowupIndexes = [18, 19, 20, 21, 22, 23];
   await prisma.anecdotalRecordFollowup.createMany({
-    data: Array.from({ length: 12 }, (_, i) => ({
-      anecdotalRecordId: pick(anecdotalCreated, i).id,
+    data: anecdotalFollowupIndexes.map((i) => ({
+      anecdotalRecordId: anecdotalCreated[i].id,
       followedUpBy: pick(teachers, i).id,
-      followupDate: new Date(2026, 6, (i % 27) + 2),
-      followupNotes: `Follow-up ${i + 1}: behavior improving; continue monitoring.`,
+      followupDate: new Date(2026, (i % 5) + 6, (i % 27) + 4),
+      followupNotes: `Follow-up ${i + 1}: behavior improving; continue monitoring and keep the family informed.`,
     })),
   });
 
@@ -1315,6 +1434,7 @@ async function main() {
   await seedTeacherAssignments(sectionsByGrade);
   await seedGradeComponents(termMap);
   await seedDemoData(sectionsByGrade, termMap);
+  await seedAnecdotalDemo();
   await seedOperationalTables();
   await repairReportCardFiles();
   await seedSf10AuditTrail();
