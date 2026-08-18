@@ -5,6 +5,7 @@ import { DASHBOARD_CACHE_TTL, GRADE_LABELS } from '../lib/school';
 import {
   Sf10ListQuery,
   Sf10Record,
+  Sf10Section,
   Sf10Sort,
   Sf10StatusCode,
   Sf10SummaryData,
@@ -20,9 +21,8 @@ const SF10_GRADE_LEVELS: GradeLevel[] = [
 ];
 
 function sf10Status(rcStatus: string | undefined, hasFile: boolean): Sf10StatusCode {
-  if (!rcStatus) return 'missing';
-  if (hasFile && (rcStatus === 'ready' || rcStatus === 'released')) return 'complete';
-  return 'pending';
+  if (rcStatus === 'released' && hasFile) return 'released';
+  return 'missing';
 }
 
 function userName(p: { firstName: string; lastName: string }): string {
@@ -38,6 +38,10 @@ async function loadSf10SummaryData(query: Sf10ListQuery): Promise<Sf10SummaryDat
       ? { yearLabel: activeYear.yearLabel }
       : {};
 
+  const isSectionUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    query.section ?? ''
+  );
+
   const profiles = await prisma.studentProfile.findMany({
     where: {
       ...(query.grade ? { gradeLevel: query.grade } : {}),
@@ -48,14 +52,19 @@ async function loadSf10SummaryData(query: Sf10ListQuery): Promise<Sf10SummaryDat
             { user: { lastName: { contains: query.search, mode: 'insensitive' } } },
           ]
         : undefined,
-      section: { schoolYear: yearFilter },
+      section: query.section
+        ? {
+            schoolYear: yearFilter,
+            ...(isSectionUuid ? { id: query.section } : { sectionName: query.section }),
+          }
+        : { schoolYear: yearFilter },
     },
     select: {
       id: true,
       lrn: true,
       gradeLevel: true,
       user: { select: { firstName: true, middleName: true, lastName: true } },
-      section: { select: { sectionName: true, schoolYearId: true } },
+      section: { select: { id: true, sectionName: true, schoolYearId: true } },
     },
   });
 
@@ -74,11 +83,20 @@ async function loadSf10SummaryData(query: Sf10ListQuery): Promise<Sf10SummaryDat
       })
     : [];
 
+  const sections = await prisma.section.findMany({
+    where: { status: 'active', schoolYear: yearFilter },
+    select: {
+      id: true,
+      sectionName: true,
+      gradeLevel: true,
+      _count: { select: { students: true } },
+    },
+  });
+
   const foldersMap = new Map<GradeLevel, number>();
   for (const g of SF10_GRADE_LEVELS) foldersMap.set(g, 0);
 
-  let complete = 0;
-  let pending = 0;
+  let released = 0;
   let missing = 0;
 
   const records: Sf10Record[] = profiles.map((p) => {
@@ -87,8 +105,7 @@ async function loadSf10SummaryData(query: Sf10ListQuery): Promise<Sf10SummaryDat
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     const first = cards[0];
     const status = sf10Status(first?.status, Boolean(first?.fileUrl));
-    if (status === 'complete') complete += 1;
-    else if (status === 'pending') pending += 1;
+    if (status === 'released') released += 1;
     else missing += 1;
 
     const current = foldersMap.get(p.gradeLevel) ?? 0;
@@ -115,6 +132,16 @@ async function loadSf10SummaryData(query: Sf10ListQuery): Promise<Sf10SummaryDat
     return true;
   });
 
+  const recentAttached = records
+    .filter((r) => r.status === 'released')
+    .sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated))
+    .slice(0, 5);
+
+  const missingList = records
+    .filter((r) => r.status === 'missing')
+    .sort((a, b) => a.fullName.localeCompare(b.fullName))
+    .slice(0, 5);
+
   const orderMap: Record<Sf10Sort, (a: Sf10Record, b: Sf10Record) => number> = {
     name_az: (a, b) => a.fullName.localeCompare(b.fullName),
     status: (a, b) => a.status.localeCompare(b.status) || a.fullName.localeCompare(b.fullName),
@@ -134,14 +161,21 @@ async function loadSf10SummaryData(query: Sf10ListQuery): Promise<Sf10SummaryDat
       label: GRADE_LABELS[g],
       count: foldersMap.get(g) ?? 0,
     })),
+    sections: sections.map((s): Sf10Section => ({
+      sectionId: s.id,
+      sectionName: s.sectionName,
+      gradeLevel: s.gradeLevel,
+      count: s._count.students,
+    })),
     counts: {
       total: profiles.length,
-      complete,
-      pending,
+      released,
       missing,
-      completePercent: profiles.length ? Math.round((complete / profiles.length) * 1000) / 10 : 0,
+      releasedPercent: profiles.length ? Math.round((released / profiles.length) * 1000) / 10 : 0,
     },
     records: paged,
+    recentAttached,
+    missingList,
     total,
     page,
     pageSize,
@@ -151,7 +185,7 @@ async function loadSf10SummaryData(query: Sf10ListQuery): Promise<Sf10SummaryDat
 export async function getSf10Summary(query: Sf10ListQuery) {
   const key = cacheKey(
     'dashboard',
-    `sf10-summary:${query.page}:${query.pageSize}:${query.search ?? ''}:${query.grade ?? ''}:${query.status ?? ''}:${query.year ?? ''}:${query.sort ?? 'last_updated'}`
+    `sf10-summary:${query.page}:${query.pageSize}:${query.search ?? ''}:${query.grade ?? ''}:${query.section ?? ''}:${query.status ?? ''}:${query.year ?? ''}:${query.sort ?? 'last_updated'}`
   );
   return getCached<{ data: Sf10SummaryData }>(key, DASHBOARD_CACHE_TTL, async () => ({
     data: await loadSf10SummaryData(query),

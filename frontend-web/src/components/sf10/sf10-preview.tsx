@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { Download, FileText, Users, Pencil, Printer } from "lucide-react";
 import type { Sf10Record } from "@/lib/dashboard";
 import { Sf10StatusPill } from "./sf10-records";
+import { AnimatedFolder } from "@/components/ui/animated-folder";
 import { CloseButton } from "@/components/ui/close-button";
 import styles from "./sf10-preview.module.css";
 
@@ -31,76 +31,69 @@ export function Sf10Preview({ record, onClose }: { record: Sf10Record; onClose: 
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const released = record.status === "released";
+
   return (
     <div className={styles.root} role="dialog" aria-modal="true" aria-label="SF10 Preview">
       <div className={styles.backdrop} onClick={onClose} />
       <aside className={styles.drawer}>
         <div className={styles.header}>
-          <h3 className={styles.title}>SF10 Preview</h3>
+          <div>
+            <h3 className={styles.title}>SF10 Preview</h3>
+            <p className={styles.subtitle}>Learner&apos;s Permanent Academic Record</p>
+          </div>
           <CloseButton onClose={onClose} label="Close preview" />
         </div>
 
         <div className={styles.body}>
-          <div className={styles.profile}>
-            <div className={styles.fileIcon}>
-              <FileText className={styles.fileIconIcon} />
-            </div>
-            <div className={styles.fileName}>{record.fileName}</div>
+          <div className={styles.previewHead}>
+            <AnimatedFolder
+              count={released ? 1 : 0}
+              variant={released ? "default" : "danger"}
+              title={record.fileName}
+            />
+            <div className={styles.previewFileName}>{record.fileName}</div>
             <Sf10StatusPill status={record.status} />
           </div>
 
-          <div className={styles.meta}>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>LRN</span>
-              <span className={styles.metaValue}>{record.lrn}</span>
+          <section className={styles.sectionCard}>
+            <h4 className={styles.sectionLabel}>Student</h4>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>LRN</span>
+              <span className={styles.fieldValue}>{record.lrn}</span>
             </div>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Full Name</span>
-              <span className={styles.metaValue}>{record.fullName}</span>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Full Name</span>
+              <span className={styles.fieldValue}>{record.fullName}</span>
             </div>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Grade &amp; Section</span>
-              <span className={styles.metaValue}>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Grade &amp; Section</span>
+              <span className={styles.fieldValue}>
                 {record.gradeLabel}
                 {record.sectionName ? ` - ${record.sectionName}` : ""}
               </span>
             </div>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>School Year</span>
-              <span className={styles.metaValue}>{record.schoolYear || "—"}</span>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>School Year</span>
+              <span className={styles.fieldValue}>{record.schoolYear || "—"}</span>
             </div>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>File Size</span>
-              <span className={styles.metaValue}>{formatBytes(record.fileSizeBytes)}</span>
-            </div>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Handled By</span>
-              <span className={styles.metaValue}>{record.handledBy || "—"}</span>
-            </div>
-            <div className={`${styles.metaRow} ${styles.metaRowLast}`}>
-              <span className={styles.metaLabel}>Last Updated</span>
-              <span className={styles.metaValue}>{formatDate(record.lastUpdated)}</span>
-            </div>
-          </div>
+          </section>
 
-          <div className={styles.actions}>
-            <button type="button" className={styles.actionBtn} disabled={!record.fileUrl}>
-              <Download className={styles.actionIcon} />
-              Download
-            </button>
-            <button type="button" className={styles.actionBtn} disabled={!record.fileUrl}>
-              <Printer className={styles.actionIcon} />
-              Print
-            </button>
-            <button type="button" className={styles.actionBtn}>
-              <Users className={styles.actionIcon} />
-              View Student
-            </button>
-            <button type="button" className={styles.actionBtn}>
-              <Pencil className={styles.actionIcon} />
-              Edit Record
-            </button>
-          </div>
+          <section className={styles.sectionCard}>
+            <h4 className={styles.sectionLabel}>File</h4>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>File Size</span>
+              <span className={styles.fieldValue}>{formatBytes(record.fileSizeBytes)}</span>
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Handled By</span>
+              <span className={styles.fieldValue}>{record.handledBy || "—"}</span>
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Last Updated</span>
+              <span className={styles.fieldValue}>{formatDate(record.lastUpdated)}</span>
+            </div>
+          </section>
         </div>
       </aside>
     </div>

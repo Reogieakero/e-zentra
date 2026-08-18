@@ -2,14 +2,15 @@ import { GradeLevel } from '@prisma/client';
 
 export type Sf10Sort = 'last_updated' | 'name_az' | 'status';
 
-export type Sf10StatusCode = 'complete' | 'pending' | 'missing';
+export type Sf10StatusCode = 'released' | 'missing';
 
 export interface Sf10ListQuery {
   page: number;
   pageSize: number;
   search?: string;
   grade?: GradeLevel;
-  status?: 'complete' | 'pending' | 'missing';
+  section?: string;
+  status?: 'released' | 'missing';
   year?: string;
   sort?: Sf10Sort;
 }
@@ -20,12 +21,18 @@ export interface Sf10Folder {
   count: number;
 }
 
+export interface Sf10Section {
+  sectionId: string;
+  sectionName: string;
+  gradeLevel: GradeLevel;
+  count: number;
+}
+
 export interface Sf10SummaryCounts {
   total: number;
-  complete: number;
-  pending: number;
+  released: number;
   missing: number;
-  completePercent: number;
+  releasedPercent: number;
 }
 
 export interface Sf10Record {
@@ -47,8 +54,11 @@ export interface Sf10Record {
 export interface Sf10SummaryData {
   schoolYear: string | null;
   folders: Sf10Folder[];
+  sections: Sf10Section[];
   counts: Sf10SummaryCounts;
   records: Sf10Record[];
+  recentAttached: Sf10Record[];
+  missingList: Sf10Record[];
   total: number;
   page: number;
   pageSize: number;

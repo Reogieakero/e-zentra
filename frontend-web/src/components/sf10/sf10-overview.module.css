@@ -1,0 +1,378 @@
+.overviewGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .overviewGrid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+  padding: 16px;
+}
+
+.summaryCard {
+  padding: 12px 16px 14px;
+}
+
+.summaryCard .cardHeader {
+  margin-bottom: 8px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.cardTitleIcon {
+  width: 15px;
+  height: 15px;
+  color: var(--brand-primary);
+}
+
+.cardHint {
+  font-size: 10px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.folderGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .folderGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.folderNote {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.summaryStat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.summaryStat:hover {
+  border-color: var(--brand-primary);
+  background: var(--brand-weak);
+}
+
+.summaryIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--success-bg-soft);
+  border: 1px solid var(--success-bd-soft);
+  flex-shrink: 0;
+}
+
+.summaryIconInner {
+  width: 13px;
+  height: 13px;
+  color: var(--brand-primary);
+}
+
+.summaryText {
+  min-width: 0;
+}
+
+.summaryValue {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  line-height: 1.1;
+}
+
+.summaryLabel {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.subGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .subGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.listCard {
+  padding: 14px 16px;
+}
+
+.listCard .cardHeader {
+  margin-bottom: 10px;
+}
+
+.listRows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+.listRow:first-child {
+  border-top: none;
+}
+
+.listRowIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--success-bg-soft);
+  border: 1px solid var(--success-bd-soft);
+  color: var(--brand-primary);
+  flex-shrink: 0;
+}
+
+.missingRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 4px;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+.missingRow:first-child {
+  border-top: none;
+}
+
+.missingFolder {
+  flex-shrink: 0;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.cardLink {
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.cardLink:hover {
+  text-decoration: underline;
+}
+
+.listRowIconInner {
+  width: 14px;
+  height: 14px;
+}
+
+.listRowMain {
+  min-width: 0;
+  flex: 1;
+}
+
+.listRowTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listRowSub {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listRowMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.listRowDate {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.listRowBy {
+  font-size: 9px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.listRowLrn {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.listEmpty {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.listEmptyWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 8px;
+  text-align: center;
+}
+
+.listEmptyIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--success-bg-soft);
+  border: 1px solid var(--success-bd-soft);
+  color: var(--brand-primary);
+}
+
+.listEmptyIconInner {
+  width: 18px;
+  height: 18px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skel-1) 25%, var(--skel-2) 50%, var(--skel-1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skCardTitle {
+  width: 120px;
+  height: 14px;
+}
+
+.skCardHint {
+  width: 90px;
+  height: 10px;
+}
+
+.skFolder {
+  height: 147px;
+}
+
+.skStat {
+  height: 40px;
+}
+
+.skListRow {
+  height: 38px;
+}
+
+.skListRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

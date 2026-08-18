@@ -1,16 +1,28 @@
-import { AlertTriangle, CheckCircle2, Clock, FolderOpen } from "lucide-react";
-import type { Sf10Folder, Sf10SummaryCounts } from "@/lib/dashboard";
-import styles from "./sf10.module.css";
+import { AlertTriangle, CheckCircle2, FileText, FileUp, FileX2, FolderOpen } from "lucide-react";
+import type { Sf10Folder, Sf10Record, Sf10SummaryCounts } from "@/lib/dashboard";
+import { formatDate } from "@/lib/students-format";
+import { AnimatedFolder } from "@/components/ui/animated-folder";
+import styles from "./sf10-overview.module.css";
 
 interface Sf10OverviewProps {
   folders: Sf10Folder[];
   counts: Sf10SummaryCounts;
+  recentAttached: Sf10Record[];
+  missingList: Sf10Record[];
   schoolYear: string | null;
-  activeGrade: string;
   onGradeClick: (grade: string) => void;
+  onShowMissing?: () => void;
 }
 
-export function Sf10Overview({ folders, counts, schoolYear, activeGrade, onGradeClick }: Sf10OverviewProps) {
+export function Sf10Overview({
+  folders,
+  counts,
+  recentAttached,
+  missingList,
+  schoolYear,
+  onGradeClick,
+  onShowMissing,
+}: Sf10OverviewProps) {
   return (
     <div className={styles.overviewGrid}>
       <div className={styles.card}>
@@ -23,18 +35,13 @@ export function Sf10Overview({ folders, counts, schoolYear, activeGrade, onGrade
         </div>
         <div className={styles.folderGrid}>
           {folders.map((f) => (
-            <button
+            <AnimatedFolder
               key={f.gradeLevel}
-              type="button"
-              className={`${styles.folderBtn} ${activeGrade === f.gradeLevel ? styles.folderBtnActive : ""}`}
-              onClick={() => onGradeClick(activeGrade === f.gradeLevel ? "all" : f.gradeLevel)}
-            >
-              <FolderOpen className={styles.folderIcon} />
-              <div style={{ minWidth: 0, width: "100%" }}>
-                <div className={styles.folderName}>{f.label}</div>
-                <div className={styles.folderCount}>{f.count.toLocaleString()} files</div>
-              </div>
-            </button>
+              label={f.label}
+              count={f.count}
+              onClick={() => onGradeClick(f.gradeLevel)}
+              title={`${f.label} sections`}
+            />
           ))}
         </div>
         <p className={styles.folderNote}>
@@ -43,42 +50,131 @@ export function Sf10Overview({ folders, counts, schoolYear, activeGrade, onGrade
         </p>
       </div>
 
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>
-            <CheckCircle2 className={styles.cardTitleIcon} />
-            Summary
-          </h2>
-          <span className={styles.cardHint}>{schoolYear ? `School Year ${schoolYear}` : "No active school year"}</span>
+      <div className={styles.sideColumn}>
+        <div className={`${styles.card} ${styles.summaryCard}`}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>
+              <CheckCircle2 className={styles.cardTitleIcon} />
+              Summary
+            </h2>
+            <span className={styles.cardHint}>{schoolYear ? `School Year ${schoolYear}` : "No active school year"}</span>
+          </div>
+          <div className={styles.summaryGrid}>
+            <div className={styles.summaryStat}>
+              <div className={styles.summaryIcon}>
+                <FolderOpen className={styles.summaryIconInner} />
+              </div>
+              <div className={styles.summaryText}>
+                <div className={styles.summaryValue}>{counts.total.toLocaleString()}</div>
+                <div className={styles.summaryLabel}>Total Records</div>
+              </div>
+            </div>
+            <div className={styles.summaryStat}>
+              <div className={styles.summaryIcon}>
+                <CheckCircle2 className={styles.summaryIconInner} />
+              </div>
+              <div className={styles.summaryText}>
+                <div className={styles.summaryValue}>{counts.released.toLocaleString()}</div>
+                <div className={styles.summaryLabel}>Released &middot; {counts.releasedPercent}%</div>
+              </div>
+            </div>
+            <div className={styles.summaryStat}>
+              <div className={styles.summaryIcon}>
+                <AlertTriangle className={styles.summaryIconInner} />
+              </div>
+              <div className={styles.summaryText}>
+                <div className={styles.summaryValue}>{counts.missing.toLocaleString()}</div>
+                <div className={styles.summaryLabel}>Missing Documents</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className={styles.summaryGrid}>
-          <div className={styles.summaryStat}>
-            <div className={styles.summaryIcon}>
-              <FolderOpen className={styles.summaryIconInner} />
+
+        <div className={styles.subGrid}>
+          <div className={`${styles.card} ${styles.listCard}`}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <FileUp className={styles.cardTitleIcon} />
+                Recent Attached SF10
+              </h2>
+              <span className={styles.cardHint}>Latest uploads</span>
             </div>
-            <div className={styles.summaryValue}>{counts.total.toLocaleString()}</div>
-            <div className={styles.summaryLabel}>Total Records</div>
+            {recentAttached.length === 0 ? (
+              <div className={styles.listEmptyWrap}>
+                <div className={styles.listEmptyIcon}>
+                  <FileUp className={styles.listEmptyIconInner} />
+                </div>
+                <p className={styles.listEmpty}>No SF10 files attached for this view yet.</p>
+              </div>
+            ) : (
+              <ul className={styles.listRows}>
+                {recentAttached.map((r) => (
+                  <li key={r.studentId} className={styles.listRow}>
+                    <div className={styles.listRowIcon}>
+                      <FileText className={styles.listRowIconInner} />
+                    </div>
+                    <div className={styles.listRowMain}>
+                      <div className={styles.listRowTitle}>{r.fullName}</div>
+                      <div className={styles.listRowSub}>
+                        {r.gradeLabel}
+                        {r.sectionName ? ` - ${r.sectionName}` : ""}
+                      </div>
+                    </div>
+                    <div className={styles.listRowMeta}>
+                      <span className={styles.listRowDate}>{formatDate(r.lastUpdated)}</span>
+                      {r.handledBy ? <span className={styles.listRowBy}>{r.handledBy}</span> : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          <div className={styles.summaryStat}>
-            <div className={styles.summaryIcon}>
-              <CheckCircle2 className={styles.summaryIconInner} />
+
+          <div className={`${styles.card} ${styles.listCard}`}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <FileX2 className={styles.cardTitleIcon} />
+                Missing SF10
+              </h2>
             </div>
-            <div className={styles.summaryValue}>{counts.complete.toLocaleString()}</div>
-            <div className={styles.summaryLabel}>Complete &middot; {counts.completePercent}%</div>
-          </div>
-          <div className={styles.summaryStat}>
-            <div className={styles.summaryIcon}>
-              <Clock className={styles.summaryIconInner} />
-            </div>
-            <div className={styles.summaryValue}>{counts.pending.toLocaleString()}</div>
-            <div className={styles.summaryLabel}>Pending Review</div>
-          </div>
-          <div className={styles.summaryStat}>
-            <div className={styles.summaryIcon}>
-              <AlertTriangle className={styles.summaryIconInner} />
-            </div>
-            <div className={styles.summaryValue}>{counts.missing.toLocaleString()}</div>
-            <div className={styles.summaryLabel}>Missing Documents</div>
+            {missingList.length === 0 ? (
+              <div className={styles.listEmptyWrap}>
+                <div className={styles.listEmptyIcon}>
+                  <CheckCircle2 className={styles.listEmptyIconInner} />
+                </div>
+                <p className={styles.listEmpty}>No missing SF10 records for this view.</p>
+              </div>
+            ) : (
+              <ul className={styles.listRows}>
+                {missingList.slice(0, 2).map((r) => (
+                  <li key={r.studentId} className={styles.missingRow}>
+                    <div className={styles.listRowMain}>
+                      <div className={styles.listRowTitle}>{r.fullName}</div>
+                      <div className={styles.listRowSub}>
+                        {r.gradeLabel}
+                        {r.sectionName ? ` - ${r.sectionName}` : ""}
+                      </div>
+                      <div className={styles.listRowLrn}>{r.lrn}</div>
+                    </div>
+                    <AnimatedFolder
+                      count={0}
+                      size="sm"
+                      variant="danger"
+                      className={styles.missingFolder}
+                      title={`${r.fullName} - no SF10 attached`}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {missingList.length > 0 && (
+              <div className={styles.cardFooter}>
+                <span>Showing {Math.min(missingList.length, 2)} of {counts.missing.toLocaleString()} missing</span>
+                <span className={styles.cardLink} onClick={onShowMissing} role="button" tabIndex={0}>
+                  View all
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -90,19 +186,48 @@ function OverviewSkeleton() {
   return (
     <div className={styles.overviewGrid}>
       <div className={styles.card}>
-        <div className={`${styles.skeleton} ${styles.skCardTitle}`} />
+        <div className={styles.cardHeader}>
+          <div className={`${styles.skeleton} ${styles.skCardTitle}`} />
+        </div>
         <div className={styles.folderGrid}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className={`${styles.skeleton} ${styles.skFolder}`} />
           ))}
         </div>
       </div>
-      <div className={styles.card}>
-        <div className={`${styles.skeleton} ${styles.skCardTitle}`} />
-        <div className={styles.summaryGrid}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={`${styles.skeleton} ${styles.skStat}`} />
-          ))}
+      <div className={styles.sideColumn}>
+        <div className={`${styles.card} ${styles.summaryCard}`}>
+          <div className={styles.cardHeader}>
+            <div className={`${styles.skeleton} ${styles.skCardTitle}`} />
+            <div className={`${styles.skeleton} ${styles.skCardHint}`} />
+          </div>
+          <div className={styles.summaryGrid}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className={`${styles.skeleton} ${styles.skStat}`} />
+            ))}
+          </div>
+        </div>
+        <div className={styles.subGrid}>
+          <div className={`${styles.card} ${styles.listCard}`}>
+            <div className={styles.cardHeader}>
+              <div className={`${styles.skeleton} ${styles.skCardTitle}`} />
+            </div>
+            <div className={styles.skListRows}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className={`${styles.skeleton} ${styles.skListRow}`} />
+              ))}
+            </div>
+          </div>
+          <div className={`${styles.card} ${styles.listCard}`}>
+            <div className={styles.cardHeader}>
+              <div className={`${styles.skeleton} ${styles.skCardTitle}`} />
+            </div>
+            <div className={styles.skListRows}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className={`${styles.skeleton} ${styles.skListRow}`} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

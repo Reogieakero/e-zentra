@@ -187,15 +187,16 @@ router.get(
     const grade: GradeLevel | undefined = GRADE_LEVELS.includes(String(req.query.grade))
       ? (String(req.query.grade) as GradeLevel)
       : undefined;
-    const status = ['complete', 'pending', 'missing'].includes(String(req.query.status))
+    const status = ['released', 'missing'].includes(String(req.query.status))
       ? (String(req.query.status) as Sf10ListQuery['status'])
       : undefined;
     const year = typeof req.query.year === 'string' && req.query.year ? (req.query.year as string) : undefined;
+    const section = typeof req.query.section === 'string' && req.query.section ? (req.query.section as string) : undefined;
     const search = typeof req.query.search === 'string' && req.query.search.trim() ? req.query.search.trim() : undefined;
     const sort: Sf10Sort = ['last_updated', 'name_az', 'status'].includes(String(req.query.sort))
       ? (String(req.query.sort) as Sf10Sort)
       : 'last_updated';
-    const query: Sf10ListQuery = { page, pageSize, search, grade, status, year, sort };
+    const query: Sf10ListQuery = { page, pageSize, search, grade, section, status, year, sort };
     const result = await getSf10Summary(query);
     res.json(result);
   })
