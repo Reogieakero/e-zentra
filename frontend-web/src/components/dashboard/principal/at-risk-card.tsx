@@ -2,6 +2,7 @@
 
 import type { AtRiskStudent } from "@/lib/dashboard";
 import { useRiskCarousel } from "@/hooks/use-risk-carousel";
+import { RISK } from "@/constants/thresholds";
 import styles from "./at-risk-card.module.css";
 
 interface AtRiskCardProps {
@@ -101,7 +102,7 @@ export default function AtRiskCard({ students, count, term, schoolYear }: AtRisk
       </div>
 
       <div className={styles.cardFooter}>
-        <span>Threshold: &lt;85%</span>
+        <span>Threshold: &lt;{RISK.attendanceRate}% attendance</span>
         <span className={styles.cardLink}>View all</span>
       </div>
     </div>
