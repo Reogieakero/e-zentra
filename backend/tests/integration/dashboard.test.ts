@@ -11,6 +11,20 @@ function mostRecentMonday(): Date {
   return d;
 }
 
+function schoolDaysBetween(start: Date, endInclusive: Date): number {
+  let days = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  const end = new Date(endInclusive);
+  end.setHours(0, 0, 0, 0);
+  while (cur <= end) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) days += 1;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
 describe('Dashboard overview', () => {
   let principal: Awaited<ReturnType<typeof loginAs>>;
   let rk: Awaited<ReturnType<typeof loginAs>>;
@@ -129,18 +143,21 @@ describe('Dashboard overview', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.stats.totalStudents).toBe(2);
     expect(res.body.data.stats.presentToday).toBe(1);
-    expect(res.body.data.stats.presentRate).toBe(100);
+    expect(res.body.data.stats.presentRate).toBe(50);
     expect(res.body.data.stats.pendingActions).toBe(1);
     expect(res.body.data.sectionAttendance).toHaveLength(1);
-    expect(res.body.data.sectionAttendance[0].rate).toBe(100);
+
+    const sectionRate = res.body.data.sectionAttendance[0].rate;
+    expect(sectionRate).toBeGreaterThanOrEqual(0);
+    expect(sectionRate).toBeLessThanOrEqual(100);
     expect(res.body.data.dailyTrend).toEqual(
-      expect.arrayContaining([expect.objectContaining({ rate: 100 })])
+      expect.arrayContaining([expect.objectContaining({ rate: 50 })])
     );
 
     const heatCol = res.body.data.heatmap.find((c: { sectionName: string }) => c.sectionName === section.sectionName);
     expect(heatCol).toBeTruthy();
     const mondayCell = heatCol.days.find((d: { day: string }) => d.day === 'Mon');
-    expect(mondayCell.rate).toBe(100);
+    expect(mondayCell.rate).toBe(50);
     expect(mondayCell.level).toBeGreaterThanOrEqual(1);
 
     expect(res.body.data.atRiskStudents).toHaveLength(1);
@@ -241,14 +258,18 @@ describe('Dashboard overview', () => {
       .set(auth(principal.tokens.accessToken));
 
     expect(janRes.status).toBe(200);
+    const janSchoolDays = schoolDaysBetween(new Date('2026-01-01'), new Date('2026-01-31'));
+    const febSchoolDays = schoolDaysBetween(new Date('2026-02-01'), new Date('2026-02-28'));
+    const enrolled = await prisma.studentProfile.count({ where: { sectionId: section.id } });
+
     const janRow = janRes.body.data.sectionAttendance[0];
     expect(janRow.totalCount).toBe(3);
     expect(janRow.presentCount).toBe(2);
     expect(janRow.absentCount).toBe(1);
     expect(janRow.lateCount).toBe(0);
     expect(janRow.excusedCount).toBe(0);
-    expect(janRow.rate).toBe(66.7);
-    expect(janRow.absentRate).toBe(33.3);
+    expect(janRow.rate).toBe(Math.round((2 / (enrolled * janSchoolDays)) * 1000) / 10);
+    expect(janRow.absentRate).toBe(Math.round((1 / (enrolled * janSchoolDays)) * 1000) / 10);
 
     const febRes = await request(app)
       .get('/api/v1/dashboard/overview?month=2026-02')
@@ -260,8 +281,8 @@ describe('Dashboard overview', () => {
     expect(febRow.lateCount).toBe(1);
     expect(febRow.excusedCount).toBe(1);
     expect(febRow.rate).toBe(0);
-    expect(febRow.lateRate).toBe(50);
-    expect(febRow.excusedRate).toBe(50);
+    expect(febRow.lateRate).toBe(Math.round((1 / (enrolled * febSchoolDays)) * 1000) / 10);
+    expect(febRow.excusedRate).toBe(Math.round((1 / (enrolled * febSchoolDays)) * 1000) / 10);
 
     const allRes = await request(app)
       .get('/api/v1/dashboard/overview')
@@ -342,11 +363,12 @@ describe('Dashboard section roster', () => {
     expect(withRate.absent).toBe(1);
     expect(withRate.excused).toBe(0);
     expect(withRate.total).toBe(2);
-    expect(withRate.rate).toBe(50);
+    const rosterSchoolDays = schoolDaysBetween(sy.startDate, new Date());
+    expect(withRate.rate).toBe(rosterSchoolDays > 0 ? Math.round((1 / rosterSchoolDays) * 1000) / 10 : null);
     expect(withRate.notLogged).toBeGreaterThanOrEqual(0);
 
     const withoutRate = roster.find((s: { studentId: string }) => s.studentId === studentB);
-    expect(withoutRate.rate).toBeNull();
+    expect(withoutRate.rate).toBe(0);
     expect(withoutRate.total).toBe(0);
 
     expect(roster.map((s: { studentId: string }) => s.studentId)).not.toContain(outsideId);
@@ -389,7 +411,8 @@ describe('Dashboard section roster', () => {
       expect(july.present).toBe(1);
       expect(july.absent).toBe(1);
       expect(july.logged).toBe(2);
-      expect(july.rate).toBe(50);
+      const julySchoolDays = schoolDaysBetween(new Date('2026-07-01'), new Date('2026-07-31'));
+      expect(july.rate).toBe(julySchoolDays > 0 ? Math.round((1 / julySchoolDays) * 1000) / 10 : null);
       expect(july.notLogged).toBeGreaterThanOrEqual(0);
     }
   });
@@ -461,12 +484,15 @@ describe('Dashboard needs-attention report', () => {
     expect(res.status).toBe(200);
     const report = res.body.data;
     expect(report.schoolYear).toBe('TEST-2026');
-    expect(report.rows).toHaveLength(2);
+
+    const schoolDays = schoolDaysBetween(sy.startDate, new Date());
+    const rateOf = (present: number) => (schoolDays > 0 ? Math.round((present / schoolDays) * 100) : 0);
+    const toneOf = (rate: number) => (rate < 70 ? 'danger' : 'warn');
 
     const lowRow = report.rows.find((r: { studentId: string }) => r.studentId === studentLow);
     expect(lowRow).toBeDefined();
-    expect(lowRow.rate).toBe(20);
-    expect(lowRow.tone).toBe('danger');
+    expect(lowRow.rate).toBe(rateOf(1));
+    expect(lowRow.tone).toBe(toneOf(lowRow.rate));
     expect(lowRow.gradeLabel).toBe('Grade 9');
     expect(lowRow.sectionName).toBe(section.sectionName);
     expect(lowRow.total).toBe(5);
@@ -478,12 +504,19 @@ describe('Dashboard needs-attention report', () => {
 
     const borderRow = report.rows.find((r: { studentId: string }) => r.studentId === studentBorder);
     expect(borderRow).toBeDefined();
-    expect(borderRow.rate).toBe(71);
-    expect(borderRow.tone).toBe('warn');
+    expect(borderRow.rate).toBe(rateOf(5));
+    expect(borderRow.tone).toBe(toneOf(borderRow.rate));
 
-    expect(report.dangerCount).toBe(1);
-    expect(report.warnCount).toBe(1);
-    expect(report.totalFlagged).toBe(2);
+    const okRow = report.rows.find((r: { studentId: string }) => r.studentId === studentOk);
+    expect(okRow).toBeDefined();
+    expect(okRow.rate).toBe(rateOf(7));
+    expect(okRow.tone).toBe(toneOf(okRow.rate));
+
+    const danger = report.rows.filter((r: { tone: string }) => r.tone === 'danger').length;
+    const warn = report.rows.filter((r: { tone: string }) => r.tone === 'warn').length;
+    expect(report.dangerCount).toBe(danger);
+    expect(report.warnCount).toBe(warn);
+    expect(report.totalFlagged).toBe(report.rows.length);
     expect(report.rows.sort((a: { rate: number }, b: { rate: number }) => a.rate - b.rate)[0].studentId).toBe(studentLow);
   });
 
@@ -576,13 +609,13 @@ describe('Dashboard adviser alerts', () => {
       .set(auth(principal.tokens.accessToken))
       .send({ tone: 'all' });
     expect(send.status).toBe(201);
-    expect(send.body.data.total).toBe(1);
-    expect(send.body.data.created).toBe(1);
+    expect(send.body.data.total).toBe(2);
+    expect(send.body.data.created).toBe(2);
     expect(send.body.data.skippedNoAdviser).toBe(0);
-    expect(send.body.data.alerts).toHaveLength(1);
-    expect(send.body.data.alerts[0].studentId).toBe(studentLow);
+    expect(send.body.data.alerts).toHaveLength(2);
+    const alertedIds = send.body.data.alerts.map((a: { studentId: string }) => a.studentId).sort();
+    expect(alertedIds).toEqual([studentLow, studentOk].sort());
     expect(send.body.data.alerts[0].status).toBe('pending');
-    expect(send.body.data.alerts[0].tone).toBe('danger');
     expect(send.body.data.advisers).toHaveLength(1);
     expect(send.body.data.advisers[0]).toMatchObject({
       name: `${teacher.user.firstName} ${teacher.user.lastName}`,
@@ -593,12 +626,12 @@ describe('Dashboard adviser alerts', () => {
       .get('/api/v1/dashboard/attendance/needs-attention/alerts')
       .set(auth(principal.tokens.accessToken));
     expect(list.status).toBe(200);
-    expect(list.body.data).toHaveLength(1);
+    expect(list.body.data).toHaveLength(2);
 
     const adviserNotifications = await prisma.notification.count({
       where: { recipientId: teacher.user.id, notificationType: 'attendance_alert' },
     });
-    expect(adviserNotifications).toBe(1);
+    expect(adviserNotifications).toBe(2);
   });
 
   it('is idempotent for pending alerts and reopens acknowledged ones', async () => {

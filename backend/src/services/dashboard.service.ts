@@ -84,7 +84,7 @@ async function loadDashboardOverview(month?: string) {
   const absentToday = statusCounts[AttendanceStatus.absent] ?? 0;
   const lateToday = statusCounts[AttendanceStatus.late] ?? 0;
   const excusedToday = statusCounts[AttendanceStatus.excused] ?? 0;
-  const presentRate = todayTotal > 0 ? Math.round((presentToday / todayTotal) * 1000) / 10 : 0;
+  const presentRate = totalStudents > 0 ? Math.round((presentToday / totalStudents) * 1000) / 10 : 0;
 
   const [atRiskStudents, admForApproval, sectionAttendance, weekRecords] = await Promise.all([
     getAtRiskStudents(activeYear?.id ?? null),
@@ -128,8 +128,29 @@ async function loadDashboardOverview(month?: string) {
   };
 }
 
+function countSchoolDays(start: Date, endExclusive: Date): number {
+  let days = 0;
+  const cur = new Date(start);
+  while (cur < endExclusive) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) days += 1;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
 async function getAtRiskStudents(schoolYearId: string | null) {
   if (!schoolYearId) return [];
+  const schoolYear = await prisma.schoolYear.findFirst({
+    where: { id: schoolYearId },
+    select: { startDate: true, endDate: true },
+  });
+  const yearStart = schoolYear ? new Date(schoolYear.startDate) : new Date();
+  yearStart.setHours(0, 0, 0, 0);
+  const yearEnd = schoolYear ? new Date(schoolYear.endDate) : new Date();
+  yearEnd.setHours(0, 0, 0, 0);
+  yearEnd.setDate(yearEnd.getDate() + 1);
+  const schoolDays = countSchoolDays(yearStart, yearEnd);
   const activeProfiles = await prisma.studentProfile.findMany({
     where: {
       section: { status: 'active', schoolYearId },
@@ -180,7 +201,8 @@ async function getAtRiskStudents(schoolYearId: string | null) {
       const counts = attendanceMap.get(p.id);
       const present = counts?.get(AttendanceStatus.present) ?? 0;
       const total = counts ? Array.from(counts.values()).reduce((sum, n) => sum + n, 0) : 0;
-      const attendanceRate = total > 0 ? Math.round((present / total) * 1000) / 10 : null;
+      const attendanceRate =
+        total > 0 && schoolDays > 0 ? Math.round((present / schoolDays) * 1000) / 10 : null;
       const riskLevel = classifyLiveRisk(
         academicAvgMap.get(p.id) ?? null,
         attendanceRate,
@@ -224,7 +246,7 @@ async function getAdmForApproval() {
 }
 
 async function getSectionAttendance(monthFilter?: { start: Date; end: Date } | null) {
-  const [sections, attendanceByStatus] = await Promise.all([
+  const [sections, attendanceByStatus, enrollments] = await Promise.all([
     prisma.section.findMany({
       where: { status: 'active' },
       select: { id: true, sectionName: true },
@@ -235,7 +257,27 @@ async function getSectionAttendance(monthFilter?: { start: Date; end: Date } | n
       where: monthFilter ? { attendanceDate: { gte: monthFilter.start, lt: monthFilter.end } } : undefined,
       _count: { _all: true },
     }),
+    prisma.studentProfile.groupBy({
+      by: ['sectionId'],
+      where: { section: { status: 'active' } },
+      _count: { _all: true },
+    }),
   ]);
+
+  const enrolledBySection = new Map(enrollments.map((g) => [g.sectionId, g._count._all]));
+
+  let monthSchoolDays = 0;
+  if (monthFilter) {
+    const cur = new Date(monthFilter.start);
+    cur.setHours(0, 0, 0, 0);
+    const end = new Date(monthFilter.end);
+    end.setHours(0, 0, 0, 0);
+    while (cur < end) {
+      const dow = cur.getDay();
+      if (dow !== 0 && dow !== 6) monthSchoolDays += 1;
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
 
   const bySection = new Map<string, Map<string, number>>();
   for (const a of attendanceByStatus) {
@@ -250,7 +292,9 @@ async function getSectionAttendance(monthFilter?: { start: Date; end: Date } | n
     const late = counts?.get(AttendanceStatus.late) ?? 0;
     const excused = counts?.get(AttendanceStatus.excused) ?? 0;
     const total = counts ? Array.from(counts.values()).reduce((sum, n) => sum + n, 0) : 0;
-    const rateOf = (n: number) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
+    const enrolled = enrolledBySection.get(s.id) ?? 0;
+    const denominator = enrolled * monthSchoolDays;
+    const rateOf = (n: number) => (denominator > 0 ? Math.round((n / denominator) * 1000) / 10 : 0);
     return {
       sectionId: s.id,
       sectionName: s.sectionName,
@@ -349,7 +393,6 @@ function buildDailyTrend(records: WeekAttendanceRecord[], today: Date, totalStud
     const absent = bucket?.absent ?? 0;
     const late = bucket?.late ?? 0;
     const excused = bucket?.excused ?? 0;
-    const total = present + absent + late + excused;
     const logged = bucket?.students.size ?? 0;
     return {
       day: HEATMAP_DAYS[i],
@@ -359,7 +402,7 @@ function buildDailyTrend(records: WeekAttendanceRecord[], today: Date, totalStud
       late,
       excused,
       notLogged: Math.max(0, totalStudents - logged),
-      rate: total > 0 ? Math.round((present / total) * 1000) / 10 : null,
+      rate: totalStudents > 0 ? Math.round((present / totalStudents) * 1000) / 10 : null,
     };
   });
 }
@@ -376,6 +419,13 @@ async function buildSectionHeatmap(records: WeekAttendanceRecord[]) {
     orderBy: { sectionName: 'asc' },
   });
 
+  const sectionEnrollments = await prisma.studentProfile.groupBy({
+    by: ['sectionId'],
+    where: { section: { status: 'active' } },
+    _count: { _all: true },
+  });
+  const sectionEnrolled = new Map(sectionEnrollments.map((g) => [g.sectionId, g._count._all]));
+
   const sectionNames = new Map(sections.map((s) => [s.id, s.sectionName]));
   const bySectionDay = new Map<string, Map<string, { present: number; total: number }>>();
   for (const r of records) {
@@ -391,15 +441,16 @@ async function buildSectionHeatmap(records: WeekAttendanceRecord[]) {
   }
 
   return sections.map((s) => {
+    const enrolled = sectionEnrolled.get(s.id) ?? 0;
     const dayMap = bySectionDay.get(s.id);
     const outDays = HEATMAP_DAYS.map((day, i) => {
       const bucket = dayMap?.get(weekKeys[i]);
-      if (!bucket || bucket.total === 0) {
+      if (!bucket || enrolled === 0) {
         return { day, label: `${shortDate(days[i])} - ${day}`, present: 0, total: 0, rate: 0, level: 0 };
       }
       const present = bucket.present;
       const total = bucket.total;
-      const rate = Math.round((present / total) * 1000) / 10;
+      const rate = Math.round((present / enrolled) * 1000) / 10;
       return { day, label: `${shortDate(days[i])} - ${day}`, present, total, rate, level: heatmapLevel(rate) };
     });
     return { sectionId: s.id, sectionName: s.sectionName, days: outDays };

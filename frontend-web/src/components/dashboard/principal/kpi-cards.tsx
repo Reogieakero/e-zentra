@@ -30,7 +30,7 @@ function buildKpiCards(stats: DashboardStats): KpiCardConfig[] {
       value: stats.presentToday.toLocaleString(),
       icon: UserCheck,
       note: { text: `${stats.presentRate}% rate today` },
-      desc: "Learners marked present today; the % is present out of everyone logged today.",
+      desc: "Learners marked present today out of all enrolled learners (present ÷ enrolled).",
     },
     {
       label: "Absent",

@@ -62,7 +62,7 @@ export default function ReportStatCards({ statBlocks: sb, targetRate, isDaily, e
         value={fmt(sb.averageRate)}
         sub={`${sb.periodsTracked} tracked ${periodName.toLowerCase()}${sb.periodsTracked === 1 ? "" : "s"}`}
         subTone="good"
-        hint={`The mean attendance rate across the current filter (grade/section) over the tracked periods. Each period rate is present ÷ (present + late + excused + absent); learners with no log that day are not counted in the period.`}
+        hint={`The mean attendance rate across the current filter (grade/section) over the tracked periods. Each period rate is present ÷ (enrolled × school days in the period); learners with no log are counted as not present.`}
       />
       <StatCard
         icon={Crown}

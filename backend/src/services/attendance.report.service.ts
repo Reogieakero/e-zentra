@@ -241,11 +241,11 @@ export async function loadAttendanceReport(
   tomorrow.setDate(tomorrow.getDate() + 1);
   const seriesEnd = tomorrow < endExclusive ? tomorrow : endExclusive;
 
-  const dailyTrend = buildDailySeries(byDay, start, seriesEnd).map((s) => {
+  const dailyTrend = buildDailySeries(byDay, start, seriesEnd, scopedEnrolled).map((s) => {
     const loggedStudents = byDayStudents.get(s.key)?.size ?? 0;
     return { ...s, notLogged: Math.max(0, scopedEnrolled - loggedStudents) };
   });
-  const series = view === 'monthly' ? buildMonthlySeriesFromDaily(dailyTrend) : dailyTrend;
+  const series = view === 'monthly' ? buildMonthlySeriesFromDaily(dailyTrend, scopedEnrolled, start, endExclusive) : dailyTrend;
 
   const activeDays = dailyTrend.filter((s) => s.total > 0);
   const presentTotal = activeDays.reduce((sum, s) => sum + s.present, 0);
@@ -340,6 +340,9 @@ function buildMonthlySeriesFromDaily(
     notLogged: number;
     rate: number | null;
   }>,
+  enrolled: number,
+  start: Date,
+  endExclusive: Date
 ) {
   const byMonth = new Map<
     string,
@@ -353,7 +356,7 @@ function buildMonthlySeriesFromDaily(
     }
   >();
   for (const d of daily) {
-    if (d.total === 0) continue;
+    if (d.total === 0 && d.notLogged === 0) continue;
     const mKey = `${d.year}-${String(d.month).padStart(2, '0')}`;
     let agg = byMonth.get(mKey);
     if (!agg) {
@@ -371,20 +374,31 @@ function buildMonthlySeriesFromDaily(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([mKey, agg]) => {
       const [year, monthNum] = mKey.split('-').map(Number);
-      const total = agg.present + agg.absent + agg.late + agg.excused;
+      const monthStart = new Date(year, monthNum - 1, 1);
+      const monthEndExclusive = new Date(year, monthNum, 1);
+      const rangeStart = monthStart < start ? start : monthStart;
+      const rangeEnd = monthEndExclusive > endExclusive ? endExclusive : monthEndExclusive;
+      let schoolDays = 0;
+      const cur = new Date(rangeStart);
+      while (cur < rangeEnd) {
+        const dow = cur.getDay();
+        if (dow !== 0 && dow !== 6) schoolDays += 1;
+        cur.setDate(cur.getDate() + 1);
+      }
+      const denominator = enrolled * schoolDays;
       return {
         key: mKey,
         shortLabel: MONTH_LONG[monthNum - 1].slice(0, 3),
         label: `${MONTH_LONG[monthNum - 1]} ${year}`,
         year,
         month: monthNum,
-        total,
+        total: denominator,
         present: agg.present,
         absent: agg.absent,
         late: agg.late,
         excused: agg.excused,
         notLogged: agg.notLogged,
-        rate: total > 0 ? Math.round((agg.present / total) * 10) / 10 : null,
+        rate: denominator > 0 ? Math.round((agg.present / denominator) * 1000) / 10 : null,
       };
     });
 }
@@ -392,7 +406,8 @@ function buildMonthlySeriesFromDaily(
 function buildDailySeries(
   byDay: Map<string, { present: number; absent: number; late: number; excused: number }>,
   start: Date,
-  endExclusive: Date
+  endExclusive: Date,
+  enrolled: number
 ) {
   const keys: string[] = [];
   const cur = new Date(start);
@@ -407,6 +422,7 @@ function buildDailySeries(
     const total = counts ? counts.present + counts.absent + counts.late + counts.excused : 0;
     const [year, monthNum, dayNum] = dKey.split('-').map(Number);
     const date = new Date(year, monthNum - 1, dayNum);
+    const rate = enrolled > 0 ? Math.round((counts?.present ?? 0) / enrolled) * 1000 / 10 : null;
     return {
       key: dKey,
       shortLabel: `${MONTH_LONG[monthNum - 1].slice(0, 3)} ${dayNum}`,
@@ -418,7 +434,7 @@ function buildDailySeries(
       absent: counts?.absent ?? 0,
       late: counts?.late ?? 0,
       excused: counts?.excused ?? 0,
-      rate: total > 0 ? rateOf(counts!) : null,
+      rate,
     };
   });
 }
@@ -583,7 +599,7 @@ export async function getSectionRoster(sectionId: string) {
   return students.map((s) => {
     const c = counts.get(s.id) ?? { present: 0, late: 0, absent: 0, excused: 0 };
     const total = c.present + c.late + c.absent + c.excused;
-    const rate = total > 0 ? Math.round((c.present / total) * 1000) / 10 : null;
+    const rate = schoolDays > 0 ? Math.round((c.present / schoolDays) * 1000) / 10 : null;
     const notLogged = Math.max(0, schoolDays - (loggedDays.get(s.id) ?? 0));
     return {
       studentId: s.id,
@@ -735,7 +751,7 @@ export async function getLowAttendanceReport(gradeLevel?: string, sectionId?: st
     if (!c) continue;
     const total = c.present + c.late + c.absent + c.excused;
     if (total === 0) continue;
-    const rate = Math.round((c.present / total) * 100);
+    const rate = schoolDays > 0 ? Math.round((c.present / schoolDays) * 100) : 0;
     if (rate >= 80) continue;
     flagged.push({
       studentId: s.id,
@@ -850,7 +866,7 @@ export async function getStudentAttendanceTrend(studentId: string) {
 
     const short = MONTH_SHORT[mo - 1];
     const logged = bucket.present + bucket.late + bucket.absent + bucket.excused;
-    const rate = logged > 0 ? round1((bucket.present / logged) * 100) : null;
+    const rate = scheduled > 0 ? round1((bucket.present / scheduled) * 100) : null;
     points.push({
       month: mk,
       label: short,
@@ -1038,12 +1054,12 @@ async function loadAttendanceSummary(
     }
   }
 
-  const dailyTrend = buildDailySeries(byDay, start, seriesEnd).map((s) => {
+  const dailyTrend = buildDailySeries(byDay, start, seriesEnd, scopedEnrolled).map((s) => {
     const loggedStudents = byDayStudents.get(s.key)?.size ?? 0;
     return { ...s, notLogged: Math.max(0, scopedEnrolled - loggedStudents) };
   });
 
-  const trend = view === 'daily' ? dailyTrend : buildMonthlySeriesFromDaily(dailyTrend);
+  const trend = view === 'daily' ? dailyTrend : buildMonthlySeriesFromDaily(dailyTrend, scopedEnrolled, start, endExclusive);
   const monthlyTrend = trend.map((s) => ({
     key: s.key,
     label: s.shortLabel,
@@ -1060,12 +1076,12 @@ async function loadAttendanceSummary(
   const heatmap = buildSchoolYearHeatmap(byDay, start, endExclusive, today, scopedEnrolled);
 
   const perfectAttendance = buildPerfectAttendance(records, byStudent, runningSchoolDays, runningSchoolDayKeys);
-  const lowAttendance = buildLowAttendance(records, byStudent);
+  const lowAttendance = buildLowAttendance(records, byStudent, runningSchoolDays);
   const topSections = buildTopSections(bySection);
 
   const totals = todayCounts;
   const todayTotal = totals.present + totals.absent + totals.late + totals.excused;
-  const todayRate = todayTotal > 0 ? round1((totals.present / todayTotal) * 100) : 0;
+  const todayRate = scopedEnrolled > 0 ? round1((totals.present / scopedEnrolled) * 100) : 0;
   const todayLogged = byDayStudents.get(todayKey)?.size ?? 0;
   const todayNotLogged = Math.max(0, scopedEnrolled - todayLogged);
 
@@ -1198,7 +1214,8 @@ function buildLowAttendance(
   byStudent: Map<
     string,
     { firstName: string; lastName: string; photo: string | null; sectionName: string; gradeLevel: string }
-  >
+  >,
+  runningSchoolDays: number
 ) {
   const perStudent = new Map<string, { present: number; absent: number; late: number; excused: number }>();
   for (const r of records) {
